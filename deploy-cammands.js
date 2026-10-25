@@ -18,7 +18,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     try {
         console.log(`Начинаю обновление ${commands.length} слэш-команд.`);
         // Вставь сюда свой CLIENT_ID из Discord Developer Portal (вкладка General Information)
-        const clientId = 'ВСТАВЬ_СЮДА_CLIENT_ID'; 
+        const clientId = '1564038849217167501'; 
         
         await rest.put(
             Routes.applicationCommands(clientId),
