@@ -1,13 +1,3 @@
-{
-  "name": "my-bot",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "start": "node deploy-commands.js && node index.js"
-  },
-  "dependencies": {
-    "discord.js": "^14.14.1",
-    "dotenv": "^16.4.5"
-  }
-}
+"scripts": {
+  "start": "node index.js"
+},
