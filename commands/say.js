@@ -1,40 +1,46 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const fs = require('fs');
+const path = require('path');
+const dbPath = path.join(__dirname, '../settings.json');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('сказать')
-        .setDescription('Отправить сообщение от лица бота (в виде красивого Embеда)')
-        .addStringOption(option => 
-            option.setName('текст')
-                .setDescription('Текст вашего объявления')
-                .setRequired(true))
-        .addStringOption(option => 
-            option.setName('картинка')
-                .setDescription('Ссылка на картинку для оформления (необязательно)')
-                .setRequired(false))
-        // Ограничиваем доступ только для тех, у кого есть право "Управлять сообщениями"
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+        .setDescription('Отправить сообщение от лица бота')
+        .addStringOption(option => option.setName('текст').setDescription('Текст').setRequired(true))
+        .addStringOption(option => option.setName('картинка').setDescription('Ссылка на картинку').setRequired(false)),
 
     async execute(interaction) {
+        // --- ПРОВЕРКА ПРАВ ---
+        const hasDiscordPerm = interaction.member.permissions.has('ManageMessages');
+        let hasCustomPerm = false;
+        
+        if (fs.existsSync(dbPath)) {
+            const settings = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+            const guildSettings = settings[interaction.guild.id];
+            if (guildSettings && guildSettings.modRoles) {
+                hasCustomPerm = interaction.member.roles.cache.some(role => guildSettings.modRoles.includes(role.id));
+            }
+        }
+
+        if (!hasDiscordPerm && !hasCustomPerm) {
+            return interaction.reply({ content: 'У вас нет прав!', ephemeral: true });
+        }
+        // ---------------------
+
         const text = interaction.options.getString('текст');
         const image = interaction.options.getString('картинка');
 
         const embed = new EmbedBuilder()
             .setTitle('📢 Объявление')
             .setDescription(text)
-            .setColor('#FEE75C') // Приятный желтый цвет
+            .setColor('#FEE75C')
             .setFooter({ text: `Сообщение от ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() })
             .setTimestamp();
 
-        // Если пользователь прикрепил картинку — добавляем её в Embed
-        if (image) {
-            embed.setImage(image);
-        }
+        if (image) embed.setImage(image);
 
-        // Отправляем Embed в текущий канал
         await interaction.channel.send({ embeds: [embed] });
-
-        // Отвечаем пользователю, что всё отправлено (сообщение видит только он)
-        await interaction.reply({ content: '✅ Объявление успешно отправлено!', ephemeral: true });
+        await interaction.reply({ content: '✅ Объявление отправлено!', ephemeral: true });
     },
 };
