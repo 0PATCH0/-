@@ -18,7 +18,7 @@ module.exports = {
         
         // УПОМИНАНИЯ
         .addIntegerOption(option => option.setName('пинг_за_минут').setDescription('За сколько минут до старта пинговать всех? (если 0 - без пинга)').setRequired(false))
-        .addMentionableOption(option => option.setName('кого_пинговать').setDescription('Кого тегнуть перед началом? (роль или себя)').setRequired(false))
+        .addMentionableOption(option => option.setName('кого_пинговать').setDescription('Дополнительный тег (роль или человек) к общему пингу').setRequired(false))
         
         .addStringOption(option => option.setName('картинка').setDescription('Ссылка на картинку').setRequired(false)),
 
@@ -33,21 +33,19 @@ module.exports = {
         const limitHeal = interaction.options.getInteger('лимит_хилов') || 0;
         
         const pingMinutes = interaction.options.getInteger('пинг_за_минут') || 0;
-        const pingTarget = interaction.options.getMentionable('кого_пинговать') || interaction.user;
+        const pingTarget = interaction.options.getMentionable('кого_пинговать'); // Может быть null
         const image = interaction.options.getString('картинка');
         const creatorId = interaction.user.id;
 
-        // Вычисляем время начала сбора в Unix Timestamp (для красивого вывода)
+        // Вычисляем время начала сбора в Unix Timestamp
         const timeParts = timeString.split(':');
         const hours = parseInt(timeParts[0]);
         const minutes = parseInt(timeParts[1]) || 0;
 
         const now = new Date();
         const eventDate = new Date();
-        // Устанавливаем время по часовому поясу пользователя (переводим в UTC для сервера)
         eventDate.setUTCHours(hours - timezone, minutes, 0, 0);
         
-        // Если время уже прошло сегодня, переносим на завтра (чтобы не было ошибок с минусовым таймером)
         if (eventDate.getTime() <= now.getTime()) {
             eventDate.setUTCDate(eventDate.getUTCDate() + 1);
         }
@@ -69,6 +67,7 @@ module.exports = {
         roles.forEach(r => state.roles[r.id] = []);
         statuses.forEach(s => state.statuses[s.id] = []);
 
+        // ================= ГЕНЕРАЦИЯ EMBED =================
         function generateEmbed(isEnded = false) {
             const embed = new EmbedBuilder()
                 .setTitle(`Десятки / ${title}`)
@@ -85,7 +84,6 @@ module.exports = {
             });
 
             let desc = `🏳️ **Создатель:** <@${creatorId}>\n`;
-            // Красивое отображение времени (каждый увидит в своем поясе)
             desc += `🕒 **Начало:** <t:${eventTimestamp}:t> (<t:${eventTimestamp}:R>)\n\n`;
             
             desc += `🚗 **Участников:** ${totalPlayers} ${totalLimit > 0 ? `/ ${totalLimit}` : ''}\n`;
@@ -113,6 +111,7 @@ module.exports = {
             return embed;
         }
 
+        // ================= МЕНЮ РОЛЕЙ =================
         function generateRoleMenu(isEnded = false) {
             if (isEnded) return [];
             const menu = new StringSelectMenuBuilder()
@@ -131,6 +130,7 @@ module.exports = {
             return [new ActionRowBuilder().addComponents(menu)];
         }
 
+        // ================= КНОПКИ СТАТУСОВ =================
         function generateStatusButtons(isEnded = false) {
             if (isEnded) return [];
             return [
@@ -149,20 +149,44 @@ module.exports = {
             fetchReply: true 
         });
 
-        // --- НАСТРОЙКА ТАЙМЕРА ПИНГА ---
+        // ================= ТАЙМЕР ПИНГА (ОБНОВЛЕННЫЙ) =================
         let pingTimeout = null;
         if (pingMinutes > 0) {
             const timeToPing = eventDate.getTime() - (pingMinutes * 60 * 1000) - Date.now();
             if (timeToPing > 0) {
                 pingTimeout = setTimeout(async () => {
-                    let pingStr = pingTarget.user ? `<@${pingTarget.id}>` : `<@&${pingTarget.id}>`;
+                    // Собираем всех участников из всех ролей
+                    let allMembers = [];
+                    roles.forEach(r => allMembers.push(...state.roles[r.id]));
+                    
+                    // Собираем тех, кто на скамейке и "поздно" (их тоже нужно тегнуть)
+                    allMembers.push(...state.statuses['bench']);
+                    allMembers.push(...state.statuses['late']);
+
+                    // Убираем дубликаты
+                    allMembers = [...new Set(allMembers)];
+
+                    if (allMembers.length === 0) {
+                        return interaction.channel.send({ content: `⏰ До сбора \`${title}\` осталось ${pingMinutes} минут, но пока никто не записался!` });
+                    }
+
+                    const pingList = allMembers.slice(0, 50).map(id => `<@${id}>`).join(', ');
+                    const extraText = allMembers.length > 50 ? ` и еще ${allMembers.length - 50} человек...` : '';
+                    
+                    // Добавляем упоминание роли/человека, если указано
+                    let extraPing = '';
+                    if (pingTarget) {
+                        extraPing = pingTarget.user ? `<@${pingTarget.id}> ` : `<@&${pingTarget.id}> `;
+                    }
+
                     await interaction.channel.send({ 
-                        content: `${pingStr}, **до начала сбора \`${title}\` осталось ${pingMinutes} минут!** Не забудьте зайти в игру.` 
+                        content: `${extraPing}\n⏰ **До начала сбора \`${title}\` осталось ${pingMinutes} минут!**\n\n**Участники:** ${pingList}${extraText}\nНе забудьте зайти в игру!` 
                     });
                 }, timeToPing);
             }
         }
 
+        // ================= СБОРЩИК КЛИКОВ =================
         const collector = response.createMessageComponentCollector({ time: 86400000 });
 
         collector.on('collect', async i => {
@@ -173,7 +197,6 @@ module.exports = {
                 const selectedRoleId = i.values[0].split('_')[1];
                 const userId = i.user.id;
                 
-                // Проверка общего лимита
                 let totalPlayers = Object.values(state.roles).flat().length;
                 const isAlreadyIn = Object.values(state.roles).flat().includes(userId);
                 
@@ -181,11 +204,9 @@ module.exports = {
                     return i.reply({ content: 'Сбор полностью заполнен!', ephemeral: true });
                 }
 
-                // Очищаем старые записи пользователя
                 roles.forEach(r => state.roles[r.id] = state.roles[r.id].filter(id => id !== userId));
                 statuses.forEach(s => state.statuses[s.id] = state.statuses[s.id].filter(id => id !== userId));
 
-                // Проверка лимита роли
                 const roleObj = roles.find(r => r.id === selectedRoleId);
                 if (roleObj.limit > 0 && state.roles[selectedRoleId].length >= roleObj.limit) {
                     return i.reply({ content: `Роль **${roleObj.name}** уже заполнена!`, ephemeral: true });
