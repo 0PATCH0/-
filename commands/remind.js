@@ -18,29 +18,19 @@ module.exports = {
         .setName('напомнить')
         .setDescription('Создать напоминание (с учетом часового пояса)')
         .addStringOption(option => option.setName('текст').setDescription('О чём напомнить?').setRequired(true))
+        .addIntegerOption(option => option.setName('часовой_пояс').setDescription('Смещение от UTC (например: 3)').setRequired(false).setMinValue(-12).setMaxValue(14))
         
-        // Часовой пояс
-        .addIntegerOption(option => option.setName('часовой_пояс').setDescription('Смещение от UTC (например: 3 для Москвы, 2 для Киева)').setRequired(false).setMinValue(-12).setMaxValue(14))
+        .addIntegerOption(option => option.setName('час').setDescription('Во сколько часов?').setRequired(false).setMinValue(0).setMaxValue(23))
+        .addIntegerOption(option => option.setName('минута').setDescription('В какую минуту?').setRequired(false).setMinValue(0).setMaxValue(59))
+        .addIntegerOption(option => option.setName('через_минут').setDescription('Или через сколько минут?').setRequired(false))
         
-        // Время
-        .addIntegerOption(option => option.setName('час').setDescription('Во сколько часов? (по вашему поясу)').setRequired(false).setMinValue(0).setMaxValue(23))
-        .addIntegerOption(option => option.setName('минута').setDescription('В какую минуту? (0-59)').setRequired(false).setMinValue(0).setMaxValue(59))
-        .addIntegerOption(option => option.setName('через_минут').setDescription('Или через сколько минут начать?').setRequired(false))
-        
-        // Дни
-        .addStringOption(option => option.setName('день_недели').setDescription('В какой день недели?').setRequired(false)
+        .addStringOption(option => option.setName('день_недели').setDescription('День недели').setRequired(false)
             .addChoices(
-                { name: 'Понедельник', value: '1' },
-                { name: 'Вторник', value: '2' },
-                { name: 'Среда', value: '3' },
-                { name: 'Четверг', value: '4' },
-                { name: 'Пятница', value: '5' },
-                { name: 'Суббота', value: '6' },
-                { name: 'Воскресенье', value: '0' }
+                { name: 'Понедельник', value: '1' }, { name: 'Вторник', value: '2' }, { name: 'Среда', value: '3' },
+                { name: 'Четверг', value: '4' }, { name: 'Пятница', value: '5' }, { name: 'Суббота', value: '6' }, { name: 'Воскресенье', value: '0' }
             ))
         .addStringOption(option => option.setName('дата').setDescription('Конкретная дата (ДД.ММ.ГГГГ)').setRequired(false))
         
-        // Повторения
         .addStringOption(option => option.setName('повтор').setDescription('Как часто повторять?').setRequired(false)
             .addChoices(
                 { name: 'Один раз', value: 'once' },
@@ -51,7 +41,7 @@ module.exports = {
 
     async execute(interaction) {
         const text = interaction.options.getString('текст');
-        const timezoneOffset = interaction.options.getInteger('часовой_пояс') ?? 0; // По умолчанию UTC
+        const timezoneOffset = interaction.options.getInteger('часовой_пояс') ?? 0;
         const delayMin = interaction.options.getInteger('через_минут');
         const hour = interaction.options.getInteger('час');
         const minute = interaction.options.getInteger('минута') || 0;
@@ -70,83 +60,61 @@ module.exports = {
         if (dateInput !== null) inputsCount++;
 
         if (inputsCount > 1) {
-            return interaction.reply({ content: 'Ошибка: Выбери **что-то одно** для времени (либо `через_минут`, либо `час`, либо `день_недели`, либо `дата`).', ephemeral: true });
+            return interaction.reply({ content: 'Ошибка: Выбери **что-то одно** для времени.', ephemeral: true });
         }
 
         const now = new Date();
 
-        // 1. Таймер
         if (delayMin !== null) {
             nextTime = Date.now() + (delayMin * 60 * 1000);
             timeDescription = `Через ${delayMin} мин.`;
         } 
-        // 2. Точная дата
         else if (dateInput !== null) {
             const parts = dateInput.split('.');
-            if (parts.length !== 3) {
-                return interaction.reply({ content: 'Ошибка: Дата должна быть в формате **ДД.ММ.ГГГГ**.', ephemeral: true });
-            }
-            const day = parseInt(parts[0]);
-            const month = parseInt(parts[1]) - 1;
-            const year = parseInt(parts[2]);
-
-            // Создаем дату в UTC и вычитаем часовой пояс
-            const targetDate = new Date(Date.UTC(year, month, day, (hour || 0) - timezoneOffset, minute));
-            
-            if (isNaN(targetDate.getTime())) return interaction.reply({ content: 'Ошибка: Неверная дата.', ephemeral: true });
-            if (targetDate.getTime() <= now.getTime()) return interaction.reply({ content: 'Ошибка: Эта дата уже прошла.', ephemeral: true });
-
+            if (parts.length !== 3) return interaction.reply({ content: 'Ошибка: Формат даты **ДД.ММ.ГГГГ**.', ephemeral: true });
+            const targetDate = new Date(Date.UTC(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]), (hour || 0) - timezoneOffset, minute));
+            if (isNaN(targetDate.getTime()) || targetDate.getTime() <= now.getTime()) return interaction.reply({ content: 'Ошибка: Неверная или прошедшая дата.', ephemeral: true });
             nextTime = targetDate.getTime();
-            timeDescription = `<t:${Math.floor(nextTime / 1000)}:f> (твой пояс) | <t:${Math.floor(nextTime / 1000)}:F>`;
+            timeDescription = `<t:${Math.floor(nextTime / 1000)}:f>`;
         }
-        // 3. День недели
         else if (dayOfWeek !== null) {
-            const targetDay = parseInt(dayOfWeek);
             const targetDate = new Date();
-            
-            // Вычисляем разницу часов с UTC
-            const utcHour = (hour || 0) - timezoneOffset;
-            targetDate.setUTCHours(utcHour, minute, 0, 0);
-
-            let daysToAdd = targetDay - targetDate.getUTCDay();
+            targetDate.setUTCHours((hour || 0) - timezoneOffset, minute, 0, 0);
+            let daysToAdd = parseInt(dayOfWeek) - targetDate.getUTCDay();
             if (daysToAdd < 0) daysToAdd += 7;
             if (daysToAdd === 0 && targetDate.getTime() <= now.getTime()) daysToAdd = 7;
-
             targetDate.setUTCDate(targetDate.getUTCDate() + daysToAdd);
-            
             nextTime = targetDate.getTime();
-            timeDescription = `<t:${Math.floor(nextTime / 1000)}:f> (твой пояс) | <t:${Math.floor(nextTime / 1000)}:F>`;
+            timeDescription = `<t:${Math.floor(nextTime / 1000)}:f>`;
         }
-        // 4. Время (часы/минуты)
         else if (hour !== null) {
             const targetDate = new Date();
-            const utcHour = hour - timezoneOffset;
-            targetDate.setUTCHours(utcHour, minute, 0, 0);
-
-            if (targetDate.getTime() <= now.getTime()) {
-                targetDate.setUTCDate(targetDate.getUTCDate() + 1);
-            }
-
+            targetDate.setUTCHours(hour - timezoneOffset, minute, 0, 0);
+            if (targetDate.getTime() <= now.getTime()) targetDate.setUTCDate(targetDate.getUTCDate() + 1);
             nextTime = targetDate.getTime();
             timeDescription = `<t:${Math.floor(nextTime / 1000)}:t> (<t:${Math.floor(nextTime / 1000)}:R>)`;
         } 
         else {
-            return interaction.reply({ content: 'Ошибка: Укажи время, день недели, дату или `через_минут`.', ephemeral: true });
+            return interaction.reply({ content: 'Ошибка: Укажи время.', ephemeral: true });
         }
 
         const remindId = Date.now().toString();
-        const channelId = interaction.channelId;
 
+        // СОХРАНЯЕМ ВСЕ ДАННЫЕ ДЛЯ РЕДАКТИРОВАНИЯ И ЖЕСТКОЙ ПРИВЯЗКИ
         const newReminder = {
             id: remindId,
-            userId: interaction.user.id, // Сохраняем ID создателя!
-            channelId: channelId,
+            userId: interaction.user.id,
+            channelId: interaction.channelId,
             text: text,
             targetId: target.id,
             targetType: target.user ? 'user' : 'role',
             repeat: repeat,
             nextTime: nextTime,
-            timezone: timezoneOffset
+            // Данные для точного пересчета при повторе:
+            hour: hour !== null ? hour : null,
+            minute: minute,
+            timezone: timezoneOffset,
+            warned: false // Флаг, чтобы предупредить за 5 минут только один раз
         };
 
         const reminders = loadReminders();
@@ -155,18 +123,13 @@ module.exports = {
 
         setReminderTimeout(newReminder, interaction.client);
 
-        let repeatText = repeat === 'once' ? 'Один раз' : (repeat === 'daily' ? 'Каждый день' : 'Каждую неделю');
-        let targetText = target.user ? `<@${target.id}>` : `<@&${target.id}>`;
-
         const embed = new EmbedBuilder()
             .setTitle('⏰ Напоминание создано!')
             .setColor('#57F287')
             .addFields(
                 { name: 'Текст', value: text },
                 { name: 'Когда', value: timeDescription },
-                { name: 'Часовой пояс', value: `UTC${timezoneOffset >= 0 ? '+' : ''}${timezoneOffset}` },
-                { name: 'Повтор', value: repeatText },
-                { name: 'Кого тегнуть', value: targetText }
+                { name: 'Повтор', value: repeat === 'once' ? 'Один раз' : (repeat === 'daily' ? 'Каждый день' : 'Каждую неделю') }
             )
             .setFooter({ text: `ID: ${remindId} • Управление: /мои_напоминания` });
 
@@ -178,19 +141,34 @@ function setReminderTimeout(reminder, client) {
     const timeLeft = reminder.nextTime - Date.now();
     const timeout = timeLeft > 0 ? timeLeft : 5000;
 
+    // Таймер на 5 минут до события
+    if (timeLeft > 5 * 60 * 1000 && !reminder.warned) {
+        setTimeout(async () => {
+            try {
+                const channel = await client.channels.fetch(reminder.channelId);
+                if (channel) {
+                    let ping = reminder.targetType === 'user' ? `<@${reminder.targetId}>` : `<@&${reminder.targetId}>`;
+                    await channel.send({ content: `🔔 **Скоро начнется!** (через 5 минут)\n${ping}, напоминаю: **${reminder.text}**` });
+                    
+                    // Отмечаем, что предупредили
+                    const reminders = loadReminders();
+                    const idx = reminders.findIndex(r => r.id === reminder.id);
+                    if (idx !== -1) {
+                        reminders[idx].warned = true;
+                        saveReminders(reminders);
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }, timeLeft - 5 * 60 * 1000);
+    }
+
+    // Основной таймер
     setTimeout(async () => {
         try {
             const channel = await client.channels.fetch(reminder.channelId);
             if (channel) {
                 let ping = reminder.targetType === 'user' ? `<@${reminder.targetId}>` : `<@&${reminder.targetId}>`;
-                
-                const embed = new EmbedBuilder()
-                    .setTitle('🔔 Напоминание!')
-                    .setDescription(`**${reminder.text}**`)
-                    .setColor('#FEE75C')
-                    .setFooter({ text: `Создано <@${reminder.userId}>` });
-
-                await channel.send({ content: ping, embeds: [embed] });
+                await channel.send({ content: `🔔 **Напоминание!**\n${ping}, **${reminder.text}**` });
             }
 
             const reminders = loadReminders();
@@ -198,21 +176,20 @@ function setReminderTimeout(reminder, client) {
 
             if (index !== -1) {
                 if (reminder.repeat === 'once') {
-                    reminders.splice(index, 1);
-                    saveReminders(reminders);
+                    reminders.splice(index, 1); // Удаляем, если разовое
                 } else {
-                    let nextDelay = reminder.repeat === 'daily' ? 86400000 : 604800000;
+                    // ЖЕСТКАЯ ПРИВЯЗКА ВРЕМЕНИ
+                    let nextTimestamp = reminder.nextTime;
+                    if (reminder.repeat === 'daily') nextTimestamp += 86400000; // +24 часа
+                    if (reminder.repeat === 'weekly') nextTimestamp += 604800000; // +7 дней
                     
-                    // Если время "плывет", мы жестко пересчитываем на следующие сутки
-                    reminders[index].nextTime = Date.now() + nextDelay;
-                    saveReminders(reminders);
-                    
-                    setReminderTimeout(reminders[index], client);
+                    reminders[index].nextTime = nextTimestamp;
+                    reminders[index].warned = false; // Сбрасываем флаг предупреждения
+                    setReminderTimeout(reminders[index], client); // Запускаем следующий цикл
                 }
+                saveReminders(reminders);
             }
-        } catch (e) {
-            console.error('Ошибка при отправке:', e);
-        }
+        } catch (e) { console.error(e); }
     }, timeout);
 }
 
