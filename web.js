@@ -3,8 +3,8 @@ const session = require('express-session');
 const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
 const path = require('path');
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, REST, Routes } = require('discord.js');
-const { ReactionRole, Settings, Reminder, CustomCommand } = require('./models');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { ReactionRole, Settings, Reminder, SentMessage } = require('./models');
 
 const app = express();
 app.use(express.json());
@@ -29,7 +29,6 @@ passport.use(new DiscordStrategy({
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
-// --- АВТОРИЗАЦИЯ ---
 app.get('/auth/discord', passport.authenticate('discord'));
 app.get('/auth/discord/callback', passport.authenticate('discord', { failureRedirect: '/' }), (req, res) => res.redirect('/dashboard'));
 app.get('/logout', (req, res) => req.logout(() => res.redirect('/')));
@@ -120,36 +119,111 @@ app.post('/api/guild/:id/moderation', async (req, res) => {
     res.json({ success: true });
 });
 
-// --- API КАСТОМНЫЕ КОМАНДЫ ---
-app.get('/api/guild/:id/custom', async (req, res) => {
+// ==========================================
+// API EMBED-СООБЩЕНИЯ (УПРАВЛЕНИЕ)
+// ==========================================
+
+// Получить список отправленных сообщений
+app.get('/api/guild/:id/embeds', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
-    const commands = await CustomCommand.find({ guildId: req.params.id });
-    res.json(commands);
+    const messages = await SentMessage.find({ guildId: req.params.id });
+    res.json(messages);
 });
 
-app.post('/api/guild/:id/custom', async (req, res) => {
+// Создать и отправить сообщение
+app.post('/api/guild/:id/embeds', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
-    const { name, title, description, color } = req.body;
-    
-    // 1. Сохраняем в БД
-    await CustomCommand.findOneAndUpdate(
-        { guildId: req.params.id, name: name },
-        { title, description, color },
-        { upsert: true }
-    );
+    const { title, description, color, image, footer, author, channelId } = req.body;
+    const client = req.app.get('botClient');
 
-    // 2. Регистрируем команду
-    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
-    const globalCommands = await rest.get(Routes.applicationCommands(process.env.CLIENT_ID));
-    
-    const newCommands = [...globalCommands, {
-        name: name.toLowerCase().replace(/[^a-z0-9-_]/g, ''),
-        description: 'Кастомная команда сервера'
-    }];
+    try {
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+        if (!channel) return res.status(400).json({ error: 'Канал не найден или бот не имеет прав.' });
 
-    await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: newCommands });
+        const embed = new EmbedBuilder()
+            .setTitle(title || null)
+            .setDescription(description || null)
+            .setColor(color || '#5865F2');
 
-    res.json({ success: true });
+        if (image) embed.setImage(image);
+        if (footer) embed.setFooter({ text: footer });
+        if (author) embed.setAuthor({ name: author });
+
+        const msg = await channel.send({ embeds: [embed] });
+
+        await SentMessage.create({
+            guildId: req.params.id, channelId, messageId: msg.id,
+            title, description, color, image, footer, author
+        });
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Ошибка при отправке' });
+    }
+});
+
+// Редактировать сообщение
+app.put('/api/guild/:id/embeds/:messageId', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    const { title, description, color, image, footer, author } = req.body;
+    const client = req.app.get('botClient');
+    const { id, messageId } = req.params;
+
+    try {
+        const dbMsg = await SentMessage.findOne({ messageId });
+        if (!dbMsg) return res.status(404).json({ error: 'Сообщение не найдено в БД' });
+
+        const channel = await client.channels.fetch(dbMsg.channelId).catch(() => null);
+        if (!channel) return res.status(400).json({ error: 'Канал не найден' });
+
+        const discordMsg = await channel.messages.fetch(messageId).catch(() => null);
+        if (!discordMsg) return res.status(400).json({ error: 'Сообщение было удалено в Discord' });
+
+        const embed = new EmbedBuilder()
+            .setTitle(title || null)
+            .setDescription(description || null)
+            .setColor(color || '#5865F2');
+
+        if (image) embed.setImage(image);
+        if (footer) embed.setFooter({ text: footer });
+        if (author) embed.setAuthor({ name: author });
+
+        await discordMsg.edit({ embeds: [embed] });
+        
+        // Обновляем в БД
+        dbMsg.title = title; dbMsg.description = description; dbMsg.color = color;
+        dbMsg.image = image; dbMsg.footer = footer; dbMsg.author = author;
+        await dbMsg.save();
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Ошибка при редактировании' });
+    }
+});
+
+// Удалить сообщение
+app.delete('/api/guild/:id/embeds/:messageId', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    const client = req.app.get('botClient');
+    const { messageId } = req.params;
+
+    try {
+        const dbMsg = await SentMessage.findOne({ messageId });
+        if (!dbMsg) return res.status(404).json({ error: 'Сообщение не найдено' });
+
+        const channel = await client.channels.fetch(dbMsg.channelId).catch(() => null);
+        if (channel) {
+            const discordMsg = await channel.messages.fetch(messageId).catch(() => null);
+            if (discordMsg) await discordMsg.delete().catch(() => {});
+        }
+
+        await SentMessage.deleteOne({ messageId });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Ошибка при удалении' });
+    }
 });
 
 function startWebServer(botClient) {
