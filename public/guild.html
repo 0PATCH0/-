@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление сервером</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="sidebar">
+        <h2 id="server-name">Загрузка...</h2>
+        <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
+        <hr style="border-color: var(--border);">
+        <a href="#" class="active">🏠 Главная</a>
+    </div>
+
+    <div class="content">
+        <div class="header">
+            <h1>Панель управления</h1>
+        </div>
+
+        <div class="grid">
+            <!-- Карточка 1: Роли по кнопкам -->
+            <a href="#" id="link-reaction-roles" class="card">
+                <h3>🎭 Роли по кнопкам</h3>
+                <p>Создавайте красивые сообщения с кнопками для выдачи ролей участникам сервера.</p>
+            </a>
+
+            <!-- Карточка 2: Заглушка (на будущее) -->
+            <div class="card" style="opacity: 0.5; cursor: not-allowed;">
+                <h3>📋 Тикеты (Скоро)</h3>
+                <p>Система поддержки с созданием приватных каналов.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const guildId = window.location.pathname.split('/').pop();
+        
+        // 1. Меняем заголовок и ссылку на сервер
+        fetch(`/api/guild/${guildId}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('server-name').innerText = data.name;
+                document.getElementById('link-reaction-roles').href = `/manage/${guildId}/reactionroles`;
+            });
+    </script>
+</body>
+</html>
