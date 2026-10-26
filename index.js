@@ -1,18 +1,18 @@
-const http = require('http');
-const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
+
+const { startWebServer } = require('./web'); // Подключаем наш сайт
+
+// Запускаем сайт
+startWebServer();
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 require('dotenv').config();
 const { Reminder } = require('./models'); // Подключаем модель для напоминаний
 
-// --- ВЕБ-СЕРВЕР ---
-const server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Bot is alive!');
+
 });
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Веб-сервер на порту ${PORT}`));
+
+
 
 // --- КЛИЕНТ БОТА ---
 const client = new Client({ 
