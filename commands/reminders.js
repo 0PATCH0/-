@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ComponentType } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, ComponentType, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 
@@ -16,7 +16,7 @@ function saveReminders(data) {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('мои_напоминания')
-        .setDescription('Показать и удалить ваши активные напоминания'),
+        .setDescription('Показать, отредактировать или удалить ваши напоминания'),
 
     async execute(interaction) {
         const reminders = loadReminders();
@@ -28,50 +28,106 @@ module.exports = {
 
         const embed = new EmbedBuilder()
             .setTitle('📋 Ваши напоминания')
-            .setDescription('Выберите напоминание из списка ниже, чтобы **удалить** его.')
+            .setDescription('Выберите действие с помощью кнопок ниже.')
             .setColor('#5865F2');
 
         userReminders.forEach((r, i) => {
             const timeUnix = Math.floor(r.nextTime / 1000);
             embed.addFields({
                 name: `${i + 1}. ${r.text.length > 50 ? r.text.substring(0, 47) + '...' : r.text}`,
-                value: `Сработает: <t:${timeUnix}:f> (<t:${timeUnix}:R>)\nПовтор: ${r.repeat === 'once' ? 'Один раз' : (r.repeat === 'daily' ? 'Каждый день' : 'Каждую неделю')}`,
+                value: `Сработает: <t:${timeUnix}:f> (<t:${timeUnix}:R>)`,
                 inline: false
             });
         });
 
-        // Создаем меню для удаления (максимум 25 пунктов, как позволяет Discord)
-        const menu = new StringSelectMenuBuilder()
-            .setCustomId('delete_reminder')
-            .setPlaceholder('Выберите напоминание для удаления')
-            .addOptions(userReminders.slice(0, 25).map(r => ({
-                label: r.text.substring(0, 50),
-                description: `ID: ${r.id}`,
-                value: r.id,
-                emoji: '🗑️'
-            })));
+        // Кнопки управления
+        const buttons = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('btn_edit').setLabel('Редактировать').setEmoji('✏️').setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId('btn_delete').setLabel('Удалить').setEmoji('🗑️').setStyle(ButtonStyle.Danger)
+        );
 
-        const row = new ActionRowBuilder().addComponents(menu);
-
-        const response = await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
-
-        const collector = response.createMessageComponentCollector({ componentType: ComponentType.StringSelect, time: 60000 });
+        const response = await interaction.reply({ embeds: [embed], components: [buttons], ephemeral: true });
+        const collector = response.createMessageComponentCollector({ time: 120000 }); // 2 минуты на действия
 
         collector.on('collect', async i => {
-            const deletedId = i.values[0];
-            let allReminders = loadReminders();
-            
-            // Проверяем, что удаляет именно владелец
-            const reminderToDelete = allReminders.find(r => r.id === deletedId);
-            if (!reminderToDelete || reminderToDelete.userId !== i.user.id) {
-                return i.reply({ content: 'Ошибка доступа.', ephemeral: true });
+            if (i.user.id !== interaction.user.id) return i.reply({ content: 'Это не ваши напоминания.', ephemeral: true });
+
+            // --- МЕНЮ УДАЛЕНИЯ ---
+            if (i.customId === 'btn_delete') {
+                const deleteMenu = new StringSelectMenuBuilder().setCustomId('sel_delete').setPlaceholder('Выберите напоминание для удаления')
+                    .addOptions(userReminders.slice(0, 25).map(r => ({ label: r.text.substring(0, 50), value: r.id, emoji: '🗑️' })));
+                
+                await i.update({ embeds: [embed], components: [new ActionRowBuilder().addComponents(deleteMenu)] });
             }
 
-            // Удаляем
-            allReminders = allReminders.filter(r => r.id !== deletedId);
-            saveReminders(allReminders);
+            // --- МЕНЮ РЕДАКТИРОВАНИЯ ---
+            if (i.customId === 'btn_edit') {
+                const editMenu = new StringSelectMenuBuilder().setCustomId('sel_edit').setPlaceholder('Выберите напоминание для изменения')
+                    .addOptions(userReminders.slice(0, 25).map(r => ({ label: r.text.substring(0, 50), value: r.id, emoji: '✏️' })));
 
-            await i.update({ content: `✅ Напоминание **удалено**!`, embeds: [], components: [] });
+                await i.update({ embeds: [embed], components: [new ActionRowBuilder().addComponents(editMenu)] });
+            }
+
+            // --- ОБРАБОТКА УДАЛЕНИЯ ---
+            if (i.customId === 'sel_delete') {
+                let allReminders = loadReminders();
+                allReminders = allReminders.filter(r => r.id !== i.values[0]);
+                saveReminders(allReminders);
+                await i.update({ content: '✅ Напоминание удалено!', embeds: [], components: [] });
+            }
+
+            // --- ОТКРЫТИЕ ОКНА РЕДАКТИРОВАНИЯ (MODAL) ---
+            if (i.customId === 'sel_edit') {
+                const remindId = i.values[0];
+                const reminder = loadReminders().find(r => r.id === remindId);
+
+                // Создаем всплывающее окно
+                const modal = new ModalBuilder().setCustomId(`modal_edit_${remindId}`).setTitle('Редактирование напоминания');
+
+                // Поле 1: Текст
+                const textInput = new TextInputBuilder().setCustomId('inp_text').setLabel('Новый текст').setStyle(TextInputStyle.Short).setValue(reminder.text).setRequired(true);
+                
+                // Поле 2: Тег (ID пользователя или роли)
+                const targetInput = new TextInputBuilder().setCustomId('inp_target').setLabel('ID пользователя/роли для тега').setStyle(TextInputStyle.Short).setValue(reminder.targetId).setRequired(true);
+
+                // Поле 3: Новое время (Unix Timestamp)
+                const timeInput = new TextInputBuilder().setCustomId('inp_time').setLabel('Новое время (Unix Timestamp)').setStyle(TextInputStyle.Short).setValue(reminder.nextTime.toString()).setRequired(true);
+
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(textInput),
+                    new ActionRowBuilder().addComponents(targetInput),
+                    new ActionRowBuilder().addComponents(timeInput)
+                );
+
+                // Показываем окно пользователю
+                await i.showModal(modal);
+
+                // Ждем заполнения
+                try {
+                    const modalInteraction = await i.awaitModalSubmit({ time: 60000, filter: m => m.customId === `modal_edit_${remindId}` });
+                    
+                    const newText = modalInteraction.fields.getTextInputValue('inp_text');
+                    const newTargetId = modalInteraction.fields.getTextInputValue('inp_target');
+                    const newTime = parseInt(modalInteraction.fields.getTextInputValue('inp_time'));
+
+                    let allReminders = loadReminders();
+                    const idx = allReminders.findIndex(r => r.id === remindId);
+
+                    if (idx !== -1) {
+                        allReminders[idx].text = newText;
+                        allReminders[idx].targetId = newTargetId;
+                        allReminders[idx].nextTime = newTime;
+                        allReminders[idx].warned = false; // Сброс предупреждения
+                        saveReminders(allReminders);
+                        
+                        // Перезапускаем таймер, но для простоты попросим перезапустить бота, 
+                        // так как старый setTimeout остался висеть.
+                        await modalInteraction.reply({ content: '✅ Напоминание обновлено! (Для применения нового таймера может потребоваться перезапуск бота)', ephemeral: true });
+                    }
+                } catch (e) {
+                    console.log('Пользователь закрыл окно редактирования.');
+                }
+            }
         });
     },
 };
