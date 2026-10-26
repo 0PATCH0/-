@@ -23,7 +23,7 @@ module.exports = {
         }
 
         if (!hasDiscordPerm && !hasCustomPerm) {
-            return interaction.reply({ content: 'У вас нет прав для использования этой команды! (Требуются права модератора)', ephemeral: true });
+            return interaction.reply({ content: 'У вас нет прав для использования этой команды!', ephemeral: true });
         }
 
         const userId = interaction.user.id;
@@ -93,24 +93,27 @@ module.exports = {
             if (i.customId === 'finish_setup') {
                 if (state.columns.length === 0) return;
 
-                await i.update({ content: '⏳ Загружаю всех участников с сервера, подождите пару секунд...', components: [] });
+                await i.update({ content: '⏳ Генерирую список...', components: [] });
 
                 try {
-                    // ПРИНУДИТЕЛЬНО ЗАГРУЖАЕМ ВСЕХ УЧАСТНИКОВ
-                    const members = await interaction.guild.members.fetch();
-                    
+                    // НОВЫЙ СПОСОБ: Запрашиваем участников прямо через роли
                     const memberRolesMap = new Map();
-                    const columnData = state.columns.map(col => {
-                        const membersWithRole = members.filter(m => !m.user.bot && m.roles.cache.has(col.roleId));
-                        return { ...col, members: membersWithRole };
-                    });
+                    const columnData = [];
 
-                    columnData.forEach(col => {
-                        col.members.forEach(m => {
+                    for (const col of state.columns) {
+                        const role = interaction.guild.roles.cache.get(col.roleId);
+                        if (!role) continue;
+
+                        // Получаем участников роли (это работает без скачивания всего сервера)
+                        const roleMembers = Array.from(role.members.values()).filter(m => !m.user.bot);
+                        
+                        columnData.push({ ...col, members: roleMembers });
+
+                        roleMembers.forEach(m => {
                             if (!memberRolesMap.has(m.id)) memberRolesMap.set(m.id, new Set());
                             memberRolesMap.get(m.id).add(col.name);
                         });
-                    });
+                    }
 
                     const totalUnique = memberRolesMap.size;
 
@@ -121,7 +124,7 @@ module.exports = {
                         .setTimestamp();
 
                     columnData.forEach(col => {
-                        const sortedMembers = Array.from(col.members.values()).sort((a, b) => a.displayName.localeCompare(b.displayName));
+                        const sortedMembers = col.members.sort((a, b) => a.displayName.localeCompare(b.displayName));
                         
                         let membersStr = '*Никого нет*';
                         if (sortedMembers.length > 0) {
@@ -136,11 +139,11 @@ module.exports = {
                     });
 
                     await interaction.channel.send({ embeds: [finalEmbed] });
-                    await i.editReply({ content: '✅ Список успешно создан и отправлен в чат!', components: [] });
+                    await i.editReply({ content: '✅ Список успешно создан!', components: [] });
                     
                 } catch (error) {
-                    console.error("Ошибка при генерации списка:", error);
-                    await i.editReply({ content: '❌ Ошибка! Убедитесь, что у бота включен **Server Members Intent** в настройках Discord Developer Portal.', components: [] });
+                    console.error("Ошибка:", error);
+                    await i.editReply({ content: '❌ Ошибка. Убедитесь, что у бота есть права на просмотр каналов.', components: [] });
                 }
                 
                 setupStates.delete(userId);
@@ -149,7 +152,7 @@ module.exports = {
 
         collector.on('end', (collected, reason) => {
             if (reason === 'time') {
-                interaction.editReply({ content: 'Время настройки истекло. Попробуйте снова.', components: [] }).catch(() => {});
+                interaction.editReply({ content: 'Время настройки истекло.', components: [] }).catch(() => {});
                 setupStates.delete(userId);
             }
         });
