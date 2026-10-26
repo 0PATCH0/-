@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 
 const { startWebServer } = require('./web'); 
-const { Reminder, ReactionRole } = require('./models'); // Добавили ReactionRole
+const { Reminder, ReactionRole, CustomCommand, Settings } = require('./models');
 
 const client = new Client({ 
     intents: [
@@ -33,7 +33,6 @@ for (const file of commandFiles) {
 async function registerCommands() {
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     try {
-        console.log(`Обновление ${commandsArray.length} слэш-команд.`);
         await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commandsArray });
         console.log('Слэш-команды успешно зарегистрированы!');
     } catch (error) {
@@ -41,45 +40,46 @@ async function registerCommands() {
     }
 }
 
-// ОБРАБОТКА ВЗАИМОДЕЙСТВИЙ (Слэш-команды и Кнопки)
 client.on('interactionCreate', async interaction => {
-    // 1. Если это слэш-команда (/help, /сбор и т.д.)
     if (interaction.isChatInputCommand()) {
+        // 1. Стандартные команды
         const command = interaction.client.commands.get(interaction.commandName);
-        if (!command) return;
-        try {
-            await command.execute(interaction);
-        } catch (error) {
-            console.error(error);
-            await interaction.reply({ content: 'Ошибка при выполнении!', ephemeral: true });
+        if (command) {
+            try { await command.execute(interaction); } catch (error) { console.error(error); }
+            return;
+        }
+
+        // 2. Кастомные команды из БД
+        const customCmd = await CustomCommand.findOne({ guildId: interaction.guild.id, name: interaction.commandName });
+        if (customCmd) {
+            const embed = new EmbedBuilder()
+                .setTitle(customCmd.title || customCmd.name)
+                .setDescription(customCmd.description || 'Нет описания')
+                .setColor(customCmd.color || '#5865F2');
+            await interaction.reply({ embeds: [embed] });
         }
     }
 
-    // 2. Если нажата кнопка Ролей по кнопкам
+    // 3. Кнопки Ролей по кнопкам
     if (interaction.isButton() && interaction.customId.startsWith('rr_')) {
         const roleId = interaction.customId.split('_')[1];
         const member = interaction.member;
         const role = interaction.guild.roles.cache.get(roleId);
 
-        if (!role) return interaction.reply({ content: 'Роль была удалена с сервера.', ephemeral: true });
+        if (!role) return interaction.reply({ content: 'Роль удалена.', ephemeral: true });
 
         try {
-            // Ищем настройку в БД, чтобы узнать режим (single или multiple)
             const config = await ReactionRole.findOne({ messageId: interaction.message.id });
             const mode = config ? config.mode : 'multiple';
 
-            if (mode === 'single') {
-                // Если режим "Одна роль", снимаем все другие роли из этой панели
-                if (config && config.roles) {
-                    for (const r of config.roles) {
-                        if (r.roleId !== roleId && member.roles.cache.has(r.roleId)) {
-                            await member.roles.remove(r.roleId).catch(() => {});
-                        }
+            if (mode === 'single' && config) {
+                for (const r of config.roles) {
+                    if (r.roleId !== roleId && member.roles.cache.has(r.roleId)) {
+                        await member.roles.remove(r.roleId).catch(() => {});
                     }
                 }
             }
 
-            // Выдаем или снимаем роль (переключатель)
             if (member.roles.cache.has(roleId)) {
                 await member.roles.remove(roleId);
                 await interaction.reply({ content: `✅ Вы сняли роль **${role.name}**`, ephemeral: true });
@@ -88,8 +88,7 @@ client.on('interactionCreate', async interaction => {
                 await interaction.reply({ content: `✅ Вы получили роль **${role.name}**`, ephemeral: true });
             }
         } catch (error) {
-            console.error('Ошибка при выдаче роли:', error);
-            await interaction.reply({ content: 'Не удалось изменить роль. Проверьте, что роль бота находится выше по иерархии.', ephemeral: true });
+            await interaction.reply({ content: 'Не удалось изменить роль. Проверьте иерархию ролей бота.', ephemeral: true });
         }
     }
 });
@@ -97,28 +96,19 @@ client.on('interactionCreate', async interaction => {
 client.once('ready', async () => {
     console.log(`Бот ${client.user.tag} в сети!`);
     await registerCommands(); 
-
     try {
         const reminders = await Reminder.find();
         if (reminders.length > 0) {
-            console.log(`[БД] Восстановлено ${reminders.length} напоминаний.`);
             const remindCommand = require('./commands/remind.js');
-            reminders.forEach(reminder => {
-                remindCommand.setReminderTimeout(reminder, client);
-            });
+            reminders.forEach(reminder => remindCommand.setReminderTimeout(reminder, client));
         }
-    } catch (e) {
-        console.error('Ошибка БД при старте:', e);
-    }
+    } catch (e) { console.error(e); }
 });
 
-console.log('Подключение к MongoDB...');
 mongoose.connect(process.env.MONGO_URI)
     .then(() => {
         console.log('✅ Успешное подключение к базе данных!');
         startWebServer(client); 
         client.login(process.env.TOKEN);
     })
-    .catch(err => {
-        console.error('❌ Ошибка подключения к БД:', err);
-    });
+    .catch(err => console.error('❌ Ошибка подключения к БД:', err));
