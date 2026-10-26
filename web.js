@@ -119,8 +119,9 @@ app.get('/logout', (req, res) => {
     });
 });
 
-function startWebServer() {
+function startWebServer(botClient) {
     const PORT = process.env.PORT || 3000;
+    app.set('botClient', botClient); // Передаем бота в Express
     app.listen(PORT, () => {
         console.log(`🌐 Веб-панель запущена на порту ${PORT}`);
     });
