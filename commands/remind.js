@@ -16,17 +16,18 @@ function saveReminders(data) {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('напомнить')
-        .setDescription('Создать напоминание (время, день недели или дата)')
+        .setDescription('Создать напоминание (с учетом часового пояса)')
         .addStringOption(option => option.setName('текст').setDescription('О чём напомнить?').setRequired(true))
         
-        // Таймер в минутах
-        .addIntegerOption(option => option.setName('через_минут').setDescription('Через сколько минут начать напоминать?').setRequired(false))
+        // Часовой пояс
+        .addIntegerOption(option => option.setName('часовой_пояс').setDescription('Смещение от UTC (например: 3 для Москвы, 2 для Киева)').setRequired(false).setMinValue(-12).setMaxValue(14))
         
-        // Точное время
-        .addIntegerOption(option => option.setName('час').setDescription('Во сколько часов? (0-23)').setRequired(false).setMinValue(0).setMaxValue(23))
+        // Время
+        .addIntegerOption(option => option.setName('час').setDescription('Во сколько часов? (по вашему поясу)').setRequired(false).setMinValue(0).setMaxValue(23))
         .addIntegerOption(option => option.setName('минута').setDescription('В какую минуту? (0-59)').setRequired(false).setMinValue(0).setMaxValue(59))
+        .addIntegerOption(option => option.setName('через_минут').setDescription('Или через сколько минут начать?').setRequired(false))
         
-        // День недели и дата
+        // Дни
         .addStringOption(option => option.setName('день_недели').setDescription('В какой день недели?').setRequired(false)
             .addChoices(
                 { name: 'Понедельник', value: '1' },
@@ -37,7 +38,7 @@ module.exports = {
                 { name: 'Суббота', value: '6' },
                 { name: 'Воскресенье', value: '0' }
             ))
-        .addStringOption(option => option.setName('дата').setDescription('Конкретная дата (формат: ДД.ММ.ГГГГ, например 25.12.2026)').setRequired(false))
+        .addStringOption(option => option.setName('дата').setDescription('Конкретная дата (ДД.ММ.ГГГГ)').setRequired(false))
         
         // Повторения
         .addStringOption(option => option.setName('повтор').setDescription('Как часто повторять?').setRequired(false)
@@ -46,10 +47,11 @@ module.exports = {
                 { name: 'Каждый день', value: 'daily' },
                 { name: 'Каждую неделю', value: 'weekly' }
             ))
-        .addMentionableOption(option => option.setName('кого_тегнуть').setDescription('Тегнуть себя или роль (по умолчанию - себя)').setRequired(false)),
+        .addMentionableOption(option => option.setName('кого_тегнуть').setDescription('Тегнуть себя или роль').setRequired(false)),
 
     async execute(interaction) {
         const text = interaction.options.getString('текст');
+        const timezoneOffset = interaction.options.getInteger('часовой_пояс') ?? 0; // По умолчанию UTC
         const delayMin = interaction.options.getInteger('через_минут');
         const hour = interaction.options.getInteger('час');
         const minute = interaction.options.getInteger('минута') || 0;
@@ -61,7 +63,6 @@ module.exports = {
         let nextTime = 0;
         let timeDescription = '';
 
-        // Проверка на дурака (если указали всё сразу)
         let inputsCount = 0;
         if (delayMin !== null) inputsCount++;
         if (hour !== null) inputsCount++;
@@ -74,65 +75,63 @@ module.exports = {
 
         const now = new Date();
 
-        // 1. Через N минут
+        // 1. Таймер
         if (delayMin !== null) {
             nextTime = Date.now() + (delayMin * 60 * 1000);
             timeDescription = `Через ${delayMin} мин.`;
         } 
-        // 2. Конкретная дата (ДД.ММ.ГГГГ)
+        // 2. Точная дата
         else if (dateInput !== null) {
             const parts = dateInput.split('.');
             if (parts.length !== 3) {
-                return interaction.reply({ content: 'Ошибка: Дата должна быть в формате **ДД.ММ.ГГГГ** (например, 25.12.2026).', ephemeral: true });
+                return interaction.reply({ content: 'Ошибка: Дата должна быть в формате **ДД.ММ.ГГГГ**.', ephemeral: true });
             }
             const day = parseInt(parts[0]);
-            const month = parseInt(parts[1]) - 1; // В JS месяцы с 0
+            const month = parseInt(parts[1]) - 1;
             const year = parseInt(parts[2]);
 
-            const targetDate = new Date(year, month, day, hour || 0, minute, 0, 0);
+            // Создаем дату в UTC и вычитаем часовой пояс
+            const targetDate = new Date(Date.UTC(year, month, day, (hour || 0) - timezoneOffset, minute));
             
-            if (isNaN(targetDate.getTime())) {
-                return interaction.reply({ content: 'Ошибка: Неверная дата.', ephemeral: true });
-            }
-            if (targetDate.getTime() <= now.getTime()) {
-                return interaction.reply({ content: 'Ошибка: Эта дата уже прошла.', ephemeral: true });
-            }
+            if (isNaN(targetDate.getTime())) return interaction.reply({ content: 'Ошибка: Неверная дата.', ephemeral: true });
+            if (targetDate.getTime() <= now.getTime()) return interaction.reply({ content: 'Ошибка: Эта дата уже прошла.', ephemeral: true });
 
             nextTime = targetDate.getTime();
-            timeDescription = `<t:${Math.floor(nextTime / 1000)}:f>`;
+            timeDescription = `<t:${Math.floor(nextTime / 1000)}:f> (твой пояс) | <t:${Math.floor(nextTime / 1000)}:F>`;
         }
         // 3. День недели
         else if (dayOfWeek !== null) {
             const targetDay = parseInt(dayOfWeek);
             const targetDate = new Date();
-            targetDate.setHours(hour || 0, minute, 0, 0);
+            
+            // Вычисляем разницу часов с UTC
+            const utcHour = (hour || 0) - timezoneOffset;
+            targetDate.setUTCHours(utcHour, minute, 0, 0);
 
-            // Вычисляем, сколько дней прибавить до нужного дня
-            let daysToAdd = targetDay - targetDate.getDay();
-            if (daysToAdd < 0) daysToAdd += 7; // Если день прошел на этой неделе, берем следующую
-            if (daysToAdd === 0 && targetDate.getTime() <= now.getTime()) daysToAdd = 7; // Если это сегодня, но время прошло
+            let daysToAdd = targetDay - targetDate.getUTCDay();
+            if (daysToAdd < 0) daysToAdd += 7;
+            if (daysToAdd === 0 && targetDate.getTime() <= now.getTime()) daysToAdd = 7;
 
-            targetDate.setDate(targetDate.getDate() + daysToAdd);
+            targetDate.setUTCDate(targetDate.getUTCDate() + daysToAdd);
             
             nextTime = targetDate.getTime();
-            timeDescription = `<t:${Math.floor(nextTime / 1000)}:f>`;
+            timeDescription = `<t:${Math.floor(nextTime / 1000)}:f> (твой пояс) | <t:${Math.floor(nextTime / 1000)}:F>`;
         }
-        // 4. Просто время (час и минута)
+        // 4. Время (часы/минуты)
         else if (hour !== null) {
             const targetDate = new Date();
-            targetDate.setHours(hour, minute, 0, 0);
+            const utcHour = hour - timezoneOffset;
+            targetDate.setUTCHours(utcHour, minute, 0, 0);
 
-            // Если время уже прошло сегодня, переносим на завтра
             if (targetDate.getTime() <= now.getTime()) {
-                targetDate.setDate(targetDate.getDate() + 1);
+                targetDate.setUTCDate(targetDate.getUTCDate() + 1);
             }
 
             nextTime = targetDate.getTime();
             timeDescription = `<t:${Math.floor(nextTime / 1000)}:t> (<t:${Math.floor(nextTime / 1000)}:R>)`;
         } 
-        // Если ничего не указано
         else {
-            return interaction.reply({ content: 'Ошибка: Укажи время (например, `час: 18`), день недели, дату или `через_минут`.', ephemeral: true });
+            return interaction.reply({ content: 'Ошибка: Укажи время, день недели, дату или `через_минут`.', ephemeral: true });
         }
 
         const remindId = Date.now().toString();
@@ -140,13 +139,14 @@ module.exports = {
 
         const newReminder = {
             id: remindId,
-            userId: interaction.user.id,
+            userId: interaction.user.id, // Сохраняем ID создателя!
             channelId: channelId,
             text: text,
             targetId: target.id,
             targetType: target.user ? 'user' : 'role',
             repeat: repeat,
-            nextTime: nextTime
+            nextTime: nextTime,
+            timezone: timezoneOffset
         };
 
         const reminders = loadReminders();
@@ -164,10 +164,11 @@ module.exports = {
             .addFields(
                 { name: 'Текст', value: text },
                 { name: 'Когда', value: timeDescription },
+                { name: 'Часовой пояс', value: `UTC${timezoneOffset >= 0 ? '+' : ''}${timezoneOffset}` },
                 { name: 'Повтор', value: repeatText },
                 { name: 'Кого тегнуть', value: targetText }
             )
-            .setFooter({ text: `ID напоминания: ${remindId} (сохрани его, чтобы удалить)` });
+            .setFooter({ text: `ID: ${remindId} • Управление: /мои_напоминания` });
 
         await interaction.reply({ embeds: [embed], ephemeral: true });
     },
@@ -201,6 +202,8 @@ function setReminderTimeout(reminder, client) {
                     saveReminders(reminders);
                 } else {
                     let nextDelay = reminder.repeat === 'daily' ? 86400000 : 604800000;
+                    
+                    // Если время "плывет", мы жестко пересчитываем на следующие сутки
                     reminders[index].nextTime = Date.now() + nextDelay;
                     saveReminders(reminders);
                     
@@ -208,7 +211,7 @@ function setReminderTimeout(reminder, client) {
                 }
             }
         } catch (e) {
-            console.error('Ошибка при отправке напоминания:', e);
+            console.error('Ошибка при отправке:', e);
         }
     }, timeout);
 }
