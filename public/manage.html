@@ -10,7 +10,7 @@
     <div class="sidebar">
         <h2 id="server-name">Загрузка...</h2>
         <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
-        <hr style="border-color: var(--border);">
+        <hr style="border-color: var(--border-color);">
         <a href="#" id="link-back">🏠 На главную сервера</a>
         <a href="#" class="active">🎭 Роли по кнопкам</a>
     </div>
@@ -38,7 +38,7 @@
 
             <div class="form-group">
                 <label>ID Канала (куда отправить сообщение)</label>
-                <input type="text" id="channel-id" placeholder="123456789012345678">
+                <input type="text" id="channel-id" placeholder="Включите режим разработчика в Discord и скопируйте ID канала">
             </div>
 
             <div class="form-group">
@@ -49,34 +49,32 @@
                 </select>
             </div>
 
-            <hr style="border-color: var(--border); margin: 30px 0;">
+            <hr style="border-color: var(--border-color); margin: 30px 0;">
             
             <h3>Кнопки ролей</h3>
             <div id="roles-container"></div>
             
-            <button class="btn btn-small btn-success" onclick="addRoleRow()" style="margin-bottom: 20px;">+ Добавить кнопку</button>
+            <button class="btn btn-small btn-success" onclick="addRoleRow()" style="margin-bottom: 30px;">+ Добавить кнопку</button>
             
-            <div style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
-                <button class="btn" onclick="saveSettings()">💾 Сохранить и отправить</button>
+            <div style="border-top: 1px solid var(--border-color); padding-top: 25px;">
+                <button class="btn" onclick="saveSettings()" id="btn-save">💾 Сохранить и отправить</button>
             </div>
         </div>
     </div>
 
     <script>
-        const guildId = window.location.pathname.split('/')[2]; // Получаем ID из URL /manage/ID/reactionroles
+        const guildId = window.location.pathname.split('/')[2]; 
         let serverRoles = [];
 
-        // 1. Загружаем данные
         fetch(`/api/guild/${guildId}`)
             .then(res => res.json())
             .then(data => {
                 document.getElementById('server-name').innerText = data.name;
                 document.getElementById('link-back').href = `/manage/${guildId}`;
                 serverRoles = data.roles;
-                addRoleRow(); // Добавляем одну пустую строку для удобства
+                addRoleRow(); 
             });
 
-        // 2. Добавление строки
         function addRoleRow() {
             const container = document.getElementById('roles-container');
             const row = document.createElement('div');
@@ -87,31 +85,59 @@
             row.innerHTML = `
                 <select class="role-select">${options}</select>
                 <input type="text" class="role-label" placeholder="Текст на кнопке">
-                <input type="text" class="role-emoji" placeholder="Эмодзи (не обяз.)" style="max-width: 100px;">
+                <input type="text" class="role-emoji" placeholder="Эмодзи (не обяз.)" style="max-width: 120px;">
                 <button class="btn btn-small btn-danger" onclick="this.parentElement.remove()">X</button>
             `;
             container.appendChild(row);
         }
 
-        // 3. Сохранение (пока просто показывает данные)
         function saveSettings() {
-            const title = document.getElementById('embed-title').value;
-            const desc = document.getElementById('embed-desc').value;
-            const color = document.getElementById('embed-color').value;
-            const channelId = document.getElementById('channel-id').value;
-            const mode = document.getElementById('role-mode').value;
+            const btn = document.getElementById('btn-save');
+            btn.innerText = 'Отправка...';
+            btn.disabled = true;
 
-            const roles = [];
+            const payload = {
+                title: document.getElementById('embed-title').value || 'Выберите роли',
+                desc: document.getElementById('embed-desc').value || 'Нажмите на кнопки ниже, чтобы получить роль.',
+                color: document.getElementById('embed-color').value,
+                channelId: document.getElementById('channel-id').value,
+                mode: document.getElementById('role-mode').value,
+                roles: []
+            };
+
             document.querySelectorAll('.role-row').forEach(row => {
-                roles.push({
+                payload.roles.push({
                     roleId: row.querySelector('.role-select').value,
-                    label: row.querySelector('.role-label').value || 'Роль',
+                    label: row.querySelector('.role-label').value || 'Получить роль',
                     emoji: row.querySelector('.role-emoji').value || null
                 });
             });
 
-            console.log("Отправляем данные:", { title, desc, color, channelId, mode, roles });
-            alert('Данные собраны! (Код отправки напишем на следующем шаге)');
+            if (!payload.channelId) {
+                alert('Укажите ID канала!');
+                btn.innerText = '💾 Сохранить и отправить';
+                btn.disabled = false;
+                return;
+            }
+
+            fetch(`/api/guild/${guildId}/reactionroles`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Успешно! Сообщение отправлено в Discord, а настройки сохранены в базу данных.');
+                } else {
+                    alert('❌ Ошибка: ' + data.error);
+                }
+            })
+            .catch(err => alert('❌ Ошибка сети!'))
+            .finally(() => {
+                btn.innerText = '💾 Сохранить и отправить';
+                btn.disabled = false;
+            });
         }
     </script>
 </body>
