@@ -1,3 +1,14 @@
+const http = require('http'); // Встроенный модуль для создания веб-сервера
+
+// Создаем мини-сайт, чтобы Render не выключал бота
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Bot is alive and running 24/7!');
+});
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Веб-сервер запущен на порту ${PORT} (чтобы Render не спал)`);
+});
 const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
