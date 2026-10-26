@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Модерация</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="sidebar">
+        <h2 id="server-name">Загрузка...</h2>
+        <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
+        <hr style="border-color: var(--border-color);">
+        <a href="#" id="link-back">🏠 На главную</a>
+        <a href="#" class="active">🛡️ Модерация</a>
+    </div>
+    <div class="content">
+        <div class="header"><h1>🛡️ Настройки модерации</h1></div>
+        <div class="form-card">
+            <p style="color: var(--text-muted); margin-bottom: 20px;">Выберите роли, которым разрешено использовать команды `/мут`, `/анмут`, `/сказать` и `/очистить`.</p>
+            <div id="roles-list" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px;"></div>
+            <button class="btn" onclick="saveModeration()">💾 Сохранить настройки</button>
+        </div>
+    </div>
+    <script>
+        const guildId = window.location.pathname.split('/')[2];
+        document.getElementById('link-back').href = `/manage/${guildId}`;
+        let allRoles = [];
+
+        Promise.all([
+            fetch(`/api/guild/${guildId}`).then(res => res.json()),
+            fetch(`/api/guild/${guildId}/moderation`).then(res => res.json())
+        ]).then(([guildData, modData]) => {
+            document.getElementById('server-name').innerText = guildData.name;
+            allRoles = guildData.roles;
+            
+            const list = document.getElementById('roles-list');
+            allRoles.forEach(role => {
+                const isChecked = modData.modRoles.includes(role.id) ? 'checked' : '';
+                list.innerHTML += `
+                    <label style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #14151c; border-radius: 5px; margin-bottom: 5px; cursor: pointer;">
+                        <input type="checkbox" value="${role.id}" ${isChecked} style="width: 20px; height: 20px;">
+                        <span>${role.name}</span>
+                    </label>
+                `;
+            });
+        });
+
+        function saveModeration() {
+            const checked = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+            fetch(`/api/guild/${guildId}/moderation`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ modRoles: checked })
+            }).then(() => alert('✅ Настройки модерации сохранены!'));
+        }
+    </script>
+</body>
+</html>
