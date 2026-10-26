@@ -93,24 +93,24 @@ module.exports = {
             if (i.customId === 'finish_setup') {
                 if (state.columns.length === 0) return;
 
-                await i.update({ content: '⏳ Загружаю участников сервера (это может занять пару секунд)...', components: [] });
+                await i.update({ content: '⏳ Собираю список (это займет пару секунд)...', components: [] });
 
                 try {
-                    // ПРИНУДИТЕЛЬНО ЗАГРУЖАЕМ ВСЕХ УЧАСТНИКОВ СЕРВЕРА В КЭШ
-                    await interaction.guild.members.fetch();
-                    
                     const memberRolesMap = new Map();
                     const columnData = [];
 
-                    // Теперь мы можем безопасно использовать кэш всех участников
-                    const allMembers = interaction.guild.members.cache;
-
+                    // ЖЕЛЕЗОБЕТОННЫЙ СПОСОБ: Запрашиваем участников через API для каждой роли отдельно
                     for (const col of state.columns) {
-                        // Фильтруем участников по наличию роли
-                        const roleMembers = allMembers.filter(m => !m.user.bot && m.roles.cache.has(col.roleId));
-                        columnData.push({ ...col, members: roleMembers });
+                        const role = interaction.guild.roles.cache.get(col.roleId);
+                        if (!role) continue;
 
-                        roleMembers.forEach(m => {
+                        // Заставляем Discord прислать список людей для этой роли
+                        const roleMembers = await interaction.guild.members.fetch({ role: col.roleId });
+                        const filteredMembers = roleMembers.filter(m => !m.user.bot);
+                        
+                        columnData.push({ ...col, members: filteredMembers });
+
+                        filteredMembers.forEach(m => {
                             if (!memberRolesMap.has(m.id)) memberRolesMap.set(m.id, new Set());
                             memberRolesMap.get(m.id).add(col.name);
                         });
@@ -125,7 +125,6 @@ module.exports = {
                         .setTimestamp();
 
                     columnData.forEach(col => {
-                        // Преобразуем коллекцию в массив для сортировки
                         const sortedMembers = Array.from(col.members.values()).sort((a, b) => a.displayName.localeCompare(b.displayName));
                         
                         let membersStr = '*Никого нет*';
@@ -145,7 +144,7 @@ module.exports = {
                     
                 } catch (error) {
                     console.error("Ошибка при загрузке участников:", error);
-                    await i.editReply({ content: '❌ Ошибка. Убедитесь, что у бота включен **Server Members Intent** в Discord Developer Portal.', components: [] });
+                    await i.editReply({ content: '❌ Ошибка при сборе данных. Проверьте логи Render.', components: [] });
                 }
                 
                 setupStates.delete(userId);
