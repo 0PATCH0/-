@@ -93,24 +93,35 @@ module.exports = {
             if (i.customId === 'finish_setup') {
                 if (state.columns.length === 0) return;
 
-                await i.update({ content: '⏳ Собираю список (это займет пару секунд)...', components: [] });
+                await i.update({ content: '⏳ Собираю список участников...', components: [] });
 
                 try {
                     const memberRolesMap = new Map();
                     const columnData = [];
 
-                    // ЖЕЛЕЗОБЕТОННЫЙ СПОСОБ: Запрашиваем участников через API для каждой роли отдельно
+                    // Проходимся по каждой выбранной роли
                     for (const col of state.columns) {
                         const role = interaction.guild.roles.cache.get(col.roleId);
                         if (!role) continue;
 
-                        // Заставляем Discord прислать список людей для этой роли
-                        const roleMembers = await interaction.guild.members.fetch({ role: col.roleId });
-                        const filteredMembers = roleMembers.filter(m => !m.user.bot);
-                        
-                        columnData.push({ ...col, members: filteredMembers });
+                        // 1. Берем участников из кэша
+                        let roleMembers = Array.from(role.members.values()).filter(m => !m.user.bot);
 
-                        filteredMembers.forEach(m => {
+                        // 2. Если кэш пуст (бот перезапускался), принудительно запрашиваем ТОЛЬКО эту роль
+                        if (roleMembers.length === 0) {
+                            try {
+                                console.log(`Запрос участников для роли: ${role.name}`);
+                                // Увеличиваем таймаут до 30 секунд для надежности
+                                await interaction.guild.members.fetch({ role: role.id, time: 30000 });
+                                roleMembers = Array.from(role.members.values()).filter(m => !m.user.bot);
+                            } catch (fetchError) {
+                                console.log(`Не удалось загрузить роль ${role.name} (таймаут). Используем кэш.`);
+                            }
+                        }
+                        
+                        columnData.push({ ...col, members: roleMembers });
+
+                        roleMembers.forEach(m => {
                             if (!memberRolesMap.has(m.id)) memberRolesMap.set(m.id, new Set());
                             memberRolesMap.get(m.id).add(col.name);
                         });
@@ -143,8 +154,8 @@ module.exports = {
                     await i.editReply({ content: '✅ Список успешно создан!', components: [] });
                     
                 } catch (error) {
-                    console.error("Ошибка при загрузке участников:", error);
-                    await i.editReply({ content: '❌ Ошибка при сборе данных. Проверьте логи Render.', components: [] });
+                    console.error("Критическая ошибка:", error);
+                    await i.editReply({ content: '❌ Произошла ошибка. Попробуйте еще раз.', components: [] });
                 }
                 
                 setupStates.delete(userId);
