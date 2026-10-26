@@ -58,6 +58,60 @@ app.get('/api/user', (req, res) => {
     });
 });
 
+// Отдаем HTML-файл управления сервером
+app.get('/manage/:id', (req, res) => {
+    if (!req.user) return res.redirect('/');
+    res.sendFile(path.join(__dirname, 'public', 'manage.html'));
+});
+
+// API: Получить название сервера и список ролей
+app.get('/api/guild/:id', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    
+    // Проверяем, есть ли у пользователя доступ к этому серверу
+    const guild = req.user.guilds.find(g => g.id === req.params.id);
+    if (!guild) return res.status(403).json({ error: 'Доступ запрещен' });
+
+    // Получаем роли сервера через бота (он уже запущен)
+    // Примечание: Мы получим клиента бота позже, для этого передадим его в функцию
+    const client = req.app.get('botClient'); 
+    const discordGuild = client.guilds.cache.get(req.params.id);
+    
+    if (!discordGuild) return res.status(404).json({ error: 'Бот не на сервере' });
+
+    // Фильтруем роли (убираем @everyone и роли ботов)
+    const roles = discordGuild.roles.cache
+        .filter(r => r.id !== discordGuild.id && !r.managed)
+        .map(r => ({ id: r.id, name: r.name }));
+
+    res.json({ name: guild.name, roles });
+});
+
+// API: Сохранить настройки и отправить сообщение в Discord
+app.post('/api/guild/:id/reactionroles', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    
+    const { title, desc, color, channelId, mode, roles } = req.body;
+    const guildId = req.params.id;
+    const client = req.app.get('botClient');
+
+    try {
+        // Здесь мы должны сохранить настройки в MongoDB (сделаем это позже)
+        // А пока просто отправим красивое сообщение в указанный канал.
+
+        const channel = await client.channels.fetch(channelId);
+        if (!channel) return res.status(400).json({ error: 'Канал не найден' });
+
+        // Здесь будет код отправки Embed и кнопок в Discord
+        // (Мы напишем его на следующем шаге)
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Ошибка при отправке в Discord' });
+    }
+});
+
 // Выход
 app.get('/logout', (req, res) => {
     req.logout(() => {
