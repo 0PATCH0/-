@@ -20,20 +20,25 @@ const ReminderSchema = new mongoose.Schema({
     warned: { type: Boolean, default: false }
 });
 
-// НОВАЯ СХЕМА ДЛЯ РОЛЕЙ ПО КНОПКАМ
 const ReactionRoleSchema = new mongoose.Schema({
     guildId: String,
     channelId: String,
     messageId: String,
-    mode: String, // 'single' или 'multiple'
-    roles: [{
-        roleId: String,
-        label: String
-    }]
+    mode: String,
+    roles: [{ roleId: String, label: String }]
+});
+
+const CustomCommandSchema = new mongoose.Schema({
+    guildId: String,
+    name: { type: String, required: true },
+    title: String,
+    description: String,
+    color: String
 });
 
 module.exports = {
     Settings: mongoose.model('Settings', SettingsSchema),
     Reminder: mongoose.model('Reminder', ReminderSchema),
-    ReactionRole: mongoose.model('ReactionRole', ReactionRoleSchema) // Экспортируем
+    ReactionRole: mongoose.model('ReactionRole', ReactionRoleSchema),
+    CustomCommand: mongoose.model('CustomCommand', CustomCommandSchema)
 };
