@@ -1,8 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
-
-const dbPath = path.join(__dirname, '../settings.json');
+const { Settings } = require('../models');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -11,22 +8,18 @@ module.exports = {
         .addUserOption(option => option.setName('пользователь').setDescription('С кого снять мут?').setRequired(true)),
 
     async execute(interaction) {
-        // --- ПРОВЕРКА ПРАВ ---
+        // Проверка прав
         const hasDiscordPerm = interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers);
         let hasCustomPerm = false;
         
-        if (fs.existsSync(dbPath)) {
-            const settings = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-            const guildSettings = settings[interaction.guild.id];
-            if (guildSettings && guildSettings.modRoles) {
-                hasCustomPerm = interaction.member.roles.cache.some(role => guildSettings.modRoles.includes(role.id));
-            }
+        const guildSettings = await Settings.findOne({ guildId: interaction.guild.id });
+        if (guildSettings && guildSettings.modRoles) {
+            hasCustomPerm = interaction.member.roles.cache.some(role => guildSettings.modRoles.includes(role.id));
         }
 
         if (!hasDiscordPerm && !hasCustomPerm) {
             return interaction.reply({ content: 'У вас нет прав для использования этой команды!', ephemeral: true });
         }
-        // ---------------------
 
         const targetUser = interaction.options.getUser('пользователь');
         const targetMember = await interaction.guild.members.fetch(targetUser.id);
