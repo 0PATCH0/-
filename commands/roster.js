@@ -93,16 +93,14 @@ module.exports = {
             if (i.customId === 'finish_setup') {
                 if (state.columns.length === 0) return;
 
-                // СРАЗУ отвечаем, чтобы Discord не выдал ошибку "Приложение не отвечает"
-                await i.update({ content: '⏳ Генерирую список...', components: [] });
+                await i.update({ content: '⏳ Загружаю всех участников с сервера, подождите пару секунд...', components: [] });
 
                 try {
-                    // Берем участников из кэша (это мгновенно)
-                    const members = interaction.guild.members.cache;
+                    // ПРИНУДИТЕЛЬНО ЗАГРУЖАЕМ ВСЕХ УЧАСТНИКОВ
+                    const members = await interaction.guild.members.fetch();
                     
                     const memberRolesMap = new Map();
                     const columnData = state.columns.map(col => {
-                        // Фильтруем кэш по наличию роли
                         const membersWithRole = members.filter(m => !m.user.bot && m.roles.cache.has(col.roleId));
                         return { ...col, members: membersWithRole };
                     });
@@ -142,7 +140,7 @@ module.exports = {
                     
                 } catch (error) {
                     console.error("Ошибка при генерации списка:", error);
-                    await i.editReply({ content: '❌ Произошла ошибка при сборе данных. Попробуйте еще раз.', components: [] });
+                    await i.editReply({ content: '❌ Ошибка! Убедитесь, что у бота включен **Server Members Intent** в настройках Discord Developer Portal.', components: [] });
                 }
                 
                 setupStates.delete(userId);
