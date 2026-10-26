@@ -28,17 +28,22 @@ const ReactionRoleSchema = new mongoose.Schema({
     roles: [{ roleId: String, label: String }]
 });
 
-const CustomCommandSchema = new mongoose.Schema({
+// НОВАЯ СХЕМА: Отправленные сообщения
+const SentMessageSchema = new mongoose.Schema({
     guildId: String,
-    name: { type: String, required: true },
+    channelId: String,
+    messageId: String,
     title: String,
     description: String,
-    color: String
+    color: String,
+    image: String,
+    footer: String,
+    author: String
 });
 
 module.exports = {
     Settings: mongoose.model('Settings', SettingsSchema),
     Reminder: mongoose.model('Reminder', ReminderSchema),
     ReactionRole: mongoose.model('ReactionRole', ReactionRoleSchema),
-    CustomCommand: mongoose.model('CustomCommand', CustomCommandSchema)
+    SentMessage: mongoose.model('SentMessage', SentMessageSchema)
 };
