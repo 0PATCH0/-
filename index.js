@@ -89,7 +89,7 @@ mongoose.connect(process.env.MONGO_URI)
         console.log('✅ Успешное подключение к базе данных!');
         
         // Запускаем сайт
-        startWebServer(); 
+        startWebServer(client); 
         
         // Запускаем бота
         client.login(process.env.TOKEN);
