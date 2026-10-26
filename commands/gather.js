@@ -52,9 +52,9 @@ module.exports = {
         const eventTimestamp = Math.floor(eventDate.getTime() / 1000);
 
         const roles = [
-            { id: 'tank', name: 'Tank', emoji: '🛡️', limit: limitTank },
-            { id: 'dps', name: 'Dps', emoji: '⚔️', limit: limitDps },
-            { id: 'healer', name: 'Healer', emoji: '💚', limit: limitHeal }
+            { id: 'tank', name: 'Tank', emoji: '<:emoji_5:1564349905571684494>', limit: limitTank },
+            { id: 'dps', name: 'Dps', emoji: '<:emoji_6:1564349962198843452>', limit: limitDps },
+            { id: 'healer', name: 'Healer', emoji: '<:emoji_4:1564349852375060541>', limit: limitHeal }
         ];
 
         const statuses = [
