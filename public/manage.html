@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление сервером</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #2f3136; color: #fff; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background-color: #202225; padding: 15px 30px; border-radius: 8px; margin-bottom: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { background-color: #36393f; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #202225; }
+        h2 { margin-top: 0; color: #b9bbbe; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #b9bbbe; }
+        input[type="text"], textarea, select { width: 100%; padding: 10px; background-color: #40444b; border: 1px solid #202225; color: white; border-radius: 5px; box-sizing: border-box; }
+        textarea { resize: vertical; height: 100px; }
+        .btn { background-color: #5865F2; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn:hover { background-color: #4752C4; }
+        .role-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .role-row input, .role-row select { flex: 1; }
+        .btn-add { background-color: #57F287; color: #000; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2 id="server-name">Загрузка...</h2>
+        <a href="/dashboard" style="color: #b9bbbe;">← Назад к серверам</a>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>🎭 Роли по кнопкам (Embed + Кнопки)</h2>
+            <p style="color: #b9bbbe; font-size: 14px;">Создайте красивое сообщение, где люди смогут получать роли в один клик.</p>
+            
+            <div class="form-group">
+                <label>Заголовок сообщения</label>
+                <input type="text" id="embed-title" placeholder="Например: Выберите свои роли">
+            </div>
+            
+            <div class="form-group">
+                <label>Описание (текст сообщения)</label>
+                <textarea id="embed-desc" placeholder="Опишите, что делают эти роли..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Цвет полоски (HEX)</label>
+                <input type="text" id="embed-color" value="#5865F2" placeholder="#5865F2">
+            </div>
+
+            <div class="form-group">
+                <label>Канал, куда отправить сообщение (ID)</label>
+                <input type="text" id="channel-id" placeholder="Например: 123456789012345678">
+            </div>
+
+            <div class="form-group">
+                <label>Режим выбора</label>
+                <select id="role-mode">
+                    <option value="multiple">Можно брать несколько ролей</option>
+                    <option value="single">Только одну роль (при выборе новой, старая снимается)</option>
+                </select>
+            </div>
+
+            <hr style="border-color: #202225; margin: 20px 0;">
+            <h3>Кнопки ролей</h3>
+            <div id="roles-container">
+                <!-- Сюда будут добавляться поля -->
+            </div>
+            <button class="btn btn-add" onclick="addRoleRow()">+ Добавить роль</button>
+            <br><br>
+            <button class="btn" onclick="saveSettings()">💾 Сохранить и отправить</button>
+        </div>
+    </div>
+
+    <script>
+        const guildId = window.location.pathname.split('/').pop();
+        let serverRoles = []; // Сюда загрузим роли сервера
+
+        // 1. Загружаем данные сервера (название и роли)
+        fetch(`/api/guild/${guildId}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('server-name').innerText = data.name;
+                serverRoles = data.roles; // Сохраняем для выпадающих списков
+            });
+
+        // 2. Функция добавления строки для роли
+        function addRoleRow() {
+            const container = document.getElementById('roles-container');
+            const row = document.createElement('div');
+            row.className = 'role-row';
+            
+            // Выпадающий список ролей
+            let options = serverRoles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+            
+            row.innerHTML = `
+                <select class="role-select">${options}</select>
+                <input type="text" class="role-label" placeholder="Текст на кнопке (например: Ивенты)">
+                <select class="role-emoji">
+                    <option value="🎮">🎮 Игра</option>
+                    <option value="🎉">🎉 Ивент</option>
+                    <option value="📢">📢 Уведомления</option>
+                    <option value="🛡️">🛡️ Танк</option>
+                    <option value="⚔️">⚔️ ДД</option>
+                    <option value="💚">💚 Хил</option>
+                </select>
+                <button class="btn" style="background:#ED4245" onclick="this.parentElement.remove()">X</button>
+            `;
+            container.appendChild(row);
+        }
+
+        // 3. Сохранение
+        function saveSettings() {
+            const title = document.getElementById('embed-title').value;
+            const desc = document.getElementById('embed-desc').value;
+            const color = document.getElementById('embed-color').value;
+            const channelId = document.getElementById('channel-id').value;
+            const mode = document.getElementById('role-mode').value;
+
+            const roles = [];
+            document.querySelectorAll('.role-row').forEach(row => {
+                roles.push({
+                    roleId: row.querySelector('.role-select').value,
+                    label: row.querySelector('.role-label').value,
+                    emoji: row.querySelector('.role-emoji').value
+                });
+            });
+
+            const payload = { title, desc, color, channelId, mode, roles };
+
+            fetch(`/api/guild/${guildId}/reactionroles`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) alert('✅ Настройки сохранены и сообщение отправлено!');
+                else alert('❌ Ошибка: ' + data.error);
+            });
+        }
+    </script>
+</body>
+</html>
