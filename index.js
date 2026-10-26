@@ -1,19 +1,21 @@
-const http = require('http'); // Встроенный модуль для создания веб-сервера
+const http = require('http');
+const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
+const fs = require('fs');
+const path = require('path');
+require('dotenv').config();
 
-// Создаем мини-сайт, чтобы Render не выключал бота
+// --- ВЕБ-СЕРВЕР ДЛЯ RENDER (чтобы бот не засыпал) ---
 const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Bot is alive and running 24/7!');
 });
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Веб-сервер запущен на порту ${PORT} (чтобы Render не спал)`);
+    console.log(`Веб-сервер запущен на порту ${PORT}. Render будет счастлив.`);
 });
-const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
-require('dotenv').config();
+// --------------------------------------------------
 
+// Создаем клиента бота
 const client = new Client({ 
     intents: [
         GatewayIntentBits.Guilds,
@@ -23,9 +25,9 @@ const client = new Client({
 });
 
 client.commands = new Collection();
-const commandsArray = []; // Массив для регистрации
+const commandsArray = []; // Массив для регистрации слэш-команд
 
-// Загружаем команды
+// Загружаем команды из папки commands
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
@@ -41,12 +43,12 @@ for (const file of commandFiles) {
     }
 }
 
-// Функция для регистрации команд (сработает при запуске)
+// Функция для регистрации слэш-команд
 async function registerCommands() {
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     try {
         console.log(`Начинаю обновление ${commandsArray.length} слэш-команд.`);
-        const clientId = process.env.CLIENT_ID; // Мы добавим это в Render
+        const clientId = process.env.CLIENT_ID; 
         await rest.put(
             Routes.applicationCommands(clientId),
             { body: commandsArray },
@@ -57,7 +59,7 @@ async function registerCommands() {
     }
 }
 
-// Обработка взаимодействий
+// Обработка слэш-команд
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
 
@@ -76,10 +78,10 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-// Когда бот запускается, сначала регистрируем команды, потом выводим статус
+// Когда бот запускается, регистрируем команды
 client.once('ready', async () => {
     console.log(`Бот ${client.user.tag} успешно запущен и готов к работе!`);
-    await registerCommands(); // Вызываем регистрацию прямо тут
+    await registerCommands(); 
 });
 
 client.login(process.env.TOKEN);
