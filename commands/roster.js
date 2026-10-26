@@ -93,20 +93,21 @@ module.exports = {
             if (i.customId === 'finish_setup') {
                 if (state.columns.length === 0) return;
 
-                await i.update({ content: '⏳ Генерирую список...', components: [] });
+                await i.update({ content: '⏳ Загружаю участников сервера (это может занять пару секунд)...', components: [] });
 
                 try {
-                    // НОВЫЙ СПОСОБ: Запрашиваем участников прямо через роли
+                    // ПРИНУДИТЕЛЬНО ЗАГРУЖАЕМ ВСЕХ УЧАСТНИКОВ СЕРВЕРА В КЭШ
+                    await interaction.guild.members.fetch();
+                    
                     const memberRolesMap = new Map();
                     const columnData = [];
 
-                    for (const col of state.columns) {
-                        const role = interaction.guild.roles.cache.get(col.roleId);
-                        if (!role) continue;
+                    // Теперь мы можем безопасно использовать кэш всех участников
+                    const allMembers = interaction.guild.members.cache;
 
-                        // Получаем участников роли (это работает без скачивания всего сервера)
-                        const roleMembers = Array.from(role.members.values()).filter(m => !m.user.bot);
-                        
+                    for (const col of state.columns) {
+                        // Фильтруем участников по наличию роли
+                        const roleMembers = allMembers.filter(m => !m.user.bot && m.roles.cache.has(col.roleId));
                         columnData.push({ ...col, members: roleMembers });
 
                         roleMembers.forEach(m => {
@@ -124,7 +125,8 @@ module.exports = {
                         .setTimestamp();
 
                     columnData.forEach(col => {
-                        const sortedMembers = col.members.sort((a, b) => a.displayName.localeCompare(b.displayName));
+                        // Преобразуем коллекцию в массив для сортировки
+                        const sortedMembers = Array.from(col.members.values()).sort((a, b) => a.displayName.localeCompare(b.displayName));
                         
                         let membersStr = '*Никого нет*';
                         if (sortedMembers.length > 0) {
@@ -142,8 +144,8 @@ module.exports = {
                     await i.editReply({ content: '✅ Список успешно создан!', components: [] });
                     
                 } catch (error) {
-                    console.error("Ошибка:", error);
-                    await i.editReply({ content: '❌ Ошибка. Убедитесь, что у бота есть права на просмотр каналов.', components: [] });
+                    console.error("Ошибка при загрузке участников:", error);
+                    await i.editReply({ content: '❌ Ошибка. Убедитесь, что у бота включен **Server Members Intent** в Discord Developer Portal.', components: [] });
                 }
                 
                 setupStates.delete(userId);
