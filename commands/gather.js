@@ -3,88 +3,109 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBui
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('сбор')
-        .setDescription('Создать продвинутый сбор на ивент (с ролями)')
+        .setDescription('Создать продвинутый сбор на ивент')
         .addStringOption(option => option.setName('название').setDescription('Название ивента').setRequired(true))
-        .addStringOption(option => option.setName('дата').setDescription('Дата (например, 27 октября)').setRequired(true))
-        .addStringOption(option => option.setName('время').setDescription('Время (например, 18:40 - 19:10)').setRequired(true))
-        .addIntegerOption(option => option.setName('лимит_танков').setDescription('Сколько Танков нужно? (0 - без лимита)').setRequired(false))
-        .addIntegerOption(option => option.setName('лимит_дд').setDescription('Сколько ДД нужно? (0 - без лимита)').setRequired(false))
-        .addIntegerOption(option => option.setName('лимит_хилов').setDescription('Сколько Хилов нужно? (0 - без лимита)').setRequired(false))
+        
+        // ЧАСОВОЙ ПОЯС И ВРЕМЯ
+        .addIntegerOption(option => option.setName('часовой_пояс').setDescription('Твой часовой пояс (например: 3 для Москвы, 2 для Киева)').setRequired(true).setMinValue(-12).setMaxValue(14))
+        .addStringOption(option => option.setName('время').setDescription('Время по твоему поясу (например, 18:40)').setRequired(true))
+        
+        // ЛИМИТЫ РОЛЕЙ
+        .addIntegerOption(option => option.setName('лимит_всего').setDescription('Общий лимит участников на сбор (0 - без лимита)').setRequired(false))
+        .addIntegerOption(option => option.setName('лимит_танков').setDescription('Сколько Танков?').setRequired(false))
+        .addIntegerOption(option => option.setName('лимит_дд').setDescription('Сколько ДД?').setRequired(false))
+        .addIntegerOption(option => option.setName('лимит_хилов').setDescription('Сколько Хилов?').setRequired(false))
+        
+        // УПОМИНАНИЯ
+        .addIntegerOption(option => option.setName('пинг_за_минут').setDescription('За сколько минут до старта пинговать всех? (если 0 - без пинга)').setRequired(false))
+        .addMentionableOption(option => option.setName('кого_пинговать').setDescription('Кого тегнуть перед началом? (роль или себя)').setRequired(false))
+        
         .addStringOption(option => option.setName('картинка').setDescription('Ссылка на картинку').setRequired(false)),
 
     async execute(interaction) {
         const title = interaction.options.getString('название');
-        const date = interaction.options.getString('дата');
-        const time = interaction.options.getString('время');
+        const timezone = interaction.options.getInteger('часовой_пояс');
+        const timeString = interaction.options.getString('время'); // "18:40"
+        
+        const totalLimit = interaction.options.getInteger('лимит_всего') || 0;
         const limitTank = interaction.options.getInteger('лимит_танков') || 0;
         const limitDps = interaction.options.getInteger('лимит_дд') || 0;
         const limitHeal = interaction.options.getInteger('лимит_хилов') || 0;
+        
+        const pingMinutes = interaction.options.getInteger('пинг_за_минут') || 0;
+        const pingTarget = interaction.options.getMentionable('кого_пинговать') || interaction.user;
         const image = interaction.options.getString('картинка');
         const creatorId = interaction.user.id;
 
-        // Настройки ролей
+        // Вычисляем время начала сбора в Unix Timestamp (для красивого вывода)
+        const timeParts = timeString.split(':');
+        const hours = parseInt(timeParts[0]);
+        const minutes = parseInt(timeParts[1]) || 0;
+
+        const now = new Date();
+        const eventDate = new Date();
+        // Устанавливаем время по часовому поясу пользователя (переводим в UTC для сервера)
+        eventDate.setUTCHours(hours - timezone, minutes, 0, 0);
+        
+        // Если время уже прошло сегодня, переносим на завтра (чтобы не было ошибок с минусовым таймером)
+        if (eventDate.getTime() <= now.getTime()) {
+            eventDate.setUTCDate(eventDate.getUTCDate() + 1);
+        }
+        const eventTimestamp = Math.floor(eventDate.getTime() / 1000);
+
         const roles = [
             { id: 'tank', name: 'Tank', emoji: '🛡️', limit: limitTank },
             { id: 'dps', name: 'Dps', emoji: '⚔️', limit: limitDps },
             { id: 'healer', name: 'Healer', emoji: '💚', limit: limitHeal }
         ];
 
-        // Статусы (доп. кнопки)
         const statuses = [
             { id: 'bench', name: 'Скамейка', emoji: '🪑' },
             { id: 'late', name: 'Поздно', emoji: '⏰' },
-            { id: 'prelim', name: 'Предварительный', emoji: '⚖️' },
             { id: 'absent', name: 'Отсутствие', emoji: '⛔' }
         ];
 
-        // Состояние сбора
-        const state = {
-            locked: false,
-            roles: {}, // Танки, ДД, Хилы
-            statuses: {} // Доп. статусы
-        };
-        
+        const state = { locked: false, roles: {}, statuses: {} };
         roles.forEach(r => state.roles[r.id] = []);
         statuses.forEach(s => state.statuses[s.id] = []);
 
-        // Функция генерации Embed
         function generateEmbed(isEnded = false) {
             const embed = new EmbedBuilder()
                 .setTitle(`Десятки / ${title}`)
-                .setColor(isEnded ? '#2f3136' : '#9b59b6') // Фиолетовый, как на скрине
-                .setFooter({ text: isEnded ? 'Сбор завершен' : (state.locked ? 'Переходы закрыты' : 'Переходы открыты'), iconURL: interaction.user.displayAvatarURL() });
+                .setColor(isEnded ? '#2f3136' : '#9b59b6')
+                .setFooter({ text: isEnded ? 'Сбор завершен' : (state.locked ? 'Переходы закрыты' : 'Сбор открыт'), iconURL: interaction.user.displayAvatarURL() });
 
             if (image) embed.setImage(image);
 
-            // Формируем текстовый блок для Embed (используем эмодзи и переносы строк)
-            let desc = `🏳️ **${interaction.user.username}**\n`;
-            desc += `📅 ${date}\n\n`;
-            
-            // Вычисляем общее количество людей (для счетчика 4/10)
             let totalPlayers = 0;
             let maxPlayers = 0;
             roles.forEach(r => {
                 totalPlayers += state.roles[r.id].length;
                 if (r.limit > 0) maxPlayers += r.limit;
             });
-            
-            desc += `🚗 **${totalPlayers} / ${maxPlayers > 0 ? maxPlayers : '∞'}**\n`;
-            desc += `🕒 ${time}\n\n`;
-            desc += `⏳ **за день**\n\n`;
 
-            // Выводим роли
+            let desc = `🏳️ **Создатель:** <@${creatorId}>\n`;
+            // Красивое отображение времени (каждый увидит в своем поясе)
+            desc += `🕒 **Начало:** <t:${eventTimestamp}:t> (<t:${eventTimestamp}:R>)\n\n`;
+            
+            desc += `🚗 **Участников:** ${totalPlayers} ${totalLimit > 0 ? `/ ${totalLimit}` : ''}\n`;
+            if (pingMinutes > 0 && !isEnded) {
+                const pingUnix = eventTimestamp - (pingMinutes * 60);
+                desc += `🔔 **Оповещение:** <t:${pingUnix}:t> (за ${pingMinutes} мин)\n`;
+            }
+            desc += `\n`;
+
             roles.forEach(r => {
                 const members = state.roles[r.id];
                 const membersStr = members.length > 0 ? members.map((id, i) => `\`${i + 1}\` <@${id}>`).join('\n') : '*Пусто*';
-                desc += `**${r.emoji} ${r.name} (${members.length}/${r.limit > 0 ? r.limit : '∞'})**\n${membersStr}\n\n`;
+                const roleLimitStr = r.limit > 0 ? `/${r.limit}` : '';
+                desc += `**${r.emoji} ${r.name} (${members.length}${roleLimitStr})**\n${membersStr}\n\n`;
             });
 
-            // Выводим статусы
             desc += `──────────────\n`;
             statuses.forEach(s => {
-                const members = state.statuses[s.id];
-                if (members.length > 0) {
-                    desc += `${s.emoji} **${s.name}**: ${members.map(id => `<@${id}>`).join(', ')}\n`;
+                if (state.statuses[s.id].length > 0) {
+                    desc += `${s.emoji} **${s.name}**: ${state.statuses[s.id].map(id => `<@${id}>`).join(', ')}\n`;
                 }
             });
 
@@ -92,99 +113,104 @@ module.exports = {
             return embed;
         }
 
-        // Генерация меню выбора роли
         function generateRoleMenu(isEnded = false) {
             if (isEnded) return [];
-
-            const roleMenu = new StringSelectMenuBuilder()
+            const menu = new StringSelectMenuBuilder()
                 .setCustomId('select_role')
                 .setPlaceholder(state.locked ? 'Переходы закрыты' : 'Выберите вашу роль')
                 .setDisabled(state.locked);
 
             roles.forEach(r => {
-                const isFull = r.limit > 0 && state.roles[r.id].length >= r.limit;
-                roleMenu.addOptions({
+                menu.addOptions({
                     label: r.name,
-                    description: isFull ? 'Мест нет' : `Занято: ${state.roles[r.id].length}/${r.limit > 0 ? r.limit : '∞'}`,
+                    description: `Занято: ${state.roles[r.id].length}/${r.limit > 0 ? r.limit : '∞'}`,
                     value: `role_${r.id}`,
-                    emoji: r.emoji,
-                    // Если места нет, мы не блокируем кнопку, чтобы можно было перезаписаться, 
-                    // но в обработчике проверим лимит
+                    emoji: r.emoji
                 });
             });
-
-            return [new ActionRowBuilder().addComponents(roleMenu)];
+            return [new ActionRowBuilder().addComponents(menu)];
         }
 
-        // Генерация кнопок статусов (в 2 ряда из-за лимита)
         function generateStatusButtons(isEnded = false) {
             if (isEnded) return [];
-
-            const row1 = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId('status_bench').setLabel('Скамейка').setEmoji('🪑').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId('status_late').setLabel('Поздно').setEmoji('⏰').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId('status_prelim').setLabel('Предварительный').setEmoji('⚖️').setStyle(ButtonStyle.Secondary)
-            );
-            const row2 = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId('status_absent').setLabel('Отсутствие').setEmoji('⛔').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId('gather_settings').setEmoji('⚙️').setStyle(ButtonStyle.Primary) // Шестеренка
-            );
-            return [row1, row2];
+            return [
+                new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('status_bench').setLabel('Скамейка').setEmoji('🪑').setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId('status_late').setLabel('Поздно').setEmoji('⏰').setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId('status_absent').setLabel('Отсутствие').setEmoji('⛔').setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId('gather_settings').setEmoji('⚙️').setStyle(ButtonStyle.Primary)
+                )
+            ];
         }
 
-        // Отправка сообщения
         const response = await interaction.reply({ 
             embeds: [generateEmbed()], 
             components: [...generateRoleMenu(), ...generateStatusButtons()],
             fetchReply: true 
         });
 
+        // --- НАСТРОЙКА ТАЙМЕРА ПИНГА ---
+        let pingTimeout = null;
+        if (pingMinutes > 0) {
+            const timeToPing = eventDate.getTime() - (pingMinutes * 60 * 1000) - Date.now();
+            if (timeToPing > 0) {
+                pingTimeout = setTimeout(async () => {
+                    let pingStr = pingTarget.user ? `<@${pingTarget.id}>` : `<@&${pingTarget.id}>`;
+                    await interaction.channel.send({ 
+                        content: `${pingStr}, **до начала сбора \`${title}\` осталось ${pingMinutes} минут!** Не забудьте зайти в игру.` 
+                    });
+                }, timeToPing);
+            }
+        }
+
         const collector = response.createMessageComponentCollector({ time: 86400000 });
 
         collector.on('collect', async i => {
-            // Обработка меню ролей
+            // --- ВЫБОР РОЛИ ---
             if (i.customId === 'select_role') {
                 if (state.locked) return i.reply({ content: 'Создатель закрыл переходы.', ephemeral: true });
                 
                 const selectedRoleId = i.values[0].split('_')[1];
                 const userId = i.user.id;
                 
-                // Убираем пользователя из всех ролей и статусов (чтобы не дублировался)
+                // Проверка общего лимита
+                let totalPlayers = Object.values(state.roles).flat().length;
+                const isAlreadyIn = Object.values(state.roles).flat().includes(userId);
+                
+                if (totalLimit > 0 && totalPlayers >= totalLimit && !isAlreadyIn) {
+                    return i.reply({ content: 'Сбор полностью заполнен!', ephemeral: true });
+                }
+
+                // Очищаем старые записи пользователя
                 roles.forEach(r => state.roles[r.id] = state.roles[r.id].filter(id => id !== userId));
                 statuses.forEach(s => state.statuses[s.id] = state.statuses[s.id].filter(id => id !== userId));
 
-                // Проверка лимита
+                // Проверка лимита роли
                 const roleObj = roles.find(r => r.id === selectedRoleId);
                 if (roleObj.limit > 0 && state.roles[selectedRoleId].length >= roleObj.limit) {
                     return i.reply({ content: `Роль **${roleObj.name}** уже заполнена!`, ephemeral: true });
                 }
 
-                // Добавляем в роль
                 state.roles[selectedRoleId].push(userId);
-                
                 await i.update({ embeds: [generateEmbed()], components: [...generateRoleMenu(), ...generateStatusButtons()] });
             }
 
-            // Обработка статусов
+            // --- СТАТУСЫ ---
             if (i.customId.startsWith('status_')) {
                 const statusId = i.customId.split('_')[1];
                 const userId = i.user.id;
 
-                // Проверяем, есть ли он там
                 if (state.statuses[statusId].includes(userId)) {
-                    state.statuses[statusId] = state.statuses[statusId].filter(id => id !== userId); // Убираем
+                    state.statuses[statusId] = state.statuses[statusId].filter(id => id !== userId);
                 } else {
-                    // Убираем из ролей и других статусов
                     roles.forEach(r => state.roles[r.id] = state.roles[r.id].filter(id => id !== userId));
                     statuses.forEach(s => state.statuses[s.id] = state.statuses[s.id].filter(id => id !== userId));
-                    
-                    state.statuses[statusId].push(userId); // Добавляем
+                    state.statuses[statusId].push(userId);
                 }
-                
                 await i.update({ embeds: [generateEmbed()], components: [...generateRoleMenu(), ...generateStatusButtons()] });
             }
 
-            // Обработка шестеренки (настройки создателя)
+            // --- НАСТРОЙКИ ---
             if (i.customId === 'gather_settings') {
                 if (i.user.id !== creatorId) return i.reply({ content: 'Только создатель может открыть настройки!', ephemeral: true });
 
@@ -192,20 +218,18 @@ module.exports = {
                     new ButtonBuilder().setCustomId('toggle_lock').setLabel(state.locked ? 'Открыть переходы' : 'Закрыть переходы').setEmoji('🔒').setStyle(ButtonStyle.Danger),
                     new ButtonBuilder().setCustomId('end_gather').setLabel('Завершить сбор').setEmoji('🏁').setStyle(ButtonStyle.Success)
                 );
-
                 await i.reply({ content: '⚙️ **Панель управления**', components: [btnRow], ephemeral: true });
             }
 
-            // Кнопки из панели управления
             if (i.customId === 'toggle_lock' || i.customId === 'end_gather') {
                 if (i.user.id !== creatorId) return;
-                
                 if (i.customId === 'toggle_lock') {
                     state.locked = !state.locked;
                     await i.update({ content: state.locked ? '🔒 Переходы закрыты!' : '🔓 Переходы открыты!', components: [] });
                 }
                 if (i.customId === 'end_gather') {
                     collector.stop('ended');
+                    if (pingTimeout) clearTimeout(pingTimeout); // Отменяем пинг, если сбор отменен
                     await i.update({ content: '🏁 Сбор завершен!', components: [] });
                 }
                 await response.edit({ embeds: [generateEmbed()], components: [...generateRoleMenu(), ...generateStatusButtons()] });
@@ -213,7 +237,10 @@ module.exports = {
         });
 
         collector.on('end', (collected, reason) => {
-            if (reason !== 'ended') response.edit({ embeds: [generateEmbed(true)], components: [] });
+            if (reason !== 'ended') {
+                if (pingTimeout) clearTimeout(pingTimeout);
+                response.edit({ embeds: [generateEmbed(true)], components: [] });
+            }
         });
     },
 };
