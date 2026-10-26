@@ -1,11 +1,11 @@
-const { Client, GatewayIntentBits, Collection, REST, Routes, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
 const { startWebServer } = require('./web'); 
-const { Reminder, ReactionRole, CustomCommand, Settings } = require('./models');
+const { Reminder, ReactionRole } = require('./models');
 
 const client = new Client({ 
     intents: [
@@ -41,26 +41,14 @@ async function registerCommands() {
 }
 
 client.on('interactionCreate', async interaction => {
+    // 1. Стандартные слэш-команды
     if (interaction.isChatInputCommand()) {
-        // 1. Стандартные команды
         const command = interaction.client.commands.get(interaction.commandName);
-        if (command) {
-            try { await command.execute(interaction); } catch (error) { console.error(error); }
-            return;
-        }
-
-        // 2. Кастомные команды из БД
-        const customCmd = await CustomCommand.findOne({ guildId: interaction.guild.id, name: interaction.commandName });
-        if (customCmd) {
-            const embed = new EmbedBuilder()
-                .setTitle(customCmd.title || customCmd.name)
-                .setDescription(customCmd.description || 'Нет описания')
-                .setColor(customCmd.color || '#5865F2');
-            await interaction.reply({ embeds: [embed] });
-        }
+        if (!command) return;
+        try { await command.execute(interaction); } catch (error) { console.error(error); }
     }
 
-    // 3. Кнопки Ролей по кнопкам
+    // 2. Кнопки Ролей по кнопкам
     if (interaction.isButton() && interaction.customId.startsWith('rr_')) {
         const roleId = interaction.customId.split('_')[1];
         const member = interaction.member;
@@ -88,7 +76,7 @@ client.on('interactionCreate', async interaction => {
                 await interaction.reply({ content: `✅ Вы получили роль **${role.name}**`, ephemeral: true });
             }
         } catch (error) {
-            await interaction.reply({ content: 'Не удалось изменить роль. Проверьте иерархию ролей бота.', ephemeral: true });
+            await interaction.reply({ content: 'Не удалось изменить роль. Проверьте иерархию.', ephemeral: true });
         }
     }
 });
