@@ -78,10 +78,35 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-// Когда бот запускается, регистрируем команды
+// Когда бот запускается
 client.once('ready', async () => {
     console.log(`Бот ${client.user.tag} успешно запущен и готов к работе!`);
+    
+    // 1. Регистрируем команды
     await registerCommands(); 
+
+    // 2. Восстанавливаем напоминания после перезапуска
+    const remindCommand = require('./commands/remind.js');
+    const dbPath = path.join(__dirname, 'reminders.json');
+
+    if (fs.existsSync(dbPath)) {
+        try {
+            const reminders = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+            if (reminders.length > 0) {
+                console.log(`[БАЗА ДАННЫХ] Восстанавливаю ${reminders.length} напоминаний...`);
+                reminders.forEach(reminder => {
+                    remindCommand.setReminderTimeout(reminder, client);
+                });
+            } else {
+                console.log(`[БАЗА ДАННЫХ] Активных напоминаний нет.`);
+            }
+        } catch (e) {
+            console.error('[БАЗА ДАННЫХ] Ошибка чтения файла reminders.json:', e);
+        }
+    } else {
+        console.log(`[БАЗА ДАННЫХ] Файл reminders.json пока не создан.`);
+    }
 });
 
+// Логин бота
 client.login(process.env.TOKEN);
