@@ -13,35 +13,36 @@
         <hr style="border-color: var(--border-color);">
         <a href="#" class="active">🏠 Главная</a>
     </div>
-
     <div class="content">
-        <div class="header">
-            <h1>Панель управления</h1>
-        </div>
-
+        <div class="header"><h1>Панель управления</h1></div>
         <div class="grid">
-            <!-- Карточка 1: Роли по кнопкам -->
             <a href="#" id="link-reaction-roles" class="card">
                 <h3>🎭 Роли по кнопкам</h3>
-                <p>Создавайте красивые сообщения с кнопками для выдачи ролей участникам сервера.</p>
+                <p>Выдача ролей по клику на кнопку в Embed-сообщении.</p>
             </a>
-
-            <!-- Карточка 2: Заглушка -->
-            <div class="card" style="opacity: 0.5; cursor: not-allowed; border-color: var(--danger);">
-                <h3>📋 Тикеты (Скоро)</h3>
-                <p>Система поддержки с созданием приватных каналов для общения с админами.</p>
-            </div>
+            <a href="#" id="link-reminders" class="card">
+                <h3>⏰ Напоминания</h3>
+                <p>Управление всеми активными напоминаниями на сервере.</p>
+            </a>
+            <a href="#" id="link-moderation" class="card">
+                <h3>🛡️ Модерация</h3>
+                <p>Выдача прав на использование мутов и других команд.</p>
+            </a>
+            <a href="#" id="link-custom" class="card">
+                <h3>✨ Свои команды</h3>
+                <p>Создание собственных слэш-команд с Embed-сообщениями.</p>
+            </a>
         </div>
     </div>
-
     <script>
         const guildId = window.location.pathname.split('/').pop();
-        fetch(`/api/guild/${guildId}`)
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('server-name').innerText = data.name;
-                document.getElementById('link-reaction-roles').href = `/manage/${guildId}/reactionroles`;
-            });
+        fetch(`/api/guild/${guildId}`).then(res => res.json()).then(data => {
+            document.getElementById('server-name').innerText = data.name;
+            document.getElementById('link-reaction-roles').href = `/manage/${guildId}/reactionroles`;
+            document.getElementById('link-reminders').href = `/manage/${guildId}/reminders`;
+            document.getElementById('link-moderation').href = `/manage/${guildId}/moderation`;
+            document.getElementById('link-custom').href = `/manage/${guildId}/custom`;
+        });
     </script>
 </body>
 </html>
