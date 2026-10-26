@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Свои команды</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="sidebar">
+        <h2 id="server-name">Загрузка...</h2>
+        <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
+        <hr style="border-color: var(--border-color);">
+        <a href="#" id="link-back">🏠 На главную</a>
+        <a href="#" class="active">✨ Свои команды</a>
+    </div>
+    <div class="content">
+        <div class="header"><h1>✨ Создать свою команду</h1></div>
+        <div class="form-card">
+            <div class="form-group">
+                <label>Название команды (латиницей, без пробелов)</label>
+                <input type="text" id="cmd-name" placeholder="например: rules">
+            </div>
+            <div class="form-group">
+                <label>Заголовок Embed</label>
+                <input type="text" id="cmd-title" placeholder="Правила сервера">
+            </div>
+            <div class="form-group">
+                <label>Текст (Описание)</label>
+                <textarea id="cmd-desc" placeholder="1. Будьте вежливы..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Цвет полоски (HEX)</label>
+                <input type="text" id="cmd-color" value="#5865F2">
+            </div>
+            <button class="btn" onclick="saveCustomCommand()">💾 Создать команду</button>
+            <p style="color: var(--text-muted); font-size: 12px; margin-top: 15px;">* После создания команда появится в Discord через 1-2 минуты.</p>
+        </div>
+    </div>
+    <script>
+        const guildId = window.location.pathname.split('/')[2];
+        document.getElementById('link-back').href = `/manage/${guildId}`;
+        
+        fetch(`/api/guild/${guildId}`).then(res => res.json()).then(data => {
+            document.getElementById('server-name').innerText = data.name;
+        });
+
+        function saveCustomCommand() {
+            const name = document.getElementById('cmd-name').value.toLowerCase().replace(/\s+/g, '_');
+            const title = document.getElementById('cmd-title').value;
+            const desc = document.getElementById('cmd-desc').value;
+            const color = document.getElementById('cmd-color').value;
+
+            if (!name || !title || !desc) return alert('Заполните все поля!');
+
+            fetch(`/api/guild/${guildId}/custom`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, title, description: desc, color })
+            }).then(res => res.json()).then(data => {
+                if (data.success) alert('✅ Команда создана! Она появится в Discord через минуту.');
+                else alert('❌ Ошибка: ' + data.error);
+            });
+        }
+    </script>
+</body>
+</html>
