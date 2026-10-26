@@ -1,18 +1,14 @@
-
-const { startWebServer } = require('./web'); // Подключаем наш сайт
-
-// Запускаем сайт
-startWebServer();
+const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 require('dotenv').config();
-const { Reminder } = require('./models'); // Подключаем модель для напоминаний
 
+// Подключаем наш веб-сервер
+const { startWebServer } = require('./web'); 
 
-});
-
-
+// Подключаем модель для напоминаний
+const { Reminder } = require('./models'); 
 
 // --- КЛИЕНТ БОТА ---
 const client = new Client({ 
@@ -40,7 +36,7 @@ for (const file of commandFiles) {
     }
 }
 
-// Регистрация
+// Регистрация слэш-команд
 async function registerCommands() {
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     try {
@@ -86,11 +82,16 @@ client.once('ready', async () => {
     }
 });
 
-// Подключение к БД и запуск бота
+// Подключение к БД и запуск
 console.log('Подключение к MongoDB...');
 mongoose.connect(process.env.MONGO_URI)
     .then(() => {
         console.log('✅ Успешное подключение к базе данных!');
+        
+        // Запускаем сайт
+        startWebServer(); 
+        
+        // Запускаем бота
         client.login(process.env.TOKEN);
     })
     .catch(err => {
