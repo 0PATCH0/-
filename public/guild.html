@@ -10,7 +10,7 @@
     <div class="sidebar">
         <h2 id="server-name">Загрузка...</h2>
         <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
-        <hr style="border-color: var(--border);">
+        <hr style="border-color: var(--border-color);">
         <a href="#" class="active">🏠 Главная</a>
     </div>
 
@@ -26,18 +26,16 @@
                 <p>Создавайте красивые сообщения с кнопками для выдачи ролей участникам сервера.</p>
             </a>
 
-            <!-- Карточка 2: Заглушка (на будущее) -->
-            <div class="card" style="opacity: 0.5; cursor: not-allowed;">
+            <!-- Карточка 2: Заглушка -->
+            <div class="card" style="opacity: 0.5; cursor: not-allowed; border-color: var(--danger);">
                 <h3>📋 Тикеты (Скоро)</h3>
-                <p>Система поддержки с созданием приватных каналов.</p>
+                <p>Система поддержки с созданием приватных каналов для общения с админами.</p>
             </div>
         </div>
     </div>
 
     <script>
         const guildId = window.location.pathname.split('/').pop();
-        
-        // 1. Меняем заголовок и ссылку на сервер
         fetch(`/api/guild/${guildId}`)
             .then(res => res.json())
             .then(data => {
