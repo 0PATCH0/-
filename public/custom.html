@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Свои команды</title>
+    <title>Эмбед-сообщения</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -12,31 +12,62 @@
         <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
         <hr style="border-color: var(--border-color);">
         <a href="#" id="link-back">🏠 На главную</a>
-        <a href="#" class="active">✨ Свои команды</a>
+        <a href="#" class="active">📨 Эмбед-сообщения</a>
     </div>
     <div class="content">
-        <div class="header"><h1>✨ Создать свою команду</h1></div>
-        <div class="form-card">
-            <div class="form-group">
-                <label>Название команды (латиницей, без пробелов)</label>
-                <input type="text" id="cmd-name" placeholder="например: rules">
+        <div class="header"><h1>📨 Управление сообщениями</h1></div>
+        
+        <div class="grid" style="grid-template-columns: 1fr 1fr; align-items: start;">
+            <!-- Форма создания/редактирования -->
+            <div class="form-card">
+                <h3 id="form-title">Создать новое сообщение</h3>
+                <input type="hidden" id="edit-message-id" value="">
+                
+                <div class="form-group">
+                    <label>ID Канала (куда отправить)</label>
+                    <input type="text" id="channel-id" placeholder="123456789012345678">
+                </div>
+                <div class="form-group">
+                    <label>Заголовок</label>
+                    <input type="text" id="cmd-title" placeholder="Заголовок">
+                </div>
+                <div class="form-group">
+                    <label>Текст (Описание)</label>
+                    <textarea id="cmd-desc" placeholder="Текст сообщения..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Цвет (HEX)</label>
+                    <input type="text" id="cmd-color" value="#5865F2">
+                </div>
+                <div class="form-group">
+                    <label>Картинка (URL)</label>
+                    <input type="text" id="cmd-image" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label>Футер (текст внизу)</label>
+                    <input type="text" id="cmd-footer" placeholder="С уважением, Администрация">
+                </div>
+                <div class="form-group">
+                    <label>Автор (имя сверху)</label>
+                    <input type="text" id="cmd-author" placeholder="Имя автора">
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn" onclick="saveMessage()" id="btn-save" style="flex: 1;">📤 Отправить</button>
+                    <button class="btn btn-danger" onclick="cancelEdit()" id="btn-cancel" style="display: none;">Отмена</button>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Заголовок Embed</label>
-                <input type="text" id="cmd-title" placeholder="Правила сервера">
+
+            <!-- Список отправленных -->
+            <div class="form-card">
+                <h3>Отправленные сообщения</h3>
+                <div id="messages-list">
+                    <p>Загрузка...</p>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Текст (Описание)</label>
-                <textarea id="cmd-desc" placeholder="1. Будьте вежливы..."></textarea>
-            </div>
-            <div class="form-group">
-                <label>Цвет полоски (HEX)</label>
-                <input type="text" id="cmd-color" value="#5865F2">
-            </div>
-            <button class="btn" onclick="saveCustomCommand()">💾 Создать команду</button>
-            <p style="color: var(--text-muted); font-size: 12px; margin-top: 15px;">* После создания команда появится в Discord через 1-2 минуты.</p>
         </div>
     </div>
+    
     <script>
         const guildId = window.location.pathname.split('/')[2];
         document.getElementById('link-back').href = `/manage/${guildId}`;
@@ -45,21 +76,103 @@
             document.getElementById('server-name').innerText = data.name;
         });
 
-        function saveCustomCommand() {
-            const name = document.getElementById('cmd-name').value.toLowerCase().replace(/\s+/g, '_');
-            const title = document.getElementById('cmd-title').value;
-            const desc = document.getElementById('cmd-desc').value;
-            const color = document.getElementById('cmd-color').value;
+        // Загрузка списка сообщений
+        function loadMessages() {
+            fetch(`/api/guild/${guildId}/embeds`).then(res => res.json()).then(data => {
+                const list = document.getElementById('messages-list');
+                if (data.length === 0) {
+                    list.innerHTML = '<p>Сообщений пока нет.</p>';
+                    return;
+                }
+                list.innerHTML = '';
+                data.forEach(msg => {
+                    list.innerHTML += `
+                        <div class="card" style="margin-bottom: 15px; padding: 15px; display: flex; flex-direction: column; gap: 10px; border-left: 4px solid ${msg.color || '#5865F2'};">
+                            <div>
+                                <h4 style="margin:0; color: var(--accent);">${msg.title || 'Без заголовка'}</h4>
+                                <p style="margin: 5px 0 0 0; font-size: 12px; color: var(--text-muted);">${msg.description ? msg.description.substring(0, 50) + '...' : ''}</p>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn btn-small" onclick='editMessage(${JSON.stringify(msg)})'>✏️ Ред.</button>
+                                <button class="btn btn-danger btn-small" onclick="deleteMessage('${msg.messageId}')">🗑️ Удалить</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
 
-            if (!name || !title || !desc) return alert('Заполните все поля!');
+        loadMessages();
 
-            fetch(`/api/guild/${guildId}/custom`, {
-                method: 'POST',
+        function saveMessage() {
+            const messageId = document.getElementById('edit-message-id').value;
+            const payload = {
+                channelId: document.getElementById('channel-id').value,
+                title: document.getElementById('cmd-title').value,
+                description: document.getElementById('cmd-desc').value,
+                color: document.getElementById('cmd-color').value,
+                image: document.getElementById('cmd-image').value,
+                footer: document.getElementById('cmd-footer').value,
+                author: document.getElementById('cmd-author').value
+            };
+
+            if (!messageId && !payload.channelId) return alert('Укажите ID канала для отправки!');
+
+            const method = messageId ? 'PUT' : 'POST';
+            const url = messageId ? `/api/guild/${guildId}/embeds/${messageId}` : `/api/guild/${guildId}/embeds`;
+
+            fetch(url, {
+                method: method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, title, description: desc, color })
+                body: JSON.stringify(payload)
             }).then(res => res.json()).then(data => {
-                if (data.success) alert('✅ Команда создана! Она появится в Discord через минуту.');
-                else alert('❌ Ошибка: ' + data.error);
+                if (data.success) {
+                    alert(method === 'PUT' ? '✅ Сообщение обновлено!' : '✅ Сообщение отправлено!');
+                    cancelEdit();
+                    loadMessages();
+                } else {
+                    alert('❌ Ошибка: ' + data.error);
+                }
+            });
+        }
+
+        function editMessage(msg) {
+            document.getElementById('form-title').innerText = 'Редактировать сообщение';
+            document.getElementById('edit-message-id').value = msg.messageId;
+            document.getElementById('channel-id').value = msg.channelId;
+            document.getElementById('channel-id').disabled = true; // Канал менять нельзя
+            
+            document.getElementById('cmd-title').value = msg.title || '';
+            document.getElementById('cmd-desc').value = msg.description || '';
+            document.getElementById('cmd-color').value = msg.color || '#5865F2';
+            document.getElementById('cmd-image').value = msg.image || '';
+            document.getElementById('cmd-footer').value = msg.footer || '';
+            document.getElementById('cmd-author').value = msg.author || '';
+
+            document.getElementById('btn-save').innerText = '💾 Сохранить изменения';
+            document.getElementById('btn-cancel').style.display = 'block';
+        }
+
+        function cancelEdit() {
+            document.getElementById('form-title').innerText = 'Создать новое сообщение';
+            document.getElementById('edit-message-id').value = '';
+            document.getElementById('channel-id').disabled = false;
+            
+            document.getElementById('channel-id').value = '';
+            document.getElementById('cmd-title').value = '';
+            document.getElementById('cmd-desc').value = '';
+            document.getElementById('cmd-image').value = '';
+            document.getElementById('cmd-footer').value = '';
+            document.getElementById('cmd-author').value = '';
+
+            document.getElementById('btn-save').innerText = '📤 Отправить';
+            document.getElementById('btn-cancel').style.display = 'none';
+        }
+
+        function deleteMessage(id) {
+            if (!confirm('Удалить сообщение из Discord и базы?')) return;
+            fetch(`/api/guild/${guildId}/embeds/${id}`, { method: 'DELETE' }).then(() => {
+                loadMessages();
             });
         }
     </script>
