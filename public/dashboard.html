@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель управления</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #2f3136; color: #ffffff; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background-color: #202225; padding: 15px 30px; border-radius: 8px; margin-bottom: 20px; }
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .user-info img { width: 40px; height: 40px; border-radius: 50%; }
+        .btn-logout { background-color: #ED4245; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        
+        .server-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .server-card { background-color: #36393f; padding: 20px; border-radius: 8px; display: flex; align-items: center; gap: 15px; text-decoration: none; color: white; transition: 0.2s; border: 1px solid #202225; }
+        .server-card:hover { background-color: #40444b; transform: translateY(-2px); }
+        .server-icon { width: 50px; height: 50px; border-radius: 50%; background-color: #5865F2; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; }
+        .server-name { font-size: 18px; font-weight: bold; }
+        h2 { color: #b9bbbe; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="user-info" id="user-info">
+            <!-- Сюда JS вставит аватарку и имя -->
+            <span>Загрузка...</span>
+        </div>
+        <a href="/logout" class="btn-logout">Выйти</a>
+    </div>
+
+    <div class="content">
+        <h2>Ваши серверы (где вы админ)</h2>
+        <div class="server-list" id="server-list">
+            <!-- Сюда JS вставит карточки серверов -->
+        </div>
+    </div>
+
+    <script>
+        // Этот скрипт берет данные пользователя и список серверов из API бота
+        fetch('/api/user')
+            .then(res => res.json())
+            .then(data => {
+                // 1. Выводим профиль
+                const userInfo = document.getElementById('user-info');
+                const avatarUrl = `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.png`;
+                userInfo.innerHTML = `
+                    <img src="${avatarUrl}" alt="avatar">
+                    <span><b>${data.user.username}</b></span>
+                `;
+
+                // 2. Выводим серверы
+                const serverList = document.getElementById('server-list');
+                if (data.guilds.length === 0) {
+                    serverList.innerHTML = '<p>У вас нет серверов, где вы администратор.</p>';
+                } else {
+                    data.guilds.forEach(guild => {
+                        const icon = guild.icon ? `<img src="https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png" class="server-icon">` : `<div class="server-icon">${guild.name.charAt(0)}</div>`;
+                        serverList.innerHTML += `
+                            <a href="/manage/${guild.id}" class="server-card">
+                                ${icon}
+                                <div class="server-name">${guild.name}</div>
+                            </a>
+                        `;
+                    });
+                }
+            })
+            .catch(err => console.error('Ошибка загрузки:', err));
+    </script>
+</body>
+</html>
