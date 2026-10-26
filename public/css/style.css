@@ -13,6 +13,10 @@
     --border-color: rgba(255, 255, 255, 0.08);
 }
 
+* {
+    box-sizing: border-box; /* Защита от вылезания за границы */
+}
+
 body {
     font-family: 'gg sans', 'Noto Sans', Arial, sans-serif;
     background: radial-gradient(circle at top left, #1a1c29 0%, var(--bg-base) 100%);
@@ -21,15 +25,21 @@ body {
     padding: 0;
     display: flex;
     min-height: 100vh;
+    overflow-x: hidden; /* Убираем горизонтальный скролл */
 }
 
 /* Сайдбар */
 .sidebar {
     width: 260px;
+    flex-shrink: 0; /* Запрещаем сайдбару сжиматься */
     background-color: var(--bg-sidebar);
     padding: 30px 20px;
     border-right: 1px solid var(--border-color);
     box-shadow: 5px 0 20px rgba(0,0,0,0.3);
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
 }
 
 .sidebar h2 {
@@ -39,6 +49,7 @@ body {
     background: var(--accent-gradient);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    word-wrap: break-word;
 }
 
 .sidebar a {
@@ -63,7 +74,10 @@ body {
 .content {
     flex: 1;
     padding: 40px 60px;
-    overflow-y: auto;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 1200px; /* Ограничиваем максимальную ширину для ПК */
+    margin: 0 auto; /* Центрируем на больших экранах */
 }
 
 .header {
@@ -71,18 +85,21 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 40px;
+    flex-wrap: wrap; /* Чтобы заголовок переносился на мобилках */
+    gap: 15px;
 }
 
 .header h1 { 
     margin: 0; 
     font-size: 28px;
     text-shadow: 0 0 10px rgba(255,255,255,0.1);
+    word-wrap: break-word;
 }
 
 /* Карточки */
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 25px;
 }
 
@@ -124,6 +141,7 @@ body {
     background: var(--bg-card);
     padding: 35px;
     border-radius: 12px;
+    width: 100%;
     max-width: 800px;
     border: 1px solid var(--border-color);
     box-shadow: 0 10px 30px rgba(0,0,0,0.2);
@@ -138,9 +156,9 @@ body {
     border: 1px solid #2a2c3a;
     color: #fff;
     border-radius: 8px;
-    box-sizing: border-box;
     font-family: inherit;
     transition: 0.3s;
+    font-size: 16px; /* Важно для мобилок, чтобы не было зума */
 }
 .form-group input:focus, .form-group textarea:focus { 
     outline: none; 
@@ -163,6 +181,7 @@ textarea { resize: vertical; height: 120px; }
     text-decoration: none;
     display: inline-block;
     box-shadow: 0 4px 15px rgba(88, 101, 242, 0.3);
+    text-align: center;
 }
 .btn:hover { 
     transform: translateY(-2px);
@@ -184,6 +203,63 @@ textarea { resize: vertical; height: 120px; }
     border-radius: 8px;
     border: 1px solid #2a2c3a;
     align-items: center;
+    flex-wrap: wrap; /* Чтобы элементы переносились на мобилках */
 }
-.role-row select, .role-row input { flex: 1; margin: 0; border-color: transparent; background: #1e202b; }
+.role-row select, .role-row input { 
+    flex: 1; 
+    min-width: 150px; /* Минимальная ширина для полей */
+    margin: 0; 
+    border-color: transparent; 
+    background: #1e202b; 
+    padding: 10px;
+    border-radius: 5px;
+    color: #fff;
+}
 .role-row select:focus, .role-row input:focus { border-color: var(--accent); }
+
+/* ========================================= */
+/* АДАПТИВНОСТЬ ДЛЯ МОБИЛЬНЫХ ТЕЛЕФОНОВ      */
+/* ========================================= */
+@media (max-width: 768px) {
+    body {
+        flex-direction: column; /* Сайдбар становится сверху */
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        padding: 15px;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar h2 {
+        margin-bottom: 15px;
+    }
+
+    .content {
+        padding: 20px;
+    }
+
+    .header h1 {
+        font-size: 22px;
+    }
+
+    .form-card {
+        padding: 20px;
+    }
+
+    .role-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .role-row input, .role-row select {
+        width: 100%;
+    }
+    
+    .btn {
+        width: 100%; /* Кнопки на всю ширину на мобилке */
+    }
+}
