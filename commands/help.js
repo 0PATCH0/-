@@ -9,7 +9,7 @@ module.exports = {
         const embed = new EmbedBuilder()
             .setTitle('📚 Руководство по командам бота')
             .setColor('#5865F2')
-            .setDescription('Вот список всего, что я умею. Бот сам добавляет сюда новые команды, как только вы их создаете!');
+            .setDescription('Вот список всего, что я умею.');
 
         // Получаем все команды, которые бот загрузил при запуске
         const commands = interaction.client.commands;
