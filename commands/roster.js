@@ -146,7 +146,7 @@ module.exports = {
 
                 const finalEmbed = new EmbedBuilder()
                     .setTitle('🛡️ Состав гильдии')
-                    .setDescription(`**Всего участников (уникальных):** ${totalUnique}\n\n🌐 — участник имеет несколько ролей из списка (мультикласс)`)
+                    .setDescription(`**Всего участников (уникальных):** ${totalUnique}\n\n🔹 — участник имеет несколько ролей из списка (мультикласс)`)
                     .setColor('#2b2d31')
                     .setTimestamp();
 
@@ -162,7 +162,7 @@ module.exports = {
                         // Ограничиваем до 20 человек, чтобы не сломать лимит Embed
                         membersStr = sortedMembers.slice(0, 20).map(m => {
                             const hasMultiple = memberRolesMap.get(m.id).size > 1;
-                            return `<@${m.id}>${hasMultiple ? ' 🌐' : ''}`;
+                            return `<@${m.id}>${hasMultiple ? ' 🔹' : ''}`;
                         }).join('\n');
                         
                         if (sortedMembers.length > 20) {
