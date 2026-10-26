@@ -58,8 +58,13 @@ app.get('/api/user', (req, res) => {
     });
 });
 
-// Отдаем HTML-файл управления сервером
 app.get('/manage/:id', (req, res) => {
+    if (!req.user) return res.redirect('/');
+    res.sendFile(path.join(__dirname, 'public', 'guild.html'));
+});
+
+// Отдаем HTML-файл управления сервером
+app.get('/manage/:id/reactionroles', (req, res) => {
     if (!req.user) return res.redirect('/');
     res.sendFile(path.join(__dirname, 'public', 'manage.html'));
 });
