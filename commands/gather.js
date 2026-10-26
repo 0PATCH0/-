@@ -70,7 +70,7 @@ module.exports = {
         // ================= ГЕНЕРАЦИЯ EMBED =================
         function generateEmbed(isEnded = false) {
             const embed = new EmbedBuilder()
-                .setTitle(`Десятки / ${title}`)
+                .setTitle(` ${title}`)
                 .setColor(isEnded ? '#2f3136' : '#9b59b6')
                 .setFooter({ text: isEnded ? 'Сбор завершен' : (state.locked ? 'Переходы закрыты' : 'Сбор открыт'), iconURL: interaction.user.displayAvatarURL() });
 
