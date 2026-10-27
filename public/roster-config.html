@@ -8,8 +8,30 @@
     <style>
         .form-card { background: var(--bg-card); padding: 30px; border-radius: 12px; max-width: 800px; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .help-text { font-size: 12px; color: var(--text-muted); margin-top: 5px; }
-        .color-picker { width: 40px; height: 40px; padding: 0; border: none; border-radius: 5px; cursor: pointer; background: transparent; }
-        .role-row { align-items: flex-start; }
+        
+        /* Стили для палитры цветов */
+        .color-picker { 
+            width: 45px; 
+            height: 45px; 
+            padding: 0; 
+            border: 2px solid var(--border-color); 
+            border-radius: 8px; 
+            cursor: pointer; 
+            background: transparent; 
+            transition: 0.3s;
+        }
+        .color-picker:hover {
+            border-color: var(--accent);
+        }
+
+        .role-row { 
+            align-items: flex-start; 
+            background: #14151c;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #2a2c3a;
+        }
     </style>
 </head>
 <body>
@@ -62,13 +84,15 @@
             let options = serverRoles.map(r => `<option value="${r.id}" ${r.id === selectedRoleId ? 'selected' : ''}>${r.name}</option>`).join('');
             
             row.innerHTML = `
-                <select class="col-role" style="flex: 1;">${options}</select>
-                <div style="flex: 1; display: flex; flex-direction: column;">
+                <select class="col-role" style="flex: 1; margin-bottom: 10px;">${options}</select>
+                <div style="flex: 1; display: flex; flex-direction: column; margin-bottom: 10px; width: 100%;">
                     <input type="text" class="col-name" placeholder="Название (например: <:tank:123> Танки)" value="${currentName}">
-                    <span class="help-text">Можно вставить кастомный эмодзи.</span>
+                    <span class="help-text">Вставь сюда код эмодзи (например <:tank:1234>) и текст.</span>
                 </div>
-                <input type="color" class="col-color color-picker" value="${currentColor}" title="Цвет полоски">
-                <button class="btn btn-danger btn-small" onclick="this.parentElement.remove()" style="height: 40px;">X</button>
+                <div style="display: flex; gap: 10px; align-items: center; width: 100%;">
+                    <input type="color" class="col-color color-picker" value="${currentColor}" title="Выберите цвет полоски">
+                    <button class="btn btn-danger" onclick="this.parentElement.parentElement.remove()" style="flex: 1;">Удалить</button>
+                </div>
             `;
             container.appendChild(row);
         }
