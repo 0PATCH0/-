@@ -4,7 +4,7 @@ const { Settings, Roster, RosterConfig } = require('../models');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('список')
-        .setDescription('Отправить в чат красивый список участников по настроенным ролям'),
+        .setDescription('Отправить в чат красивый список участников (по одному Embed на класс)'),
 
     async execute(interaction) {
         const hasDiscordPerm = interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
@@ -24,60 +24,58 @@ module.exports = {
         await interaction.deferReply();
 
         const config = await RosterConfig.findOne({ guildId: interaction.guild.id });
-        
-        if (!config || !config.columns || config.columns.length === 0) {
-            return interaction.editReply({ content: 'Сначала настройте колонки на сайте в разделе "Состав гильдии" -> "Настроить колонки".' });
-        }
-
         const rosterData = await Roster.findOne({ guildId: interaction.guild.id });
 
-        if (!rosterData || !rosterData.data || Object.keys(rosterData.data).length === 0) {
-            return interaction.editReply({ content: 'Данные пусты. Зайдите на сайт в раздел "Состав гильдии" и нажмите "Обновить данные".' });
+        if (!config || !config.columns || config.columns.length === 0) {
+            return interaction.editReply({ content: 'Сначала настройте колонки на сайте.' });
         }
 
-        const embed = new EmbedBuilder()
-            .setTitle('🛡️ Состав гильдии')
-            .setColor('#2b2d31')
-            .setDescription('Актуальный список участников по ролям.')
-            .setFooter({ text: `Обновлено: ${new Date(rosterData.lastUpdated).toLocaleString('ru-RU')}` });
+        if (!rosterData || !rosterData.data) {
+            return interaction.editReply({ content: 'Данные пусты. Обновите их на сайте.' });
+        }
 
+        const embedsToSend = [];
         let totalUnique = new Set();
 
-        for (const col of config.columns) {
-            const roleData = rosterData.data[col.roleId]; 
+        // Генерируем Embed для каждой настроенной колонки
+        config.columns.forEach((col, index) => {
+            const roleData = rosterData.data[col.roleId] || [];
             
-            // Разделяем название колонки и эмодзи (если он есть)
-            // Ищем паттерн <:name:id> в начале строки
-            const emojiMatch = col.name.match(/^(<a?:[a-zA-Z0-9_]+:[0-9]+>)\s*(.*)$/);
-            
-            let emoji = '';
-            let cleanName = col.name;
+            roleData.forEach(m => totalUnique.add(m.id));
 
-            if (emojiMatch) {
-                emoji = emojiMatch[1]; // Сам эмодзи
-                cleanName = emojiMatch[2]; // Текст без эмодзи
-            }
+            let memberList = roleData.length > 0 ? roleData.map(m => `<@${m.id}>`).join('\n') : '*Никого нет*';
             
-            // Формируем список участников
-            let memberList = '*Никого нет*';
-            if (roleData && roleData.length > 0) {
-                memberList = roleData.map(m => `<@${m.id}>`).join(', ');
-                if (memberList.length > 1000) memberList = memberList.substring(0, 1000) + '...';
-                roleData.forEach(m => totalUnique.add(m.id));
+            // Если текст слишком длинный, обрезаем
+            if (memberList.length > 4000) {
+                memberList = memberList.substring(0, 4000) + '\n...и другие';
             }
 
-            // Вставляем эмодзи в НАЧАЛО текста с участниками, так как Discord не рендерит их в заголовках
-            const finalValue = emoji ? `${emoji} ${memberList}` : memberList;
+            // Создаем отдельный Embed для этой роли
+            const embed = new EmbedBuilder()
+                .setTitle(col.name) // Эмодзи в заголовке будет работать!
+                .setColor(col.color || '#5865F2') // Твой цвет полоски
+                .setDescription(memberList)
+                .setFooter({ text: `Участников в роли: ${roleData.length} • Обновлено: ${new Date(rosterData.lastUpdated).toLocaleString('ru-RU')}` });
 
-            embed.addFields({ 
-                name: `${cleanName} (${roleData ? roleData.length : 0})`, 
-                value: finalValue, 
-                inline: false 
-            });
+            embedsToSend.push(embed);
+        });
+
+        // Добавляем самый первый Embed со статистикой
+        const headerEmbed = new EmbedBuilder()
+            .setTitle('🛡️ Состав гильдии')
+            .setColor('#2b2d31')
+            .setDescription(`**Всего уникальных участников:** ${totalUnique.size}\nНиже представлен список по классам.`)
+            .setTimestamp();
+        
+        embedsToSend.unshift(headerEmbed);
+
+        // Отправляем сообщения пачками (Discord разрешает максимум 10 Embed в одном сообщении)
+        for (let i = 0; i < embedsToSend.length; i += 10) {
+            const chunk = embedsToSend.slice(i, i + 10);
+            await interaction.followUp({ embeds: chunk });
         }
 
-        embed.setDescription(`**Всего участников:** ${totalUnique.size}\nАктуальный список участников по ролям.`);
-
-        await interaction.editReply({ embeds: [embed] });
+        // Удаляем сообщение "Бот думает..."
+        await interaction.editReply({ content: '✅ Список отправлен!', embeds: [] });
     },
 };
