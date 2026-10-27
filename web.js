@@ -212,34 +212,20 @@ app.get('/api/guild/:id/roster', async (req, res) => {
     res.json(roster || { data: {}, lastUpdated: null });
 });
 
-app.post('/api/guild/:id/roster-config', async (req, res) => {
+app.post('/api/guild/:id/roster/update', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
-    const { columns } = req.body;
-    
     const client = req.app.get('botClient');
     const guild = client.guilds.cache.get(req.params.id);
+    if (!guild) return res.status(404).json({ error: 'Сервер не найден' });
 
-    const processedColumns = columns.map(col => {
-        let newName = col.name;
-        
-        // Конвертация :emoji: в <:emoji:id>
-        const emojiRegex = /:([a-zA-Z0-9_]+):/g;
-        newName = newName.replace(emojiRegex, (match, emojiName) => {
-            const emoji = guild.emojis.cache.find(e => e.name === emojiName);
-            if (emoji) return `<:${emoji.name}:${emoji.id}>`;
-            return match;
-        });
-
-        // Возвращаем колонку с цветом (если цвета нет, ставим дефолтный)
-        return { roleId: col.roleId, name: newName, color: col.color || '#5865F2' };
-    });
-
-    await RosterConfig.findOneAndUpdate(
-        { guildId: req.params.id },
-        { columns: processedColumns },
-        { upsert: true }
-    );
-    res.json({ success: true });
+    try {
+        const { updateRosterForGuild } = require('./index.js'); 
+        await updateRosterForGuild(guild);
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Ошибка при обновлении' });
+    }
 });
 
 // --- API НАСТРОЙКИ КОЛОНОК ---
@@ -249,6 +235,7 @@ app.get('/api/guild/:id/roster-config', async (req, res) => {
     res.json(config || { columns: [] });
 });
 
+// ВОТ ЗДЕСЬ БЫЛА ОШИБКА, Я ДОБАВИЛ ASYNC
 app.post('/api/guild/:id/roster-config', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     const { columns } = req.body;
@@ -259,13 +246,10 @@ app.post('/api/guild/:id/roster-config', async (req, res) => {
     const processedColumns = columns.map(col => {
         let newName = col.name;
         
-        // Ищем формат :emoji_name: или <:emoji_name:id>
-        // 1. Если пользователь написал просто :tank:
         const shortEmojiRegex = /:([a-zA-Z0-9_]+):/g;
         newName = newName.replace(shortEmojiRegex, (match, emojiName) => {
-            // Ищем эмодзи по имени на сервере
             const emoji = guild.emojis.cache.find(e => e.name === emojiName);
-            if (emoji) return `<:${emoji.name}:${emoji.id}>`; // Меняем на правильный код
+            if (emoji) return `<:${emoji.name}:${emoji.id}>`;
             return match; 
         });
 
@@ -280,13 +264,6 @@ app.post('/api/guild/:id/roster-config', async (req, res) => {
     res.json({ success: true });
 });
 
-    await RosterConfig.findOneAndUpdate(
-        { guildId: req.params.id },
-        { columns: processedColumns },
-        { upsert: true }
-    );
-    res.json({ success: true });
-});
 function startWebServer(botClient) {
     app.set('botClient', botClient);
     app.listen(process.env.PORT || 3000, () => console.log(`🌐 Веб-панель запущена`));
