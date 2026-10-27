@@ -26,7 +26,7 @@ const RosterConfigSchema = new mongoose.Schema({
     guildId: String, columns: [{ roleId: String, name: String, color: { type: String, default: '#5865F2' } }]
 });
 
-// Хранит ID сообщения, которое бот редактирует
+// Хранит ID сообщений (может быть несколько в разных каналах)
 const RosterMessageSchema = new mongoose.Schema({
     guildId: String,
     channelId: String,
