@@ -21,7 +21,8 @@ module.exports = {
             return interaction.reply({ content: 'У вас нет прав для использования этой команды!', ephemeral: true });
         }
 
-        await interaction.deferReply();
+        // Сначала отвечаем "Думаю...", чтобы Discord не выдал ошибку таймаута
+        await interaction.deferReply({ ephemeral: true });
 
         const config = await RosterConfig.findOne({ guildId: interaction.guild.id });
         const rosterData = await Roster.findOne({ guildId: interaction.guild.id });
@@ -65,11 +66,16 @@ module.exports = {
         
         embedsToSend.unshift(headerEmbed);
 
+        // ОТПРАВЛЯЕМ В КАНАЛ, ЧТОБЫ ОНИ НЕ ПРОПАДАЛИ
         for (let i = 0; i < embedsToSend.length; i += 10) {
             const chunk = embedsToSend.slice(i, i + 10);
-            await interaction.followUp({ embeds: chunk });
+            await interaction.channel.send({ embeds: chunk });
         }
 
-        await interaction.editReply({ content: '✅ Список отправлен!', embeds: [] });
+        // Удаляем служебное сообщение "Список отправлен!", чтобы не засорять чат
+        await interaction.editReply({ content: '✅ Список отправлен в чат!' });
+        
+        // Опционально: удалить ответ бота через 3 секунды, чтобы вообще ничего не висело
+        setTimeout(() => interaction.deleteReply().catch(() => {}), 3000);
     },
 };
