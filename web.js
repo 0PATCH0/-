@@ -9,7 +9,7 @@ const {
 } = require('./models');
 
 // ВАЖНО: Вставь свой Discord ID (цифры) для прав Создателя
-const OWNER_ID = 'ТВОЙ_DISCORD_ID'; 
+const OWNER_ID = 439798786059927552; 
 
 const app = express();
 app.use(express.json());
