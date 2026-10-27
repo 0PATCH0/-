@@ -46,25 +46,34 @@ module.exports = {
         for (const col of config.columns) {
             const roleData = rosterData.data[col.roleId]; 
             
-            if (roleData && roleData.length > 0) {
-                let memberList = roleData.map(m => `<@${m.id}>`).join(', ');
-                if (memberList.length > 1000) memberList = memberList.substring(0, 1000) + '...';
-                
-                // ВАЖНО: col.name теперь содержит правильный код эмодзи (например: <:tank:1234> Танки)
-                embed.addFields({ 
-                    name: `${col.name} (${roleData.length})`, 
-                    value: memberList, 
-                    inline: false 
-                });
+            // Разделяем название колонки и эмодзи (если он есть)
+            // Ищем паттерн <:name:id> в начале строки
+            const emojiMatch = col.name.match(/^(<a?:[a-zA-Z0-9_]+:[0-9]+>)\s*(.*)$/);
+            
+            let emoji = '';
+            let cleanName = col.name;
 
-                roleData.forEach(m => totalUnique.add(m.id));
-            } else {
-                embed.addFields({ 
-                    name: `${col.name} (0)`, 
-                    value: '*Никого нет*', 
-                    inline: false 
-                });
+            if (emojiMatch) {
+                emoji = emojiMatch[1]; // Сам эмодзи
+                cleanName = emojiMatch[2]; // Текст без эмодзи
             }
+            
+            // Формируем список участников
+            let memberList = '*Никого нет*';
+            if (roleData && roleData.length > 0) {
+                memberList = roleData.map(m => `<@${m.id}>`).join(', ');
+                if (memberList.length > 1000) memberList = memberList.substring(0, 1000) + '...';
+                roleData.forEach(m => totalUnique.add(m.id));
+            }
+
+            // Вставляем эмодзи в НАЧАЛО текста с участниками, так как Discord не рендерит их в заголовках
+            const finalValue = emoji ? `${emoji} ${memberList}` : memberList;
+
+            embed.addFields({ 
+                name: `${cleanName} (${roleData ? roleData.length : 0})`, 
+                value: finalValue, 
+                inline: false 
+            });
         }
 
         embed.setDescription(`**Всего участников:** ${totalUnique.size}\nАктуальный список участников по ролям.`);
