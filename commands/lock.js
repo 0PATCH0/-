@@ -1,25 +1,17 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
-const { Settings } = require('../models');
-
+const { Settings, Log } = require('../models');
 module.exports = {
-    data: new SlashCommandBuilder()
-        .setName('закрыть')
-        .setDescription('Запретить писать сообщения в этот канал'),
-
+    data: new SlashCommandBuilder().setName('закрыть').setDescription('Закрыть канал'),
     async execute(interaction) {
-        const hasDiscordPerm = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels);
-        let hasCustomPerm = false;
+        const hasPerm = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels);
+        const settings = await Settings.findOne({ guildId: interaction.guild.id });
+        const hasCustom = settings && settings.modRoles && interaction.member.roles.cache.some(r => settings.modRoles.includes(r.id));
         
-        const guildSettings = await Settings.findOne({ guildId: interaction.guild.id });
-        if (guildSettings && guildSettings.modRoles) {
-            hasCustomPerm = interaction.member.roles.cache.some(role => guildSettings.modRoles.includes(role.id));
-        }
-
-        if (!hasDiscordPerm && !hasCustomPerm) {
-            return interaction.reply({ content: 'У вас нет прав!', ephemeral: true });
-        }
+        if (!hasPerm && !hasCustom) return interaction.reply({ content: 'Нет прав!', ephemeral: true });
 
         await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { SendMessages: false });
-        await interaction.reply({ content: '🔒 Канал закрыт! Теперь писать могут только модераторы.' });
-    },
+        
+        await Log.create({ guildId: interaction.guild.id, userId: interaction.user.id, username: interaction.user.tag, action: 'Закрытие канала', details: `Закрыл #${interaction.channel.name}` });
+        await interaction.reply({ content: '🔒 Канал закрыт!' });
+    }
 };
