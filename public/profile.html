@@ -32,11 +32,11 @@
         <a href="/dashboard" class="back-btn">← Вернуться в панель</a>
         
         <div class="profile-header">
-            <h1>Мои персонажи</h1>
+            <h1 id="page-title">Мои персонажи</h1>
             <p>Эта информация будет видна другим игрокам</p>
         </div>
 
-        <div class="switch-container">
+        <div class="switch-container" id="switch-global">
             <div>
                 <h4 style="margin: 0; color: var(--text-main);">Сделать профиль глобальным?</h4>
                 <p style="margin: 5px 0 0 0; font-size: 12px; color: var(--text-muted);">Если включено, профиль будет виден на всех серверах бота.</p>
@@ -55,11 +55,15 @@
     </div>
 
     <script>
-        const guildId = new URLSearchParams(window.location.search).get('guild') || window.location.pathname.split('/').pop();
-        const targetUser = new URLSearchParams(window.location.search).get('user'); // Если админ редактирует
+        // Получаем параметры из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const guildId = urlParams.get('guild') || window.location.pathname.split('/').pop();
+        const targetUserId = urlParams.get('user'); 
+        
         let charCount = 0;
         let isNewProfile = true;
 
+        // Заполнение блока персонажа
         function createCharacterBlock(data = {}, index = 0) {
             charCount++;
             const block = document.createElement('div');
@@ -108,17 +112,29 @@
             document.getElementById('btn-add').style.display = blocks.length >= 2 ? 'none' : 'block';
         }
 
-        // Загрузка данных
-        fetch(`/api/profile/${guildId}?user=${targetUser || ''}`).then(res => res.json()).then(data => {
-            if (data.characters && data.characters.length > 0) {
-                isNewProfile = false;
-                document.getElementById('btn-delete-profile').style.display = 'block'; // Показываем кнопку удаления
-                if (data.isGlobal) document.getElementById('is-global').checked = true;
-                data.characters.forEach((char, idx) => createCharacterBlock(char, idx));
-            } else {
-                createCharacterBlock();
-            }
-        });
+        // Загрузка данных профиля
+        // Если targetUserId есть, значит мы редактируем чужой профиль (админ)
+        const fetchUrl = targetUserId 
+            ? `/api/profile/${guildId}?user=${targetUserId}` 
+            : `/api/profile/${guildId}`;
+
+        fetch(fetchUrl)
+            .then(res => res.json())
+            .then(data => {
+                if (targetUserId) {
+                    document.getElementById('page-title').innerText = 'Редактирование профиля игрока';
+                }
+
+                if (data.characters && data.characters.length > 0) {
+                    isNewProfile = false;
+                    document.getElementById('btn-delete-profile').style.display = 'block'; // Показываем кнопку удаления
+                    if (data.isGlobal) document.getElementById('is-global').checked = true;
+                    data.characters.forEach((char, idx) => createCharacterBlock(char, idx));
+                } else {
+                    createCharacterBlock();
+                }
+            })
+            .catch(() => createCharacterBlock());
 
         function saveProfile() {
             const characters = [];
@@ -134,28 +150,34 @@
 
             const isGlobal = document.getElementById('is-global').checked;
 
+            const payload = { characters, isGlobal };
+            if (targetUserId) payload.targetUser = targetUserId;
+
             fetch(`/api/profile/${guildId}`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ characters, isGlobal, targetUser })
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(payload)
             }).then(res => res.json()).then(data => {
                 if (data.success) {
                     showToast('Профиль сохранен!', 'success');
+                    // Перезагружаем страницу, чтобы показать актуальные данные
                     setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    showToast('Ошибка: ' + data.error, 'error');
                 }
-                else showToast('Ошибка: ' + data.error, 'error');
             });
         }
 
         function deleteMyProfile() {
-            showConfirm('Удаление профиля', 'Вы уверены, что хотите удалить свой профиль? Это действие необратимо.', () => {
-                fetch(`/api/profile/${guildId}`, { method: 'DELETE' })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            showToast('Профиль удален!', 'success');
-                            setTimeout(() => window.location.reload(), 1000);
-                        } else showToast('Ошибка: ' + data.error, 'error');
-                    });
-            });
+            if (!confirm('Вы уверены, что хотите удалить свой профиль?')) return;
+            fetch(`/api/profile/${guildId}`, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Профиль удален!', 'success');
+                        setTimeout(() => window.location.reload(), 1000);
+                    } else showToast('Ошибка: ' + data.error, 'error');
+                });
         }
     </script>
 </body>
