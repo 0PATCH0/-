@@ -84,6 +84,8 @@ client.on('interactionCreate', async interaction => {
 client.once('ready', async () => {
     console.log(`Бот ${client.user.tag} в сети!`);
     await registerCommands(); 
+
+    // Восстанавливаем напоминания
     try {
         const reminders = await Reminder.find();
         if (reminders.length > 0) {
@@ -91,12 +93,12 @@ client.once('ready', async () => {
             reminders.forEach(reminder => remindCommand.setReminderTimeout(reminder, client));
         }
     } catch (e) { console.error(e); }
-});
 
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => {
-        console.log('✅ Успешное подключение к базе данных!');
-        startWebServer(client); 
-        client.login(process.env.TOKEN);
-    })
-    .catch(err => console.error('❌ Ошибка подключения к БД:', err));
+    // ПРИНУДИТЕЛЬНО ЗАГРУЖАЕМ ВСЕХ УЧАСТНИКОВ В КЭШ (в фоне, чтобы не блокировать бота)
+    console.log("Начинаю фоновую загрузку участников...");
+    client.guilds.cache.forEach(guild => {
+        guild.members.fetch()
+            .then(members => console.log(`✅ Загружено ${members.size} участников для сервера ${guild.name}`))
+            .catch(err => console.log(`❌ Не удалось загрузить участников для ${guild.name}: ${err.message}`));
+    });
+});
