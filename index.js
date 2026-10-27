@@ -33,9 +33,28 @@ for (const file of commandFiles) {
 async function registerCommands() {
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     try {
+        console.log(`Начинаю обновление ${commandsArray.length} слэш-команд.`);
+        
+        // 1. Регистрируем глобально (на всякий случай)
         await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commandsArray });
-        console.log('Слэш-команды успешно зарегистрированы!');
-    } catch (error) { console.error(error); }
+        
+        // 2. Регистрируем ЛОКАЛЬНО для каждого сервера, где есть бот (это мгновенно)
+        client.guilds.cache.forEach(async (guild) => {
+            try {
+                await rest.put(
+                    Routes.applicationGuildCommands(process.env.CLIENT_ID, guild.id),
+                    { body: commandsArray }
+                );
+                console.log(`Слэш-команды для сервера "${guild.name}" успешно обновлены (мгновенно).`);
+            } catch (err) {
+                console.error(`Не удалось обновить команды для ${guild.name}:`, err.message);
+            }
+        });
+
+        console.log('Глобальные слэш-команды успешно зарегистрированы!');
+    } catch (error) {
+        console.error('Ошибка регистрации:', error);
+    }
 }
 
 // --- ФУНКЦИЯ ОБНОВЛЕНИЯ ВСЕХ СООБЩЕНИЙ В DISCORD ---
