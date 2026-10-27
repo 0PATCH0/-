@@ -6,74 +6,72 @@
     <title>Роли по кнопкам</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
+<body class="bg-ruins">
+    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
+
     <div class="sidebar">
         <h2 id="server-name">Загрузка...</h2>
         <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
-        <hr style="border-color: var(--border-color);">
-        <a href="#" id="link-back">🏠 На главную сервера</a>
+        <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+        <a href="#" id="nav-home">🏠 Обзор</a>
+        <a href="#" id="nav-roster">🛡️ Состав гильдии</a>
         <a href="#" class="active">🎭 Роли по кнопкам</a>
+        <a href="#" id="nav-rem">⏰ Напоминания</a>
+        <a href="#" id="nav-mod">⚙️ Модерация</a>
+        <a href="#" id="nav-emb">📨 Эмбеды</a>
+        <a href="#" id="nav-logs">📜 Логи действий</a>
     </div>
 
     <div class="content">
-        <div class="header">
-            <h1>🎭 Роли по кнопкам</h1>
-        </div>
-
+        <div class="header"><h1>🎭 Роли по кнопкам</h1></div>
         <div class="form-card">
             <div class="form-group">
                 <label>Заголовок Embed-сообщения</label>
-                <input type="text" id="embed-title" placeholder="Например: Выберите свои роли">
+                <input type="text" id="rr-title" placeholder="Например: Выберите свои роли">
             </div>
-            
             <div class="form-group">
                 <label>Описание</label>
-                <textarea id="embed-desc" placeholder="Выберите роли, которые будут отображаться в вашем профиле..."></textarea>
+                <textarea id="rr-desc" placeholder="Выберите роли, которые будут отображаться в вашем профиле..." style="height: 80px;"></textarea>
             </div>
-
             <div class="form-group">
                 <label>Цвет полоски (HEX)</label>
-                <input type="text" id="embed-color" value="#5865F2" placeholder="#5865F2">
+                <input type="color" id="rr-color" value="#d4af37" style="height: 45px; padding: 5px;">
             </div>
-
             <div class="form-group">
-                <label>ID Канала (куда отправить сообщение)</label>
-                <input type="text" id="channel-id" placeholder="Включите режим разработчика в Discord и скопируйте ID канала">
+                <label>ID Канала (куда отправить)</label>
+                <input type="text" id="rr-channel" placeholder="123456789012345678">
             </div>
-
             <div class="form-group">
                 <label>Режим выбора</label>
-                <select id="role-mode">
+                <select id="rr-mode">
                     <option value="multiple">Можно брать несколько ролей</option>
-                    <option value="single">Только одну роль (авто-снятие старой)</option>
+                    <option value="single">Только одну роль</option>
                 </select>
             </div>
 
-            <hr style="border-color: var(--border-color); margin: 30px 0;">
-            
-            <h3>Кнопки ролей</h3>
+            <hr style="border-color: var(--border-color); margin: 20px 0;">
+            <h3 style="color: var(--accent); margin-bottom: 15px;">Кнопки ролей</h3>
             <div id="roles-container"></div>
+            <button class="btn btn-success btn-small" onclick="addRoleRow()" style="margin-bottom: 20px;">+ Добавить кнопку</button>
             
-            <button class="btn btn-small btn-success" onclick="addRoleRow()" style="margin-bottom: 30px;">+ Добавить кнопку</button>
-            
-            <div style="border-top: 1px solid var(--border-color); padding-top: 25px;">
-                <button class="btn" onclick="saveSettings()" id="btn-save">💾 Сохранить и отправить</button>
+            <div style="border-top: 1px solid var(--border-color); padding-top: 20px;">
+                <button class="btn" onclick="saveReactionRoles()" id="btn-save-rr">💾 Отправить в Discord</button>
             </div>
         </div>
     </div>
 
     <script>
-        const guildId = window.location.pathname.split('/')[2]; 
+        const guildId = window.location.pathname.split('/')[2];
+        const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-emb': '/custom', 'nav-logs': '/logs'};
+        for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
+        
         let serverRoles = [];
 
-        fetch(`/api/guild/${guildId}`)
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('server-name').innerText = data.name;
-                document.getElementById('link-back').href = `/manage/${guildId}`;
-                serverRoles = data.roles;
-                addRoleRow(); 
-            });
+        fetch(`/api/guild/${guildId}`).then(res => res.json()).then(data => {
+            document.getElementById('server-name').innerText = data.name;
+            serverRoles = data.roles;
+            addRoleRow();
+        });
 
         function addRoleRow() {
             const container = document.getElementById('roles-container');
@@ -83,59 +81,46 @@
             let options = serverRoles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
             
             row.innerHTML = `
-                <select class="role-select">${options}</select>
-                <input type="text" class="role-label" placeholder="Текст на кнопке">
-                <input type="text" class="role-emoji" placeholder="Эмодзи (не обяз.)" style="max-width: 120px;">
-                <button class="btn btn-small btn-danger" onclick="this.parentElement.remove()">X</button>
+                <select class="rr-role" style="flex: 1;">${options}</select>
+                <input type="text" class="rr-label" placeholder="Текст кнопки" style="flex: 1;">
+                <button class="btn btn-danger btn-small" onclick="this.parentElement.remove()">X</button>
             `;
             container.appendChild(row);
         }
 
-        function saveSettings() {
-            const btn = document.getElementById('btn-save');
-            btn.innerText = 'Отправка...';
-            btn.disabled = true;
-
-            const payload = {
-                title: document.getElementById('embed-title').value || 'Выберите роли',
-                desc: document.getElementById('embed-desc').value || 'Нажмите на кнопки ниже, чтобы получить роль.',
-                color: document.getElementById('embed-color').value,
-                channelId: document.getElementById('channel-id').value,
-                mode: document.getElementById('role-mode').value,
-                roles: []
-            };
-
-            document.querySelectorAll('.role-row').forEach(row => {
-                payload.roles.push({
-                    roleId: row.querySelector('.role-select').value,
-                    label: row.querySelector('.role-label').value || 'Получить роль',
-                    emoji: row.querySelector('.role-emoji').value || null
+        function saveReactionRoles() {
+            const roles = [];
+            document.querySelectorAll('#roles-container .role-row').forEach(row => {
+                roles.push({
+                    roleId: row.querySelector('.rr-role').value,
+                    label: row.querySelector('.rr-label').value || 'Получить роль'
                 });
             });
 
-            if (!payload.channelId) {
-                alert('Укажите ID канала!');
-                btn.innerText = '💾 Сохранить и отправить';
-                btn.disabled = false;
-                return;
-            }
+            const payload = {
+                title: document.getElementById('rr-title').value,
+                desc: document.getElementById('rr-desc').value,
+                color: document.getElementById('rr-color').value,
+                channelId: document.getElementById('rr-channel').value,
+                mode: document.getElementById('rr-mode').value,
+                roles: roles
+            };
+
+            if (!payload.channelId) return alert('Укажите ID канала!');
+
+            const btn = document.getElementById('btn-save-rr');
+            btn.innerText = 'Отправка...';
+            btn.disabled = true;
 
             fetch(`/api/guild/${guildId}/reactionroles`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    alert('✅ Успешно! Сообщение отправлено в Discord, а настройки сохранены в базу данных.');
-                } else {
-                    alert('❌ Ошибка: ' + data.error);
-                }
-            })
-            .catch(err => alert('❌ Ошибка сети!'))
-            .finally(() => {
-                btn.innerText = '💾 Сохранить и отправить';
+            }).then(res => res.json()).then(data => {
+                if (data.success) alert('✅ Сообщение отправлено в Discord!');
+                else alert('❌ Ошибка: ' + data.error);
+            }).finally(() => {
+                btn.innerText = '💾 Отправить в Discord';
                 btn.disabled = false;
             });
         }
