@@ -53,7 +53,7 @@ app.get('/manage/:id/roster-config', (req, res) => { if (!req.user) return res.r
 app.get('/manage/:id/logs', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'logs.html')); });
 app.get('/manage/:id/profiles', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'profiles-admin.html')); });
 
-// СТРАНИЦА ПРОФИЛЯ ДЛЯ ИГРОКОВ (Без проверки на админа)
+// Страница профиля игрока
 app.get('/profile', (req, res) => { 
     if (!req.user) return res.redirect('/'); 
     res.sendFile(path.join(__dirname, 'public', 'profile.html')); 
@@ -63,28 +63,31 @@ app.get('/profile', (req, res) => {
 app.get('/api/profile', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     let profile = await PlayerProfile.findOne({ userId: req.user.id });
-    if (!profile) profile = { userId: req.user.id, gameNickname: '', guildName: '', classRole: '', weapon: '', bio: '' };
+    if (!profile) {
+        profile = { userId: req.user.id, characters: [ { gameNickname: '', guildName: '', classRole: '', weapon: '', bio: '' } ] };
+    }
+    if (!profile.characters || profile.characters.length === 0) {
+        profile.characters = [ { gameNickname: '', guildName: '', classRole: '', weapon: '', bio: '' } ];
+    }
     res.json(profile);
 });
 
 app.post('/api/profile', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
-    const { gameNickname, guildName, classRole, weapon, bio } = req.body;
+    const { characters } = req.body;
     await PlayerProfile.findOneAndUpdate(
         { userId: req.user.id },
-        { gameNickname, guildName, classRole, weapon, bio },
+        { characters: characters },
         { upsert: true }
     );
     res.json({ success: true });
 });
 
-// API для админа (посмотреть все профили)
 app.get('/api/guild/:id/profiles', isModerator, async (req, res) => {
     const client = req.app.get('botClient');
     const discordGuild = client.guilds.cache.get(req.params.id);
     const profiles = await PlayerProfile.find();
 
-    // Обогащаем профили данными из Discord (аватарки и текущие ники)
     const enrichedProfiles = await Promise.all(profiles.map(async (p) => {
         const member = await discordGuild.members.fetch(p.userId).catch(() => null);
         return {
@@ -97,7 +100,7 @@ app.get('/api/guild/:id/profiles', isModerator, async (req, res) => {
     res.json(enrichedProfiles);
 });
 
-// ... (ОСТАЛЬНЫЕ API ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ, КАК В ПРЕДЫДУЩЕМ КОДЕ) ...
+// --- ОСТАЛЬНЫЕ API (остались без изменений) ---
 app.get('/api/user', (req, res) => { if (!req.user) return res.status(401).json({ error: 'Не авторизован' }); res.json({ user: req.user, guilds: req.user.guilds.filter(g => (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8)) }); });
 app.get('/api/guild/:id', isModerator, async (req, res) => { const client = req.app.get('botClient'); const guild = client.guilds.cache.get(req.params.id); const roles = guild.roles.cache.filter(r => r.id !== guild.id && !r.managed).map(r => ({ id: r.id, name: r.name })); res.json({ name: guild.name, roles }); });
 app.get('/api/guild/:id/logs', isModerator, async (req, res) => { const logs = await Log.find({ guildId: req.params.id }).sort({ date: -1 }).limit(100); res.json(logs); });
