@@ -23,7 +23,6 @@ module.exports = {
     async execute(interaction) {
         const targetClass = interaction.options.getString('класс');
 
-        // Если выбран класс, показываем кнопку для списка
         if (targetClass) {
             const btn = new ButtonBuilder()
                 .setCustomId(`show_class_${targetClass}`)
@@ -32,7 +31,6 @@ module.exports = {
                 .setEmoji('📋');
 
             const row = new ActionRowBuilder().addComponents(btn);
-
             const embed = new EmbedBuilder()
                 .setTitle(`🎭 Класс: ${targetClass}`)
                 .setDescription('Нажмите на кнопку ниже, чтобы увидеть список всех игроков этого класса.')
@@ -41,11 +39,10 @@ module.exports = {
             return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
         }
 
-        // Если класс не выбран, ищем профиль пользователя
         const targetUser = interaction.options.getUser('пользователь') || interaction.user;
         const profile = await PlayerProfile.findOne({ userId: targetUser.id });
 
-        if (!profile) {
+        if (!profile || !profile.characters || profile.characters.length === 0) {
             return interaction.reply({ 
                 content: targetUser.id === interaction.user.id 
                     ? '❌ Вы еще не заполнили свой профиль! Зайдите на сайт в раздел "Мой профиль".' 
@@ -57,19 +54,19 @@ module.exports = {
         const avatarUrl = targetUser.avatar ? `https://cdn.discordapp.com/avatars/${targetUser.id}/${targetUser.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png';
 
         const embed = new EmbedBuilder()
-            .setTitle(`👤 Профиль: ${profile.gameNickname || targetUser.username}`)
-            .setThumbnail(avatarUrl)
+            .setAuthor({ name: `Профиль ${targetUser.username}`, iconURL: avatarUrl })
             .setColor('#d4af37')
-            .addFields(
-                { name: '🏰 Гильдия', value: profile.guildName || 'Не указана', inline: true },
-                { name: '⚔️ Класс', value: profile.classRole || 'Не указан', inline: true },
-                { name: '🗡️ Оружие', value: profile.weapon || 'Не указано', inline: true }
-            )
-            .setFooter({ text: `Discord: ${targetUser.tag}`, iconURL: avatarUrl });
+            .setThumbnail(avatarUrl);
 
-        if (profile.bio) {
-            embed.setDescription(`*"${profile.bio}"*`);
-        }
+        profile.characters.forEach((char, index) => {
+            const charTitle = `👤 Персонаж ${index + 1}: ${char.gameNickname || 'Без ника'}`;
+            let charValue = `🏰 **Гильдия:** ${char.guildName || 'Не указана'}\n⚔️ **Класс:** ${char.classRole || 'Не указан'}\n🗡️ **Оружие:** ${char.weapon || 'Не указано'}`;
+            if (char.bio) charValue += `\n*"${char.bio}"*`;
+
+            embed.addFields({ name: charTitle, value: charValue, inline: false });
+        });
+
+        embed.setFooter({ text: `Discord: ${targetUser.tag}` });
 
         await interaction.reply({ embeds: [embed] });
     },
