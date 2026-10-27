@@ -40,6 +40,15 @@ const SentMessageSchema = new mongoose.Schema({
     author: String
 });
 
+const RosterConfigSchema = new mongoose.Schema({
+    guildId: String,
+    columns: [{
+        roleId: String, 
+        name: String,   
+        color: { type: String, default: '#5865F2' } // Добавили цвет
+    }]
+});
+
 const RosterSchema = new mongoose.Schema({
     guildId: String,
     lastUpdated: { type: Date, default: Date.now },
