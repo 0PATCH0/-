@@ -41,6 +41,8 @@ module.exports = {
         if (image) embed.setImage(image);
 
         await interaction.channel.send({ embeds: [embed] });
+        
+        await Log.create({ guildId: interaction.guild.id, userId: interaction.user.id, username: interaction.user.tag, action: 'Закрытие канала', details: `Закрыл #${interaction.channel.name}` });
         await interaction.reply({ content: '✅ Объявление отправлено!', ephemeral: true });
     },
 };
