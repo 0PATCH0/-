@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Состав гильдии</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="sidebar">
+        <h2 id="server-name">Загрузка...</h2>
+        <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
+        <hr style="border-color: var(--border-color);">
+        <a href="#" id="link-back">🏠 На главную</a>
+        <a href="#" class="active">🛡️ Состав гильдии</a>
+    </div>
+    <div class="content">
+        <div class="header">
+            <h1>🛡️ Состав гильдии</h1>
+            <button class="btn" onclick="forceUpdate()" id="btn-update">🔄 Обновить данные</button>
+        </div>
+        <p id="last-updated" style="color: var(--text-muted); margin-bottom: 20px;">Последнее обновление: Загрузка...</p>
+        
+        <div class="grid" id="roster-grid">
+            <!-- Сюда будут загружаться колонки -->
+        </div>
+    </div>
+    <script>
+        const guildId = window.location.pathname.split('/')[2];
+        document.getElementById('link-back').href = `/manage/${guildId}`;
+
+        fetch(`/api/guild/${guildId}`).then(res => res.json()).then(data => {
+            document.getElementById('server-name').innerText = data.name;
+        });
+
+        function loadRoster() {
+            fetch(`/api/guild/${guildId}/roster`).then(res => res.json()).then(data => {
+                const grid = document.getElementById('roster-grid');
+                const lastUpdatedEl = document.getElementById('last-updated');
+
+                if (!data.lastUpdated || !data.data || Object.keys(data.data).length === 0) {
+                    grid.innerHTML = '<p>Список пуст. Нажмите "Обновить данные", чтобы собрать его.</p>';
+                    return;
+                }
+
+                const date = new Date(data.lastUpdated).toLocaleString('ru-RU');
+                lastUpdatedEl.innerText = `Последнее обновление: ${date}`;
+
+                grid.innerHTML = '';
+                for (const colName in data.data) {
+                    const members = data.data[colName];
+                    let membersHtml = members.length > 0 ? members.map(m => `<div>@${m.name}</div>`).join('') : '<i>Никого нет</i>';
+                    
+                    grid.innerHTML += `
+                        <div class="card" style="background: var(--bg-card);">
+                            <h3>${colName} (${members.length})</h3>
+                            <div style="margin-top: 15px; color: var(--text-muted);">${membersHtml}</div>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        function forceUpdate() {
+            const btn = document.getElementById('btn-update');
+            btn.innerText = '⏳ Загрузка...';
+            btn.disabled = true;
+
+            fetch(`/api/guild/${guildId}/roster/update`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) alert('❌ ' + data.error);
+                    loadRoster();
+                })
+                .finally(() => {
+                    btn.innerText = '🔄 Обновить данные';
+                    btn.disabled = false;
+                });
+        }
+
+        loadRoster();
+    </script>
+</body>
+</html>
