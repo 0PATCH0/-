@@ -28,7 +28,6 @@ const ReactionRoleSchema = new mongoose.Schema({
     roles: [{ roleId: String, label: String }]
 });
 
-// НОВАЯ СХЕМА: Отправленные сообщения
 const SentMessageSchema = new mongoose.Schema({
     guildId: String,
     channelId: String,
@@ -41,9 +40,17 @@ const SentMessageSchema = new mongoose.Schema({
     author: String
 });
 
+// НОВАЯ МОДЕЛЬ: Сохраненный состав гильдии
+const RosterSchema = new mongoose.Schema({
+    guildId: String,
+    lastUpdated: { type: Date, default: Date.now },
+    data: { type: Object, default: {} } // Здесь будем хранить готовые колонки и участников
+});
+
 module.exports = {
     Settings: mongoose.model('Settings', SettingsSchema),
     Reminder: mongoose.model('Reminder', ReminderSchema),
     ReactionRole: mongoose.model('ReactionRole', ReactionRoleSchema),
-    SentMessage: mongoose.model('SentMessage', SentMessageSchema)
+    SentMessage: mongoose.model('SentMessage', SentMessageSchema),
+    Roster: mongoose.model('Roster', RosterSchema)
 };
