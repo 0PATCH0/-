@@ -26,6 +26,10 @@ module.exports = {
             return interaction.reply({ content: 'У вас нет прав для использования этой команды!', ephemeral: true });
         }
 
+        // ФОНОВАЯ ЗАГРУЗКА ВСЕХ УЧАСТНИКОВ (пока ты настраиваешь колонки)
+        // Бот начнет скачивать всех, чтобы к моменту завершения они были у него в памяти.
+        interaction.guild.members.fetch().catch(err => console.log("Фоновая загрузка завершилась с ошибкой (это нормально для Render)"));
+
         const userId = interaction.user.id;
         setupStates.set(userId, { columns: [], tempRoleId: null, tempRoleName: null });
 
@@ -93,32 +97,18 @@ module.exports = {
             if (i.customId === 'finish_setup') {
                 if (state.columns.length === 0) return;
 
-                await i.update({ content: '⏳ Собираю данные (это может занять до 10 секунд)...', components: [] });
+                await i.update({ content: '⏳ Генерирую список (беру данные из памяти)...', components: [] });
 
                 try {
                     const memberRolesMap = new Map();
                     const columnData = [];
+                    
+                    // Берем всех участников, которых бот успел закешировать за время твоей настройки
+                    const allMembers = interaction.guild.members.cache;
 
-                    // Проходимся по каждой выбранной роли и принудительно запрашиваем её участников
                     for (const col of state.columns) {
-                        const role = interaction.guild.roles.cache.get(col.roleId);
-                        if (!role) continue;
-
-                        let roleMembers;
-                        try {
-                            // Пытаемся запросить участников конкретной роли с большим таймаутом (15 сек)
-                            const fetchedMembers = await interaction.guild.members.fetch({ 
-                                role: col.roleId, 
-                                time: 15000, 
-                                force: true 
-                            });
-                            roleMembers = Array.from(fetchedMembers.values()).filter(m => !m.user.bot);
-                        } catch (e) {
-                            // Если не удалось (таймаут), берем из кэша
-                            console.log(`Таймаут для роли ${role.name}, используем кэш.`);
-                            roleMembers = Array.from(role.members.values()).filter(m => !m.user.bot);
-                        }
-                        
+                        // Ищем в кэше тех, у кого есть нужная роль
+                        const roleMembers = allMembers.filter(m => !m.user.bot && m.roles.cache.has(col.roleId));
                         columnData.push({ ...col, members: roleMembers });
 
                         roleMembers.forEach(m => {
@@ -155,7 +145,7 @@ module.exports = {
                     
                 } catch (error) {
                     console.error("Ошибка:", error);
-                    await i.editReply({ content: '❌ Ошибка. Попробуйте еще раз.', components: [] });
+                    await i.editReply({ content: '❌ Ошибка при генерации.', components: [] });
                 }
                 
                 setupStates.delete(userId);
