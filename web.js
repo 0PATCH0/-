@@ -4,7 +4,7 @@ const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
 const path = require('path');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { ReactionRole, Settings, Reminder, SentMessage, Roster } = require('./models');
+const { ReactionRole, Settings, Reminder, SentMessage, Roster, RosterConfig } = require('./models');
 
 const app = express();
 app.use(express.json());
@@ -42,6 +42,7 @@ app.get('/manage/:id/reminders', (req, res) => { if (!req.user) return res.redir
 app.get('/manage/:id/moderation', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'moderation.html')); });
 app.get('/manage/:id/custom', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'custom.html')); });
 app.get('/manage/:id/roster', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'roster.html')); });
+app.get('/manage/:id/roster-config', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'roster-config.html')); });
 
 // --- API БАЗОВЫЕ ---
 app.get('/api/user', (req, res) => {
@@ -218,7 +219,6 @@ app.post('/api/guild/:id/roster/update', async (req, res) => {
     if (!guild) return res.status(404).json({ error: 'Сервер не найден' });
 
     try {
-        // Вызываем функцию из index.js
         const { updateRosterForGuild } = require('./index.js'); 
         await updateRosterForGuild(guild);
         res.json({ success: true });
@@ -226,6 +226,24 @@ app.post('/api/guild/:id/roster/update', async (req, res) => {
         console.error(error);
         res.status(500).json({ error: 'Ошибка при обновлении' });
     }
+});
+
+// --- API НАСТРОЙКИ КОЛОНОК ---
+app.get('/api/guild/:id/roster-config', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    let config = await RosterConfig.findOne({ guildId: req.params.id });
+    res.json(config || { columns: [] });
+});
+
+app.post('/api/guild/:id/roster-config', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    const { columns } = req.body;
+    await RosterConfig.findOneAndUpdate(
+        { guildId: req.params.id },
+        { columns },
+        { upsert: true }
+    );
+    res.json({ success: true });
 });
 
 function startWebServer(botClient) {
