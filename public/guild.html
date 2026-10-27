@@ -7,16 +7,13 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body class="bg-ruins">
-    <!-- Кнопка мобильного меню -->
     <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
 
-    <!-- Сайдбар -->
     <div class="sidebar">
         <h2 id="server-name">Загрузка...</h2>
         <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
         <hr style="border-color: var(--border-color); margin-bottom: 20px;">
         
-        <!-- Навигация -->
         <a href="#" class="active" id="nav-home">🏠 Обзор</a>
         <a href="#" id="nav-roster">🛡️ Состав гильдии</a>
         <a href="#" id="nav-rr">🎭 Роли по кнопкам</a>
@@ -24,28 +21,34 @@
         <a href="#" id="nav-mod">⚙️ Модерация</a>
         <a href="#" id="nav-emb">📨 Эмбеды</a>
         <a href="#" id="nav-guides">📖 Гайды</a>
+        
+        <!-- НОВЫЙ ПУНКТ: Гильдия (Профили) -->
+        <a href="#" id="nav-guild">👥 Гильдия</a>
+        <!-- ================================ -->
+        
         <a href="#" id="nav-logs">📜 Логи действий</a>
+        
+        <hr style="border-color: var(--border-color); margin: 20px 0;">
+        <a href="/profile" style="color: var(--text-muted);">👤 Мой профиль</a>
     </div>
 
-    <!-- Контент -->
     <div class="content">
         <div class="header">
             <h1>Обзор сервера</h1>
         </div>
         
-        <!-- Сетка карточек -->
         <div class="grid">
             <a href="#" id="card-roster" class="card">
                 <h3>🛡️ Состав гильдии</h3>
-                <p>Просмотр списка участников и настройка колонок в реальном времени.</p>
+                <p>Просмотр списка участников и настройка колонок.</p>
             </a>
             <a href="#" id="card-rr" class="card">
                 <h3>🎭 Роли по кнопкам</h3>
-                <p>Выдача ролей по клику на кнопку в красивом Embed-сообщении.</p>
+                <p>Выдача ролей по клику на кнопку в Embed-сообщении.</p>
             </a>
             <a href="#" id="card-rem" class="card">
                 <h3>⏰ Напоминания</h3>
-                <p>Управление активными напоминаниями и событиями сервера.</p>
+                <p>Управление активными напоминаниями и событиями.</p>
             </a>
             <a href="#" id="card-mod" class="card">
                 <h3>⚙️ Модерация</h3>
@@ -53,45 +56,46 @@
             </a>
             <a href="#" id="card-emb" class="card">
                 <h3>📨 Эмбед-сообщения</h3>
-                <p>Создание, редактирование и удаление красивых сообщений.</p>
+                <p>Создание и редактирование красивых сообщений.</p>
             </a>
-            
-            <!-- НОВАЯ КАРТОЧКА ДЛЯ ГАЙДОВ -->
             <a href="#" id="card-guides" class="card">
                 <h3>📖 Гайды</h3>
-                <p>Создание и редактирование руководств с красивым оформлением.</p>
+                <p>Создание и редактирование руководств с вложениями.</p>
             </a>
-            <!-- ============================== -->
+            
+            <!-- НОВАЯ КАРТОЧКА: Профили игроков -->
+            <a href="#" id="card-guild" class="card" style="border-color: rgba(212, 175, 55, 0.4);">
+                <h3>👥 Гильдия</h3>
+                <p>Список всех участников с их игровыми профилями и классами.</p>
+            </a>
+            <!-- ================================ -->
 
             <a href="#" id="card-logs" class="card">
                 <h3>📜 Логи действий</h3>
-                <p>История мутов, закрытий каналов и других действий модераторов.</p>
+                <p>История мутов, закрытий каналов и других действий.</p>
             </a>
         </div>
     </div>
 
-    <!-- Скрипты для связывания ссылок -->
     <script>
         const guildId = window.location.pathname.split('/').pop();
         
-        // Массив ссылок: связываем ID карточек и навигации с путями
         const links = {
             'nav-roster': 'roster', 'card-roster': 'roster',
             'nav-rr': 'reactionroles', 'card-rr': 'reactionroles',
             'nav-rem': 'reminders', 'card-rem': 'reminders',
             'nav-mod': 'moderation', 'card-mod': 'moderation',
             'nav-emb': 'custom', 'card-emb': 'custom',
-            'nav-guides': 'guides', 'card-guides': 'guides', // Ссылка на гайды
+            'nav-guides': 'guides', 'card-guides': 'guides',
+            'nav-guild': 'profiles', 'card-guild': 'profiles', // Ведет на страницу профилей
             'nav-logs': 'logs', 'card-logs': 'logs'
         };
 
-        // Применяем ссылки
         for (const [id, path] of Object.entries(links)) {
             const el = document.getElementById(id);
             if (el) el.href = `/manage/${guildId}/${path}`;
         }
 
-        // Загружаем имя сервера
         fetch(`/api/guild/${guildId}`)
             .then(r => r.json())
             .then(d => document.getElementById('server-name').innerText = d.name)
