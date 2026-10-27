@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="/css/style.css">
     <script src="/js/ui.js"></script>
     <style>
-        .profile-container { max-width: 700px; margin: 50px auto; padding: 20px; }
+        .profile-container { max-width: 700px; margin: 0 auto; padding: 20px; }
         .profile-header { text-align: center; margin-bottom: 30px; }
-        .profile-header h1 { font-family: 'Cinzel', serif; color: var(--accent); font-size: 36px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
+        .profile-header h1 { font-family: 'Cinzel', serif; color: var(--accent-gold); font-size: 36px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
         .back-btn { display: block; text-align: center; margin-bottom: 20px; color: var(--text-muted); text-decoration: none; }
-        .back-btn:hover { color: var(--accent); }
+        .back-btn:hover { color: var(--accent-jade); }
         
         .character-block { background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); padding: 20px; border-radius: 8px; margin-bottom: 20px; position: relative; }
-        .char-title { font-family: 'Cinzel', serif; color: var(--accent); margin-bottom: 15px; font-size: 18px; }
+        .char-title { font-family: 'Cinzel', serif; color: var(--accent-jade); margin-bottom: 15px; font-size: 18px; }
         .remove-char-btn { position: absolute; top: 15px; right: 15px; background: var(--danger); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; display: none; }
         
         .switch-container { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border-color); }
@@ -22,35 +22,42 @@
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 34px; }
         .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider { background-color: var(--accent-jade); }
         input:checked + .slider:before { transform: translateX(24px); }
     </style>
 </head>
-<body class="bg-forest">
-    <div class="profile-container">
-        <a href="/dashboard" class="back-btn">← Вернуться в панель</a>
-        
-        <div class="profile-header">
-            <h1 id="page-title">Мои персонажи</h1>
-            <p id="page-subtitle">Эта информация будет видна другим игрокам</p>
-        </div>
+<body>
 
-        <div class="switch-container" id="switch-global">
-            <div>
-                <h4 style="margin: 0; color: var(--text-main);">Сделать профиль глобальным?</h4>
-                <p style="margin: 5px 0 0 0; font-size: 12px; color: var(--text-muted);">Если включено, профиль будет виден на всех серверах бота.</p>
+    <a href="/dashboard" class="top-banner"><h1>Главная</h1></a>
+
+    <div class="main-container" style="display: block;">
+        <div class="content" style="max-width: 800px;">
+            <div class="profile-container">
+                <a href="/dashboard" class="back-btn"><i class="ph ph-arrow-left"></i> Вернуться в панель</a>
+                
+                <div class="profile-header">
+                    <h1 id="page-title">Мои персонажи</h1>
+                    <p id="page-subtitle" style="color: var(--text-muted);">Эта информация будет видна другим игрокам</p>
+                </div>
+
+                <div class="switch-container" id="switch-global">
+                    <div>
+                        <h4 style="margin: 0; color: var(--text-main);">Сделать профиль глобальным?</h4>
+                        <p style="margin: 5px 0 0 0; font-size: 12px; color: var(--text-muted);">Если включено, профиль будет виден на всех серверах бота.</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="is-global">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div id="characters-container"></div>
+                
+                <button class="btn btn-success" onclick="addCharacter()" id="btn-add" style="width: 100%; margin-bottom: 15px;"><i class="ph ph-plus"></i> Добавить второго персонажа</button>
+                <button class="btn" onclick="saveProfile()" style="width: 100%; margin-bottom: 15px;"><i class="ph ph-floppy-disk"></i> Сохранить профиль</button>
+                <button class="btn btn-danger" onclick="deleteMyProfile()" id="btn-delete-profile" style="width: 100%; display: none;"><i class="ph ph-trash"></i> Удалить профиль</button>
             </div>
-            <label class="switch">
-                <input type="checkbox" id="is-global">
-                <span class="slider"></span>
-            </label>
         </div>
-
-        <div id="characters-container"></div>
-        
-        <button class="btn btn-success" onclick="addCharacter()" id="btn-add" style="width: 100%; margin-bottom: 15px;">+ Добавить второго персонажа</button>
-        <button class="btn" onclick="saveProfile()" style="width: 100%; margin-bottom: 15px;">💾 Сохранить профиль</button>
-        <button class="btn btn-danger" onclick="deleteMyProfile()" id="btn-delete-profile" style="width: 100%; display: none;">🗑️ Удалить профиль</button>
     </div>
 
     <script>
@@ -73,7 +80,7 @@
             block.id = `char-block-${charCount}`;
             
             block.innerHTML = `
-                <button class="remove-char-btn" onclick="removeCharacter('${block.id}')">Удалить</button>
+                <button class="remove-char-btn" onclick="removeCharacter('${block.id}')"><i class="ph ph-x"></i></button>
                 <div class="char-title">Персонаж ${index + 1}</div>
                 <div class="form-group"><label>Игровой ник</label><input type="text" class="c-nick" value="${data.gameNickname || ''}" placeholder="Например: Koten-Ren"></div>
                 <div class="form-group"><label>Гильдия</label><input type="text" class="c-guild" value="${data.guildName || ''}" placeholder="Например: СНОВА"></div>
@@ -114,7 +121,6 @@
             document.getElementById('btn-add').style.display = blocks.length >= 2 ? 'none' : 'block';
         }
 
-        // ЗАГРУЗКА ПРОФИЛЯ
         const fetchUrl = targetUserId 
             ? `/api/profile/${guildId}?user=${targetUserId}` 
             : `/api/profile/${guildId}`;
@@ -127,7 +133,6 @@
             .then(data => {
                 if (data.characters && data.characters.length > 0) {
                     isNewProfile = false;
-                    // Показываем кнопку удаления только если это свой профиль
                     if (!targetUserId) document.getElementById('btn-delete-profile').style.display = 'block';
                     
                     if (data.isGlobal) document.getElementById('is-global').checked = true;
