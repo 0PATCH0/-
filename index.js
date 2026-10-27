@@ -45,11 +45,9 @@ async function registerCommands() {
     try {
         console.log(`[DISCORD] Начинаю обновление ${commandsArray.length} слэш-команд.`);
         
-        // Глобальная регистрация
         await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commandsArray });
         console.log('[DISCORD] ✅ Глобальные слэш-команды успешно зарегистрированы!');
 
-        // Локальная регистрация для каждого сервера (мгновенное обновление)
         client.guilds.cache.forEach(async (guild) => {
             try {
                 await rest.put(
@@ -66,7 +64,6 @@ async function registerCommands() {
     }
 }
 
-// ФУНКЦИЯ ОБНОВЛЕНИЯ СООБЩЕНИЯ В DISCORD
 async function refreshRosterMessage(guildId, client) {
     try {
         const msgRecord = await RosterMessage.findOne({ guildId });
@@ -107,7 +104,6 @@ async function refreshRosterMessage(guildId, client) {
     }
 }
 
-// ФУНКЦИЯ СБОРА ДАННЫХ
 async function updateRosterForGuild(guild) {
     try {
         await guild.members.fetch({ time: 120000, force: true });
@@ -141,24 +137,14 @@ function scheduleUpdate(guildId) {
 }
 
 client.on('interactionCreate', async interaction => {
-        if (interaction.customId.startsWith('show_class_')) {
-            const classRole = interaction.customId.replace('show_class_', '');
-            const { PlayerProfile } = require('./models');
-            
-            // Ищем и локальные, и глобальные профили
-            const profiles = await PlayerProfile.find({ 
-                $or: [ { classRole: classRole, guildId: interaction.guild.id }, { classRole: classRole, isGlobal: true } ] 
-            });
-            
-            if (profiles.length === 0) return interaction.reply({ content: `Пока никто не указал класс **${classRole}**.`, ephemeral: true });
-
-            const embed = new EmbedBuilder()
-                .setTitle(`📋 Список класса: ${classRole}`)
-                .setColor('#d4af37')
-                .setDescription(profiles.map(p => `**${p.characters[0].gameNickname || 'Без ника'}** • ${p.characters[0].weapon || 'Оружие не указано'} • <@${p.userId}>`).join('\n'))
-                .setFooter({ text: `Всего участников: ${profiles.length}` });
-
-            await interaction.reply({ embeds: [embed] });
+    if (interaction.isChatInputCommand()) {
+        const command = client.commands.get(interaction.commandName);
+        if (!command) return;
+        try {
+            await command.execute(interaction);
+        } catch (error) {
+            console.error(error);
+            await interaction.reply({ content: 'Ошибка при выполнении!', ephemeral: true });
         }
     }
 
@@ -197,16 +183,16 @@ client.on('interactionCreate', async interaction => {
             const classRole = interaction.customId.replace('show_class_', '');
             const { PlayerProfile } = require('./models');
             
-            const profiles = await PlayerProfile.find({ classRole: classRole });
+            const profiles = await PlayerProfile.find({ 
+                $or: [ { classRole: classRole, guildId: interaction.guild.id }, { classRole: classRole, isGlobal: true } ] 
+            });
             
-            if (profiles.length === 0) {
-                return interaction.reply({ content: `Пока никто не указал класс **${classRole}**.`, ephemeral: true });
-            }
+            if (profiles.length === 0) return interaction.reply({ content: `Пока никто не указал класс **${classRole}**.`, ephemeral: true });
 
             const embed = new EmbedBuilder()
                 .setTitle(`📋 Список класса: ${classRole}`)
                 .setColor('#d4af37')
-                .setDescription(profiles.map(p => `**${p.gameNickname || 'Без ника'}** • ${p.weapon || 'Оружие не указано'} • <@${p.userId}>`).join('\n'))
+                .setDescription(profiles.map(p => `**${p.characters[0].gameNickname || 'Без ника'}** • ${p.characters[0].weapon || 'Оружие не указано'} • <@${p.userId}>`).join('\n'))
                 .setFooter({ text: `Всего участников: ${profiles.length}` });
 
             await interaction.reply({ embeds: [embed] });
@@ -217,7 +203,6 @@ client.on('interactionCreate', async interaction => {
 client.once('ready', async () => {
     console.log(`Бот ${client.user.tag} в сети!`);
     
-    // Ждем 2 секунды, чтобы кэш гильдий загрузился, и регистрируем команды
     setTimeout(async () => {
         await registerCommands();
     }, 2000);
