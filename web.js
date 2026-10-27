@@ -218,12 +218,13 @@ app.post('/api/guild/:id/roster/update', async (req, res) => {
     if (!guild) return res.status(404).json({ error: 'Сервер не найден' });
 
     try {
-        // Скачиваем всех участников (увеличиваем таймаут)
-        await guild.members.fetch({ time: 60000, force: true });
+        // Вызываем функцию из index.js
+        const { updateRosterForGuild } = require('./index.js'); 
+        await updateRosterForGuild(guild);
         res.json({ success: true });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Не удалось обновить данные (таймаут)' });
+        res.status(500).json({ error: 'Ошибка при обновлении' });
     }
 });
 
