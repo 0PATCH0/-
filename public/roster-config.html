@@ -3,69 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Запрет кэширования, чтобы новые стили сразу подгружались -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    
+    <meta http-equiv="Cache-Control" content="no-cache">
     <title>Настройка колонок</title>
     <link rel="stylesheet" href="/css/style.css">
-    <style>
-        .form-card { background: var(--bg-card); padding: 30px; border-radius: 12px; max-width: 800px; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-        .help-text { font-size: 12px; color: var(--text-muted); margin-top: 5px; display: block; }
-        
-        .role-row { 
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            background: #14151c;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            border: 1px solid #2a2c3a;
-        }
-
-        .row-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        /* Стили для палитры цветов */
-        .color-picker { 
-            width: 50px; 
-            height: 45px; 
-            padding: 0; 
-            border: 2px solid var(--border-color); 
-            border-radius: 8px; 
-            cursor: pointer; 
-            background: #1e202b; 
-            transition: 0.3s;
-        }
-        .color-picker:hover {
-            border-color: var(--accent);
-            transform: scale(1.05);
-        }
-    </style>
 </head>
-<body>
+<body class="bg-mountain">
+    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
+
     <div class="sidebar">
         <h2 id="server-name">Загрузка...</h2>
         <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
-        <hr style="border-color: var(--border-color);">
-        <a href="#" id="link-back">🏠 На главную</a>
+        <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+        <a href="#" id="nav-home">🏠 Обзор</a>
+        <a href="#" id="nav-roster">🛡️ Состав гильдии</a>
         <a href="#" class="active">⚙️ Настройка колонок</a>
     </div>
+
     <div class="content">
-        <div class="header"><h1>⚙️ Настройка колонок для списка</h1></div>
+        <div class="header"><h1>⚙️ Настройка колонок</h1></div>
         <div class="form-card">
-            <p style="color: var(--text-muted); margin-bottom: 20px;">Выберите роли, придумайте названия (можно писать :имя_эмодзи: или вставлять сам эмодзи) и выберите цвет полоски.</p>
-            
+            <p style="color: var(--text-muted); margin-bottom: 20px;">Выберите роли и укажите названия. Эмодзи сервера пишутся как :имя_эмодзи:.</p>
             <div id="columns-container"></div>
-            
             <button class="btn btn-success btn-small" onclick="addColumn()" style="margin-bottom: 20px;">+ Добавить колонку</button>
-            
-            <div style="border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 20px;">
+            <div style="border-top: 1px solid var(--border-color); padding-top: 20px;">
                 <button class="btn" onclick="saveConfig()">💾 Сохранить настройки</button>
             </div>
         </div>
@@ -73,13 +33,13 @@
 
     <script>
         const guildId = window.location.pathname.split('/')[2];
-        document.getElementById('link-back').href = `/manage/${guildId}`;
+        document.getElementById('nav-home').href = `/manage/${guildId}`;
+        document.getElementById('nav-roster').href = `/manage/${guildId}/roster`;
         let serverRoles = [];
 
-        // Используем cache: 'no-store', чтобы всегда получать свежие данные
         Promise.all([
-            fetch(`/api/guild/${guildId}`, { cache: 'no-store' }).then(res => res.json()),
-            fetch(`/api/guild/${guildId}/roster-config`, { cache: 'no-store' }).then(res => res.json())
+            fetch(`/api/guild/${guildId}`).then(res => res.json()),
+            fetch(`/api/guild/${guildId}/roster-config`).then(res => res.json())
         ]).then(([guildData, configData]) => {
             document.getElementById('server-name').innerText = guildData.name;
             serverRoles = guildData.roles;
@@ -91,23 +51,17 @@
             }
         });
 
-        function addColumn(selectedRoleId = '', currentName = '', currentColor = '#5865F2') {
+        function addColumn(selectedRoleId = '', currentName = '', currentColor = '#d4af37') {
             const container = document.getElementById('columns-container');
             const row = document.createElement('div');
             row.className = 'role-row';
-            
             let options = serverRoles.map(r => `<option value="${r.id}" ${r.id === selectedRoleId ? 'selected' : ''}>${r.name}</option>`).join('');
             
             row.innerHTML = `
                 <select class="col-role">${options}</select>
-                <div>
-                    <input type="text" class="col-name" placeholder="Название (например: :tank: Танки)" value="${currentName}">
-                    <span class="help-text">Пиши :имя_эмодзи: или вставляй готовый эмодзи из Дискорда.</span>
-                </div>
-                <div class="row-controls">
-                    <input type="color" class="col-color color-picker" value="${currentColor}" title="Цвет полоски">
-                    <button class="btn btn-danger" onclick="this.parentElement.parentElement.remove()" style="flex: 1;">Удалить колонку</button>
-                </div>
+                <input type="text" class="col-name" placeholder="Название (например: ⚔️ ДД)" value="${currentName}">
+                <input type="color" class="col-color color-picker" value="${currentColor}" title="Цвет">
+                <button class="btn btn-danger btn-small" onclick="this.parentElement.remove()">X</button>
             `;
             container.appendChild(row);
         }
@@ -123,16 +77,12 @@
             });
 
             fetch(`/api/guild/${guildId}/roster-config`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ columns })
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ columns })
             }).then(res => res.json()).then(data => {
                 if (data.success) {
-                    alert('✅ Настройки успешно сохранены!');
-                    // Перезагружаем страницу с обходом кэша
-                    window.location.href = `/manage/${guildId}/roster-config?updated=${Date.now()}`;
+                    alert('✅ Настройки сохранены!');
+                    window.location.href = `/manage/${guildId}/roster`;
                 }
-                else alert('❌ Ошибка: ' + data.error);
             });
         }
     </script>
