@@ -1,11 +1,11 @@
-const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, REST, Routes, EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
 const { startWebServer } = require('./web'); 
-const { Reminder, ReactionRole, Roster } = require('./models');
+const { Reminder, ReactionRole, Roster, RosterConfig, RosterMessage } = require('./models');
 
 const client = new Client({ 
     intents: [
@@ -38,67 +38,95 @@ async function registerCommands() {
     } catch (error) { console.error(error); }
 }
 
-// ФУНКЦИЯ СОХРАНЕНИЯ СПИСКА В БД (по ID ролей)
-async function updateRosterForGuild(guild) {
+// --- ФУНКЦИЯ ОБНОВЛЕНИЯ СООБЩЕНИЯ В DISCORD ---
+async function refreshRosterMessage(guildId, client) {
     try {
-        console.log(`[ROSTER] Обновляю данные для ${guild.name}...`);
-        // Скачиваем всех участников
-        await guild.members.fetch({ time: 120000, force: true });
-        
-        const rolesData = {};
-        
-        // Проходимся по всем ролям на сервере
-        guild.roles.cache.forEach(role => {
-            if (role.id === guild.id || role.managed) return; // Пропускаем @everyone и роли ботов
-            
-            const membersInRole = role.members.filter(m => !m.user.bot).map(m => ({
-                id: m.id,
-                name: m.displayName
-            }));
+        const msgRecord = await RosterMessage.findOne({ guildId });
+        if (!msgRecord) return; 
 
-            if (membersInRole.length > 0) {
-                rolesData[role.id] = membersInRole; // СОХРАНЯЕМ ПО ID РОЛИ!
-            }
+        const config = await RosterConfig.findOne({ guildId });
+        const rosterData = await Roster.findOne({ guildId });
+        if (!config || !rosterData) return;
+
+        const embedsToSend = [];
+        let totalUnique = new Set();
+
+        config.columns.forEach((col) => {
+            const roleData = rosterData.data[col.roleId] || [];
+            roleData.forEach(m => totalUnique.add(m.id));
+            let memberList = roleData.length > 0 ? roleData.map(m => `<@${m.id}>`).join('\n') : '*Никого нет*';
+            if (memberList.length > 4000) memberList = memberList.substring(0, 4000) + '\n...и другие';
+
+            embedsToSend.push(new EmbedBuilder()
+                .setTitle(col.name).setColor(col.color || '#5865F2').setDescription(memberList)
+                .setFooter({ text: `Участников: ${roleData.length} • Обновлено: ${new Date(rosterData.lastUpdated).toLocaleString('ru-RU')}` }));
         });
 
-        // Сохраняем в MongoDB
+        embedsToSend.unshift(new EmbedBuilder().setTitle('🛡️ Состав гильдии').setColor('#2b2d31')
+            .setDescription(`**Всего уникальных участников:** ${totalUnique.size}`).setTimestamp());
+
+        const channel = await client.channels.fetch(msgRecord.channelId).catch(() => null);
+        if (!channel) return;
+        const message = await channel.messages.fetch(msgRecord.messageId).catch(() => null);
+        if (!message) {
+            await RosterMessage.deleteOne({ guildId });
+            return;
+        }
+
+        await message.edit({ embeds: embedsToSend.slice(0, 10) });
+        console.log(`[ROSTER] Сообщение в гильдии ${guildId} успешно обновлено.`);
+    } catch (e) {
+        console.error('[ROSTER] Ошибка при обновлении сообщения:', e);
+    }
+}
+
+// ФУНКЦИЯ СОХРАНЕНИЯ СПИСКА В БД
+async function updateRosterForGuild(guild) {
+    try {
+        await guild.members.fetch({ time: 120000, force: true });
+        const rolesData = {};
+        guild.roles.cache.forEach(role => {
+            if (role.id === guild.id || role.managed) return; 
+            const membersInRole = role.members.filter(m => !m.user.bot).map(m => ({ id: m.id, name: m.displayName }));
+            if (membersInRole.length > 0) rolesData[role.id] = membersInRole;
+        });
+
         await Roster.findOneAndUpdate(
             { guildId: guild.id },
             { data: rolesData, lastUpdated: new Date() },
             { upsert: true }
         );
-        console.log(`[ROSTER] Данные для ${guild.name} сохранены в БД.`);
+        console.log(`[ROSTER] База данных для ${guild.name} обновлена.`);
+        
+        await refreshRosterMessage(guild.id, client);
     } catch (e) {
         console.error(`[ROSTER] Ошибка при обновлении ${guild.name}: ${e.message}`);
     }
+}
+
+// --- ЗАДЕРЖКА (DEBOUNCE) ДЛЯ СОБЫТИЙ ---
+const updateTimers = new Map();
+function scheduleUpdate(guildId) {
+    if (updateTimers.has(guildId)) clearTimeout(updateTimers.get(guildId));
+    updateTimers.set(guildId, setTimeout(async () => {
+        const guild = client.guilds.cache.get(guildId);
+        if (guild) await updateRosterForGuild(guild);
+        updateTimers.delete(guildId);
+    }, 5000));
 }
 
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     const command = client.commands.get(interaction.commandName);
     if (!command) return;
-    try {
-        await command.execute(interaction);
-    } catch (error) {
-        console.error(error);
-        await interaction.reply({ content: 'Ошибка при выполнении!', ephemeral: true });
-    }
+    try { await command.execute(interaction); } catch (error) { console.error(error); }
 });
 
 client.once('ready', async () => {
     console.log(`Бот ${client.user.tag} в сети!`);
     await registerCommands();
-
-    // Первичное обновление при старте
     client.guilds.cache.forEach(guild => updateRosterForGuild(guild));
 
-    // АВТОМАТИЧЕСКОЕ ОБНОВЛЕНИЕ КАЖДЫЕ 30 МИНУТ
-    setInterval(() => {
-        console.log('[ROSTER] Запуск авто-обновления...');
-        client.guilds.cache.forEach(guild => updateRosterForGuild(guild));
-    }, 30 * 60 * 1000);
-    
-    // Восстановление напоминаний
     try {
         const reminders = await Reminder.find();
         if (reminders.length > 0) {
@@ -108,8 +136,14 @@ client.once('ready', async () => {
     } catch (e) { console.error(e); }
 });
 
-// Экспортируем функцию, чтобы сайт мог вызвать её вручную
+client.on('guildMemberUpdate', (oldMember, newMember) => {
+    if (oldMember.roles.cache.size !== newMember.roles.cache.size) scheduleUpdate(newMember.guild.id);
+});
+client.on('guildMemberAdd', (member) => scheduleUpdate(member.guild.id));
+client.on('guildMemberRemove', (member) => scheduleUpdate(member.guild.id));
+
 module.exports.updateRosterForGuild = updateRosterForGuild;
+module.exports.refreshRosterMessage = refreshRosterMessage;
 
 mongoose.connect(process.env.MONGO_URI)
     .then(() => {
