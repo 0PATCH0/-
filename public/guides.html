@@ -6,37 +6,40 @@
     <title>Гайды</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body class="bg-forest">
-    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
+<body>
 
-    <div class="sidebar">
-        <h2 id="server-name">Загрузка...</h2>
-        <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
-        <hr style="border-color: var(--border-color); margin-bottom: 20px;">
-        <a href="#" id="nav-home">🏠 Обзор</a>
-        <a href="#" id="nav-roster">🛡️ Состав гильдии</a>
-        <a href="#" id="nav-rr">🎭 Роли по кнопкам</a>
-        <a href="#" id="nav-rem">⏰ Напоминания</a>
-        <a href="#" id="nav-mod">⚙️ Модерация</a>
-        <a href="#" id="nav-emb">📨 Эмбеды</a>
-        <a href="#" class="active">📖 Гайды</a>
-        <a href="#" id="nav-logs">📜 Логи действий</a>
-    </div>
+    <a href="/dashboard" class="top-banner"><h1>Главная</h1></a>
 
-    <div class="content">
-        <div class="header">
-            <h1>📖 Гайды сервера</h1>
-            <a href="#" id="btn-create" class="btn">+ Создать гайд</a>
+    <div class="main-container">
+        <div class="sidebar">
+            <h2 id="server-name">Загрузка...</h2>
+            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><i class="ph ph-arrow-left"></i> К списку серверов</a>
+            <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+            <a href="#" id="nav-home"><i class="ph ph-house"></i> Обзор</a>
+            <a href="#" id="nav-roster"><i class="ph ph-shield"></i> Состав гильдии</a>
+            <a href="#" id="nav-guild"><i class="ph ph-users"></i> Гильдия</a>
+            <a href="#" class="active"><i class="ph ph-book-open"></i> Гайды</a>
+            <a href="#" id="nav-rr"><i class="ph ph-masks"></i> Роли по кнопкам</a>
+            <a href="#" id="nav-rem"><i class="ph ph-alarm"></i> Напоминания</a>
+            <a href="#" id="nav-mod"><i class="ph ph-gear"></i> Модерация</a>
+            <a href="#" id="nav-logs"><i class="ph ph-scroll"></i> Логи действий</a>
+            <a href="#" id="nav-emb"><i class="ph ph-envelope"></i> Эмбеды</a>
         </div>
-        
-        <div class="grid" id="guides-grid">
-            <p style="color: var(--text-muted);">Загрузка...</p>
+
+        <div class="content">
+            <div class="header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <h1><i class="ph ph-book-open"></i> Гайды сервера</h1>
+                <a href="#" id="btn-create" class="btn"><i class="ph ph-plus"></i> Создать гайд</a>
+            </div>
+            <div class="grid" id="guides-grid">
+                <p style="color: var(--text-muted);">Загрузка...</p>
+            </div>
         </div>
     </div>
 
     <script>
         const guildId = window.location.pathname.split('/')[2];
-        const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-emb': '/custom', 'nav-logs': '/logs'};
+        const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-guild': '/profiles', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-logs': '/logs', 'nav-emb': '/custom'};
         for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
         document.getElementById('btn-create').href = `/manage/${guildId}/guides/edit/new`;
 
@@ -44,20 +47,20 @@
 
         fetch(`/api/guild/${guildId}/guides`).then(res => res.json()).then(data => {
             const grid = document.getElementById('guides-grid');
-            if (data.length === 0) return grid.innerHTML = '<p style="color: var(--text-muted);">Гайдов пока нет. Создайте первый!</p>';
+            if (data.length === 0) return grid.innerHTML = '<p style="color: var(--text-muted);">Гайдов пока нет.</p>';
             
             grid.innerHTML = '';
             data.forEach(guide => {
                 grid.innerHTML += `
-                    <div class="card" style="border-left: 4px solid var(--accent); display: flex; flex-direction: column; justify-content: space-between;">
+                    <div class="card" style="border-left: 4px solid var(--accent-gold); display: flex; flex-direction: column; justify-content: space-between;">
                         <div>
-                            <h3 style="color: var(--accent);">${guide.name}</h3>
+                            <h3 style="color: var(--accent-gold);"><i class="ph ph-book"></i> ${guide.name}</h3>
                             <p style="margin-bottom: 15px;">${guide.description || 'Без описания'}</p>
-                            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Глав: ${guide.chapters.length}</p>
+                            <p style="font-size: 12px; color: var(--accent-jade); margin-bottom: 15px;">Глав: ${guide.chapters.length}</p>
                         </div>
                         <div style="display: flex; gap: 10px;">
-                            <a href="/manage/${guildId}/guides/edit/${guide._id}" class="btn btn-small" style="flex: 1;">✏️ Редактировать</a>
-                            <button class="btn btn-danger btn-small" onclick="deleteGuide('${guide._id}')">🗑️</button>
+                            <a href="/manage/${guildId}/guides/edit/${guide._id}" class="btn btn-small" style="flex: 1; background: var(--bg-sidebar); border: 1px solid var(--accent-jade); color: var(--accent-jade);"><i class="ph ph-pencil"></i> Ред.</a>
+                            <button class="btn btn-danger btn-small" onclick="deleteGuide('${guide._id}')"><i class="ph ph-trash"></i></button>
                         </div>
                     </div>
                 `;
