@@ -102,4 +102,31 @@
 
         function editMessage(msg) {
             document.getElementById('form-title').innerText = 'Редактировать';
-            document.getElementById('edit-message-id').value = msg
+            document.getElementById('edit-message-id').value = msg.messageId;
+            document.getElementById('channel-id').value = msg.channelId;
+            document.getElementById('channel-id').disabled = true;
+            document.getElementById('cmd-title').value = msg.title || '';
+            document.getElementById('cmd-desc').value = msg.description || '';
+            document.getElementById('cmd-color').value = msg.color || '#d4af37';
+            document.getElementById('btn-save').innerText = '💾 Сохранить';
+            document.getElementById('btn-cancel').style.display = 'block';
+        }
+
+        function cancelEdit() {
+            document.getElementById('form-title').innerText = 'Создать сообщение';
+            document.getElementById('edit-message-id').value = '';
+            document.getElementById('channel-id').disabled = false;
+            document.getElementById('channel-id').value = '';
+            document.getElementById('cmd-title').value = '';
+            document.getElementById('cmd-desc').value = '';
+            document.getElementById('btn-save').innerText = '📤 Отправить';
+            document.getElementById('btn-cancel').style.display = 'none';
+        }
+
+        function deleteMessage(id) {
+            if (!confirm('Удалить сообщение?')) return;
+            fetch(`/api/guild/${guildId}/embeds/${id}`, { method: 'DELETE' }).then(() => loadMessages());
+        }
+    </script>
+</body>
+</html>
