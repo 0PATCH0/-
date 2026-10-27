@@ -6,54 +6,62 @@
     <title>Логи действий</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body class="bg-default">
-    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
+<body>
 
-    <div class="sidebar">
-        <h2 id="server-name">Загрузка...</h2>
-        <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
-        <hr style="border-color: var(--border-color); margin-bottom: 20px;">
-        <a href="#" id="nav-home">🏠 Обзор</a>
-        <a href="#" id="nav-roster">🛡️ Состав гильдии</a>
-        <a href="#" id="nav-rr">🎭 Роли по кнопкам</a>
-        <a href="#" id="nav-rem">⏰ Напоминания</a>
-        <a href="#" id="nav-mod">⚙️ Модерация</a>
-        <a href="#" id="nav-emb">📨 Эмбеды</a>
-        <a href="#" class="active">📜 Логи действий</a>
-    </div>
+    <a href="/dashboard" class="top-banner"><h1>Главная</h1></a>
 
-    <div class="content">
-        <div class="header"><h1>📜 Журнал действий</h1></div>
-        <div class="form-card" style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; text-align: left;">
-                <thead>
-                    <tr style="border-bottom: 2px solid var(--border-color); color: var(--accent); font-family: 'Cinzel', serif;">
-                        <th style="padding: 15px;">Время</th><th style="padding: 15px;">Модератор</th><th style="padding: 15px;">Действие</th><th style="padding: 15px;">Детали</th>
-                    </tr>
-                </thead>
-                <tbody id="logs-body">
-                    <tr><td colspan="4" style="text-align: center; padding: 20px; color: var(--text-muted);">Загрузка...</td></tr>
-                </tbody>
-            </table>
+    <div class="main-container">
+        <div class="sidebar">
+            <h2 id="server-name">Загрузка...</h2>
+            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><i class="ph ph-arrow-left"></i> К списку серверов</a>
+            <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+            <a href="#" id="nav-home"><i class="ph ph-house"></i> Обзор</a>
+            <a href="#" id="nav-roster"><i class="ph ph-shield"></i> Состав гильдии</a>
+            <a href="#" id="nav-guild"><i class="ph ph-users"></i> Гильдия</a>
+            <a href="#" id="nav-guides"><i class="ph ph-book-open"></i> Гайды</a>
+            <a href="#" id="nav-rr"><i class="ph ph-masks"></i> Роли по кнопкам</a>
+            <a href="#" id="nav-rem"><i class="ph ph-alarm"></i> Напоминания</a>
+            <a href="#" id="nav-mod"><i class="ph ph-gear"></i> Модерация</a>
+            <a href="#" class="active"><i class="ph ph-scroll"></i> Логи действий</a>
+            <a href="#" id="nav-emb"><i class="ph ph-envelope"></i> Эмбеды</a>
+        </div>
+
+        <div class="content">
+            <div class="header"><h1><i class="ph ph-scroll"></i> Журнал действий</h1></div>
+            <div class="form-card" style="overflow-x: auto; padding: 20px;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border-color); color: var(--accent-gold); font-family: 'Cinzel', serif;">
+                            <th style="padding: 15px;">Время</th>
+                            <th style="padding: 15px;">Модератор</th>
+                            <th style="padding: 15px;">Действие</th>
+                            <th style="padding: 15px;">Детали</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-body">
+                        <tr><td colspan="4" style="text-align: center; padding: 20px; color: var(--text-muted);">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script>
         const guildId = window.location.pathname.split('/')[2];
-        const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-emb': '/custom'};
+        const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-guild': '/profiles', 'nav-guides': '/guides', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-emb': '/custom'};
         for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
 
         fetch(`/api/guild/${guildId}`).then(r=>r.json()).then(d => document.getElementById('server-name').innerText = d.name);
 
         fetch(`/api/guild/${guildId}/logs`).then(res => res.json()).then(data => {
             const tbody = document.getElementById('logs-body');
-            if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">Логов пока нет. Используйте команды модерации в Discord.</td></tr>';
+            if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">Логов пока нет.</td></tr>';
             
             tbody.innerHTML = data.map(log => `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                     <td style="padding: 15px; color: var(--text-muted); font-size: 13px;">${new Date(log.date).toLocaleString('ru-RU')}</td>
-                    <td style="padding: 15px; color: var(--accent); font-weight: bold;">${log.username}</td>
-                    <td style="padding: 15px;"><span style="background: rgba(212, 175, 55, 0.15); color: var(--accent); padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(212, 175, 55, 0.3);">${log.action}</span></td>
+                    <td style="padding: 15px; color: var(--accent-jade); font-weight: bold;">${log.username}</td>
+                    <td style="padding: 15px;"><span style="background: rgba(46, 204, 113, 0.15); color: var(--accent-jade); padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(46, 204, 113, 0.3);">${log.action}</span></td>
                     <td style="padding: 15px; font-size: 14px;">${log.details}</td>
                 </tr>
             `).join('');
