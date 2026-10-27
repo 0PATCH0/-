@@ -22,46 +22,55 @@ const commandsArray = [];
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
+console.log(`[COMMANDS] Найдено файлов в папке commands: ${commandFiles.length}`);
+
 for (const file of commandFiles) {
-    const command = require(path.join(commandsPath, file));
-    if ('data' in command && 'execute' in command) {
-        client.commands.set(command.data.name, command);
-        commandsArray.push(command.data.toJSON());
+    try {
+        const filePath = path.join(commandsPath, file);
+        const command = require(filePath);
+        if ('data' in command && 'execute' in command) {
+            client.commands.set(command.data.name, command);
+            commandsArray.push(command.data.toJSON());
+            console.log(`[COMMANDS] ✅ Загружена команда: /${command.data.name}`);
+        } else {
+            console.log(`[COMMANDS] ⚠️ В файле ${file} не хватает свойства "data" или "execute".`);
+        }
+    } catch (error) {
+        console.error(`[COMMANDS] ❌ Ошибка при загрузке файла ${file}:`, error.message);
     }
 }
 
 async function registerCommands() {
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     try {
-        console.log(`Начинаю обновление ${commandsArray.length} слэш-команд.`);
+        console.log(`[DISCORD] Начинаю обновление ${commandsArray.length} слэш-команд.`);
         
-        // 1. Регистрируем глобально (на всякий случай)
+        // Глобальная регистрация
         await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commandsArray });
-        
-        // 2. Регистрируем ЛОКАЛЬНО для каждого сервера, где есть бот (это мгновенно)
+        console.log('[DISCORD] ✅ Глобальные слэш-команды успешно зарегистрированы!');
+
+        // Локальная регистрация для каждого сервера (мгновенное обновление)
         client.guilds.cache.forEach(async (guild) => {
             try {
                 await rest.put(
                     Routes.applicationGuildCommands(process.env.CLIENT_ID, guild.id),
                     { body: commandsArray }
                 );
-                console.log(`Слэш-команды для сервера "${guild.name}" успешно обновлены (мгновенно).`);
+                console.log(`[DISCORD] ✅ Локальные команды для "${guild.name}" обновлены!`);
             } catch (err) {
-                console.error(`Не удалось обновить команды для ${guild.name}:`, err.message);
+                console.error(`[DISCORD] ❌ Ошибка обновления для ${guild.name}:`, err.message);
             }
         });
-
-        console.log('Глобальные слэш-команды успешно зарегистрированы!');
     } catch (error) {
-        console.error('Ошибка регистрации:', error);
+        console.error('[DISCORD] ❌ Ошибка регистрации:', error);
     }
 }
 
-// --- ФУНКЦИЯ ОБНОВЛЕНИЯ ВСЕХ СООБЩЕНИЙ В DISCORD ---
+// ФУНКЦИЯ ОБНОВЛЕНИЯ СООБЩЕНИЯ В DISCORD
 async function refreshRosterMessage(guildId, client) {
     try {
-        const msgRecords = await RosterMessage.find({ guildId });
-        if (msgRecords.length === 0) return; 
+        const msgRecord = await RosterMessage.findOne({ guildId });
+        if (!msgRecord) return; 
 
         const config = await RosterConfig.findOne({ guildId });
         const rosterData = await Roster.findOne({ guildId });
@@ -84,22 +93,17 @@ async function refreshRosterMessage(guildId, client) {
         embedsToSend.unshift(new EmbedBuilder().setTitle('🛡️ Состав гильдии').setColor('#2b2d31')
             .setDescription(`**Всего уникальных участников:** ${totalUnique.size}`).setTimestamp());
 
-        for (const record of msgRecords) {
-            const channel = await client.channels.fetch(record.channelId).catch(() => null);
-            if (!channel) {
-                await RosterMessage.deleteOne({ _id: record._id }); // Канал удален
-                continue;
-            }
-            const message = await channel.messages.fetch(record.messageId).catch(() => null);
-            if (!message) {
-                await RosterMessage.deleteOne({ _id: record._id }); // Сообщение удалено
-                continue;
-            }
-            await message.edit({ embeds: embedsToSend.slice(0, 10) });
-            console.log(`[ROSTER] Сообщение в канале #${channel.name} обновлено.`);
+        const channel = await client.channels.fetch(msgRecord.channelId).catch(() => null);
+        if (!channel) return;
+        const message = await channel.messages.fetch(msgRecord.messageId).catch(() => null);
+        if (!message) {
+            await RosterMessage.deleteOne({ guildId });
+            return;
         }
+
+        await message.edit({ embeds: embedsToSend.slice(0, 10) });
     } catch (e) {
-        console.error('[ROSTER] Ошибка при обновлении сообщений:', e);
+        console.error('[ROSTER] Ошибка при обновлении сообщения:', e);
     }
 }
 
@@ -119,7 +123,6 @@ async function updateRosterForGuild(guild) {
             { data: rolesData, lastUpdated: new Date() },
             { upsert: true }
         );
-        console.log(`[ROSTER] База данных для ${guild.name} обновлена.`);
         
         await refreshRosterMessage(guild.id, client);
     } catch (e) {
@@ -127,7 +130,6 @@ async function updateRosterForGuild(guild) {
     }
 }
 
-// ЗАДЕРЖКА ОБНОВЛЕНИЙ (чтобы не спамить при массовой выдаче ролей)
 const updateTimers = new Map();
 function scheduleUpdate(guildId) {
     if (updateTimers.has(guildId)) clearTimeout(updateTimers.get(guildId));
@@ -150,9 +152,7 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
-    // Обработка кнопок (Роли и Списки классов)
     if (interaction.isButton()) {
-        // Роли по кнопкам (старый код)
         if (interaction.customId.startsWith('rr_')) {
             const roleId = interaction.customId.split('_')[1];
             const member = interaction.member;
@@ -183,7 +183,6 @@ client.on('interactionCreate', async interaction => {
             }
         }
 
-        // Обработка кнопки "Показать всех" из команды /профиль
         if (interaction.customId.startsWith('show_class_')) {
             const classRole = interaction.customId.replace('show_class_', '');
             const { PlayerProfile } = require('./models');
@@ -203,6 +202,25 @@ client.on('interactionCreate', async interaction => {
             await interaction.reply({ embeds: [embed] });
         }
     }
+});
+
+client.once('ready', async () => {
+    console.log(`Бот ${client.user.tag} в сети!`);
+    
+    // Ждем 2 секунды, чтобы кэш гильдий загрузился, и регистрируем команды
+    setTimeout(async () => {
+        await registerCommands();
+    }, 2000);
+
+    client.guilds.cache.forEach(guild => updateRosterForGuild(guild));
+
+    try {
+        const reminders = await Reminder.find();
+        if (reminders.length > 0) {
+            const remindCommand = require('./commands/remind.js');
+            reminders.forEach(rem => remindCommand.setReminderTimeout(rem, client));
+        }
+    } catch (e) { console.error(e); }
 });
 
 client.on('guildMemberUpdate', (oldMember, newMember) => {
