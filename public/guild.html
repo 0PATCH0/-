@@ -32,6 +32,11 @@
                 <h3>📨 Эмбед-сообщения</h3>
                 <p>Создание, редактирование и удаление красивых сообщений в каналах.</p>
             </a>
+            <!-- НОВАЯ КАРТОЧКА -->
+            <a href="#" id="link-roster" class="card">
+                <h3>🛡️ Состав гильдии</h3>
+                <p>Просмотр и обновление списка участников по ролям в реальном времени.</p>
+            </a>
         </div>
     </div>
     <script>
@@ -42,6 +47,7 @@
             document.getElementById('link-reminders').href = `/manage/${guildId}/reminders`;
             document.getElementById('link-moderation').href = `/manage/${guildId}/moderation`;
             document.getElementById('link-custom').href = `/manage/${guildId}/custom`;
+            document.getElementById('link-roster').href = `/manage/${guildId}/roster`; // Ссылка на новую страницу
         });
     </script>
 </body>
