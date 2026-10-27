@@ -1,4 +1,4 @@
-// Функция для красивых уведомлений
+// Функция для красивых уведомлений (Toast)
 function showToast(message, type = 'success') {
     let container = document.querySelector('.toast-container');
     if (!container) {
@@ -18,7 +18,6 @@ function showToast(message, type = 'success') {
     `;
     
     container.appendChild(toast);
-
     setTimeout(() => {
         toast.style.animation = 'fadeOut 0.3s forwards';
         setTimeout(() => {
@@ -26,4 +25,29 @@ function showToast(message, type = 'success') {
             if (container.children.length === 0) container.remove();
         }, 300);
     }, 3000);
+}
+
+// Функция для красивого подтверждения (Modal)
+function showConfirm(title, message, onConfirm) {
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'modal-overlay';
+    
+    modalOverlay.innerHTML = `
+        <div class="modal-content">
+            <h3 style="color: var(--accent); margin-bottom: 15px; font-family: 'Cinzel', serif;">${title}</h3>
+            <p style="color: var(--text-muted); margin-bottom: 25px;">${message}</p>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-small" id="modal-cancel" style="background: rgba(255,255,255,0.1); color: white;">Отмена</button>
+                <button class="btn btn-danger btn-small" id="modal-confirm">Удалить</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modalOverlay);
+
+    document.getElementById('modal-cancel').onclick = () => modalOverlay.remove();
+    document.getElementById('modal-confirm').onclick = () => {
+        onConfirm();
+        modalOverlay.remove();
+    };
 }
