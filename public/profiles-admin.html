@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Гильдия - Профили</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .profile-card { display: flex; gap: 20px; align-items: flex-start; }
+        .profile-avatar { width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--accent); background: #000; }
+        .profile-info h3 { color: var(--accent); margin-bottom: 5px; font-family: 'Cinzel', serif; font-size: 20px; }
+        .profile-info p { font-size: 14px; margin-bottom: 5px; color: var(--text-muted); }
+        .profile-stats { display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap; }
+        .stat-badge { background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); padding: 5px 12px; border-radius: 20px; font-size: 12px; color: var(--accent); font-weight: bold; }
+    </style>
+</head>
+<body class="bg-forest">
+    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
+
+    <div class="sidebar">
+        <h2 id="server-name">Загрузка...</h2>
+        <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
+        <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+        <a href="#" id="nav-home">🏠 Обзор</a>
+        <a href="#" id="nav-roster">🛡️ Состав гильдии</a>
+        <a href="#" id="nav-rr">🎭 Роли по кнопкам</a>
+        <a href="#" id="nav-rem">⏰ Напоминания</a>
+        <a href="#" id="nav-mod">⚙️ Модерация</a>
+        <a href="#" id="nav-emb">📨 Эмбеды</a>
+        <a href="#" id="nav-guides">📖 Гайды</a>
+        <a href="#" class="active">👥 Гильдия</a>
+        <a href="#" id="nav-logs">📜 Логи действий</a>
+    </div>
+
+    <div class="content">
+        <div class="header"><h1>👥 Профили гильдии</h1></div>
+        <div class="grid" id="profiles-grid">
+            <p style="color: var(--text-muted);">Загрузка профилей...</p>
+        </div>
+    </div>
+
+    <script>
+        const guildId = window.location.pathname.split('/')[2];
+        const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-emb': '/custom', 'nav-guides': '/guides', 'nav-logs': '/logs'};
+        for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
+
+        fetch(`/api/guild/${guildId}`).then(r=>r.json()).then(d => document.getElementById('server-name').innerText = d.name);
+
+        fetch(`/api/guild/${guildId}/profiles`).then(res => res.json()).then(data => {
+            const grid = document.getElementById('profiles-grid');
+            if (data.length === 0) {
+                grid.innerHTML = '<p style="color: var(--text-muted);">Пока никто не заполнил свой профиль. Напомните игрокам зайти на сайт!</p>';
+                return;
+            }
+            grid.innerHTML = '';
+            data.forEach(p => {
+                // Пытаемся получить аватарку по ID (Discord API отдает дефолтную, если нет) - для простоты ставим дефолт
+                const avatarUrl = 'https://cdn.discordapp.com/embed/avatars/0.png'; 
+                
+                grid.innerHTML += `
+                    <div class="card profile-card">
+                        <img src="${avatarUrl}" class="profile-avatar" alt="avatar">
+                        <div class="profile-info" style="flex: 1;">
+                            <h3>${p.gameNickname || 'Ник не указан'}</h3>
+                            <p><b style="color: var(--text-main);">Гильдия:</b> ${p.guildName || 'Не указана'}</p>
+                            <p><b style="color: var(--text-main);">Класс:</b> ${p.classRole || 'Не указан'}</p>
+                            <p><b style="color: var(--text-main);">Оружие:</b> ${p.weapon || 'Не указано'}</p>
+                            ${p.bio ? `<p style="margin-top: 10px; font-style: italic;">"${p.bio}"</p>` : ''}
+                            <div class="profile-stats">
+                                <span class="stat-badge">Discord ID: ${p.userId}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+    </script>
+</body>
+</html>
