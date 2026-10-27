@@ -10,56 +10,52 @@
     <div class="sidebar">
         <h2 id="server-name">Загрузка...</h2>
         <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
-        <hr style="border-color: var(--border-color);">
-        <a href="#" id="link-back">🏠 На главную</a>
+        <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+        <a href="#" id="nav-home">🏠 Обзор</a>
+        <a href="#" id="nav-roster">🛡️ Состав гильдии</a>
+        <a href="#" id="nav-rr">🎭 Роли по кнопкам</a>
+        <a href="#" id="nav-rem">⏰ Напоминания</a>
+        <a href="#" id="nav-mod">⚙️ Модерация</a>
+        <a href="#" id="nav-emb">📨 Эмбеды</a>
         <a href="#" class="active">📜 Логи действий</a>
     </div>
     <div class="content">
-        <div class="header"><h1>📜 Журнал действий модераторов</h1></div>
-        <div class="form-card" style="max-width: 100%; overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+        <div class="header"><h1>📜 Журнал действий</h1></div>
+        <div class="form-card">
+            <table class="logs-table">
                 <thead>
-                    <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-muted);">
-                        <th style="padding: 12px;">Дата</th>
-                        <th style="padding: 12px;">Модератор</th>
-                        <th style="padding: 12px;">Действие</th>
-                        <th style="padding: 12px;">Детали</th>
-                    </tr>
+                    <tr><th>Время</th><th>Модератор</th><th>Действие</th><th>Детали</th></tr>
                 </thead>
-                <tbody id="logs-table">
-                    <tr><td colspan="4" style="padding: 20px; text-align: center;">Загрузка...</td></tr>
+                <tbody id="logs-body">
+                    <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Загрузка...</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
-    <script src="/js/ui.js"></script>
     <script>
         const guildId = window.location.pathname.split('/')[2];
-        document.getElementById('link-back').href = `/manage/${guildId}`;
+        document.getElementById('nav-home').href = `/manage/${guildId}`;
+        document.getElementById('nav-roster').href = `/manage/${guildId}/roster`;
+        document.getElementById('nav-rr').href = `/manage/${guildId}/reactionroles`;
+        document.getElementById('nav-rem').href = `/manage/${guildId}/reminders`;
+        document.getElementById('nav-mod').href = `/manage/${guildId}/moderation`;
+        document.getElementById('nav-emb').href = `/manage/${guildId}/custom`;
 
-        fetch(`/api/guild/${guildId}`, { cache: 'no-store' }).then(r => r.json()).then(d => document.getElementById('server-name').innerText = d.name);
+        fetch(`/api/guild/${guildId}`).then(r=>r.json()).then(d => document.getElementById('server-name').innerText = d.name);
 
-        fetch(`/api/guild/${guildId}/logs`, { cache: 'no-store' })
-            .then(res => res.json())
-            .then(data => {
-                const tbody = document.getElementById('logs-table');
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center;">Логов пока нет.</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = '';
-                data.forEach(log => {
-                    const date = new Date(log.date).toLocaleString('ru-RU');
-                    tbody.innerHTML += `
-                        <tr style="border-bottom: 1px solid var(--border-color);">
-                            <td style="padding: 12px; color: var(--text-muted);">${date}</td>
-                            <td style="padding: 12px; font-weight: bold;">@${log.username}</td>
-                            <td style="padding: 12px; color: var(--accent);">${log.action}</td>
-                            <td style="padding: 12px;">${log.details}</td>
-                        </tr>
-                    `;
-                });
-            });
+        fetch(`/api/guild/${guildId}/logs`).then(res => res.json()).then(data => {
+            const tbody = document.getElementById('logs-body');
+            if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Логов пока нет. Используйте команды бота!</td></tr>';
+            
+            tbody.innerHTML = data.map(log => `
+                <tr>
+                    <td style="color: var(--text-muted);">${new Date(log.date).toLocaleString('ru-RU')}</td>
+                    <td style="color: var(--accent); font-weight: bold;">${log.username}</td>
+                    <td>${log.action}</td>
+                    <td>${log.details}</td>
+                </tr>
+            `).join('');
+        });
     </script>
 </body>
 </html>
