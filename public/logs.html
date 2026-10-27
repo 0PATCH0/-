@@ -24,7 +24,7 @@
 
     <div class="content">
         <div class="header"><h1>📜 Журнал действий</h1></div>
-        <div class="form-card" style="overflow-x: auto; padding: 20px;">
+        <div class="form-card" style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; text-align: left;">
                 <thead>
                     <tr style="border-bottom: 2px solid var(--border-color); color: var(--accent); font-family: 'Cinzel', serif;">
@@ -47,10 +47,10 @@
 
         fetch(`/api/guild/${guildId}/logs`).then(res => res.json()).then(data => {
             const tbody = document.getElementById('logs-body');
-            if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">Логов пока нет.</td></tr>';
+            if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">Логов пока нет. Используйте команды модерации в Discord.</td></tr>';
             
             tbody.innerHTML = data.map(log => `
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                     <td style="padding: 15px; color: var(--text-muted); font-size: 13px;">${new Date(log.date).toLocaleString('ru-RU')}</td>
                     <td style="padding: 15px; color: var(--accent); font-weight: bold;">${log.username}</td>
                     <td style="padding: 15px;"><span style="background: rgba(212, 175, 55, 0.15); color: var(--accent); padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(212, 175, 55, 0.3);">${log.action}</span></td>
