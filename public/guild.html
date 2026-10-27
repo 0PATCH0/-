@@ -7,23 +7,33 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body class="bg-ruins">
+    <!-- Кнопка мобильного меню -->
     <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
 
+    <!-- Сайдбар -->
     <div class="sidebar">
         <h2 id="server-name">Загрузка...</h2>
         <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
         <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+        
+        <!-- Навигация -->
         <a href="#" class="active" id="nav-home">🏠 Обзор</a>
         <a href="#" id="nav-roster">🛡️ Состав гильдии</a>
         <a href="#" id="nav-rr">🎭 Роли по кнопкам</a>
         <a href="#" id="nav-rem">⏰ Напоминания</a>
         <a href="#" id="nav-mod">⚙️ Модерация</a>
         <a href="#" id="nav-emb">📨 Эмбеды</a>
+        <a href="#" id="nav-guides">📖 Гайды</a>
         <a href="#" id="nav-logs">📜 Логи действий</a>
     </div>
 
+    <!-- Контент -->
     <div class="content">
-        <div class="header"><h1>Обзор сервера</h1></div>
+        <div class="header">
+            <h1>Обзор сервера</h1>
+        </div>
+        
+        <!-- Сетка карточек -->
         <div class="grid">
             <a href="#" id="card-roster" class="card">
                 <h3>🛡️ Состав гильдии</h3>
@@ -45,27 +55,47 @@
                 <h3>📨 Эмбед-сообщения</h3>
                 <p>Создание, редактирование и удаление красивых сообщений.</p>
             </a>
+            
+            <!-- НОВАЯ КАРТОЧКА ДЛЯ ГАЙДОВ -->
+            <a href="#" id="card-guides" class="card">
+                <h3>📖 Гайды</h3>
+                <p>Создание и редактирование руководств с красивым оформлением.</p>
+            </a>
+            <!-- ============================== -->
+
             <a href="#" id="card-logs" class="card">
                 <h3>📜 Логи действий</h3>
                 <p>История мутов, закрытий каналов и других действий модераторов.</p>
             </a>
         </div>
     </div>
+
+    <!-- Скрипты для связывания ссылок -->
     <script>
         const guildId = window.location.pathname.split('/').pop();
+        
+        // Массив ссылок: связываем ID карточек и навигации с путями
         const links = {
             'nav-roster': 'roster', 'card-roster': 'roster',
             'nav-rr': 'reactionroles', 'card-rr': 'reactionroles',
             'nav-rem': 'reminders', 'card-rem': 'reminders',
             'nav-mod': 'moderation', 'card-mod': 'moderation',
             'nav-emb': 'custom', 'card-emb': 'custom',
+            'nav-guides': 'guides', 'card-guides': 'guides', // Ссылка на гайды
             'nav-logs': 'logs', 'card-logs': 'logs'
         };
+
+        // Применяем ссылки
         for (const [id, path] of Object.entries(links)) {
             const el = document.getElementById(id);
             if (el) el.href = `/manage/${guildId}/${path}`;
         }
-        fetch(`/api/guild/${guildId}`).then(r=>r.json()).then(d => document.getElementById('server-name').innerText = d.name);
+
+        // Загружаем имя сервера
+        fetch(`/api/guild/${guildId}`)
+            .then(r => r.json())
+            .then(d => document.getElementById('server-name').innerText = d.name)
+            .catch(() => document.getElementById('server-name').innerText = 'Ошибка');
     </script>
 </body>
 </html>
