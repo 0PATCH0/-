@@ -80,8 +80,21 @@ app.post('/api/profile', async (req, res) => {
 
 // API для админа (посмотреть все профили)
 app.get('/api/guild/:id/profiles', isModerator, async (req, res) => {
+    const client = req.app.get('botClient');
+    const discordGuild = client.guilds.cache.get(req.params.id);
     const profiles = await PlayerProfile.find();
-    res.json(profiles);
+
+    // Обогащаем профили данными из Discord (аватарки и текущие ники)
+    const enrichedProfiles = await Promise.all(profiles.map(async (p) => {
+        const member = await discordGuild.members.fetch(p.userId).catch(() => null);
+        return {
+            ...p._doc,
+            discordName: member ? member.user.username : 'Неизвестный',
+            avatar: member && member.user.avatar ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png'
+        };
+    }));
+
+    res.json(enrichedProfiles);
 });
 
 // ... (ОСТАЛЬНЫЕ API ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ, КАК В ПРЕДЫДУЩЕМ КОДЕ) ...
