@@ -238,14 +238,35 @@ app.get('/api/guild/:id/roster-config', async (req, res) => {
 app.post('/api/guild/:id/roster-config', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     const { columns } = req.body;
+    
+    // --- МАГИЯ КОНВЕРТАЦИИ ЭМОДЗИ ---
+    const client = req.app.get('botClient');
+    const guild = client.guilds.cache.get(req.params.id);
+
+    const processedColumns = columns.map(col => {
+        let newName = col.name;
+        
+        // Ищем паттерн :name: и заменяем на <:name:id>
+        const emojiRegex = /:([a-zA-Z0-9_]+):/g;
+        newName = newName.replace(emojiRegex, (match, emojiName) => {
+            // Ищем эмодзи на сервере по его имени
+            const emoji = guild.emojis.cache.find(e => e.name === emojiName);
+            if (emoji) {
+                return `<:${emoji.name}:${emoji.id}>`; // Возвращаем правильный код Discord
+            }
+            return match; // Если не нашли, оставляем как есть
+        });
+
+        return { ...col, name: newName };
+    });
+
     await RosterConfig.findOneAndUpdate(
         { guildId: req.params.id },
-        { columns },
+        { columns: processedColumns },
         { upsert: true }
     );
     res.json({ success: true });
 });
-
 function startWebServer(botClient) {
     app.set('botClient', botClient);
     app.listen(process.env.PORT || 3000, () => console.log(`🌐 Веб-панель запущена`));
