@@ -16,17 +16,13 @@
         
         <a href="#" class="active" id="nav-home">🏠 Обзор</a>
         <a href="#" id="nav-roster">🛡️ Состав гильдии</a>
+        <a href="#" id="nav-guild">👥 Гильдия</a>
+        <a href="#" id="nav-guides">📖 Гайды</a>
         <a href="#" id="nav-rr">🎭 Роли по кнопкам</a>
         <a href="#" id="nav-rem">⏰ Напоминания</a>
         <a href="#" id="nav-mod">⚙️ Модерация</a>
-        <a href="#" id="nav-emb">📨 Эмбеды</a>
-        <a href="#" id="nav-guides">📖 Гайды</a>
-        
-        <!-- НОВЫЙ ПУНКТ: Гильдия (Профили) -->
-        <a href="#" id="nav-guild">👥 Гильдия</a>
-        <!-- ================================ -->
-        
         <a href="#" id="nav-logs">📜 Логи действий</a>
+        <a href="#" id="nav-emb">📨 Эмбеды</a>
         
         <hr style="border-color: var(--border-color); margin: 20px 0;">
         <a href="/profile" style="color: var(--text-muted);">👤 Мой профиль</a>
@@ -37,11 +33,39 @@
             <h1>Обзор сервера</h1>
         </div>
         
+        <!-- БЛОК 1: ГИЛЬДИЯ -->
+        <h2 class="section-title">🛡️ Гильдия и Игроки</h2>
         <div class="grid">
             <a href="#" id="card-roster" class="card">
                 <h3>🛡️ Состав гильдии</h3>
                 <p>Просмотр списка участников и настройка колонок.</p>
             </a>
+            <a href="#" id="card-guild" class="card">
+                <h3>👥 Профили игроков</h3>
+                <p>Список всех участников с их классами и оружием.</p>
+            </a>
+            <a href="#" id="card-guides" class="card">
+                <h3>📖 Гайды</h3>
+                <p>Создание и редактирование руководств с вложениями.</p>
+            </a>
+        </div>
+
+        <!-- БЛОК 2: АДМИНИСТРИРОВАНИЕ -->
+        <h2 class="section-title">⚙️ Управление и Модерация</h2>
+        <div class="grid">
+            <a href="#" id="card-mod" class="card">
+                <h3>⚙️ Модерация</h3>
+                <p>Выдача прав на использование мутов и других команд.</p>
+            </a>
+            <a href="#" id="card-logs" class="card">
+                <h3>📜 Логи действий</h3>
+                <p>История мутов, закрытий каналов и других действий.</p>
+            </a>
+        </div>
+
+        <!-- БЛОК 3: КОНТЕНТ И УТИЛИТЫ -->
+        <h2 class="section-title">✨ Контент и Утилиты</h2>
+        <div class="grid">
             <a href="#" id="card-rr" class="card">
                 <h3>🎭 Роли по кнопкам</h3>
                 <p>Выдача ролей по клику на кнопку в Embed-сообщении.</p>
@@ -50,29 +74,9 @@
                 <h3>⏰ Напоминания</h3>
                 <p>Управление активными напоминаниями и событиями.</p>
             </a>
-            <a href="#" id="card-mod" class="card">
-                <h3>⚙️ Модерация</h3>
-                <p>Выдача прав на использование мутов и других команд.</p>
-            </a>
             <a href="#" id="card-emb" class="card">
                 <h3>📨 Эмбед-сообщения</h3>
                 <p>Создание и редактирование красивых сообщений.</p>
-            </a>
-            <a href="#" id="card-guides" class="card">
-                <h3>📖 Гайды</h3>
-                <p>Создание и редактирование руководств с вложениями.</p>
-            </a>
-            
-            <!-- НОВАЯ КАРТОЧКА: Профили игроков -->
-            <a href="#" id="card-guild" class="card" style="border-color: rgba(212, 175, 55, 0.4);">
-                <h3>👥 Гильдия</h3>
-                <p>Список всех участников с их игровыми профилями и классами.</p>
-            </a>
-            <!-- ================================ -->
-
-            <a href="#" id="card-logs" class="card">
-                <h3>📜 Логи действий</h3>
-                <p>История мутов, закрытий каналов и других действий.</p>
             </a>
         </div>
     </div>
@@ -82,13 +86,13 @@
         
         const links = {
             'nav-roster': 'roster', 'card-roster': 'roster',
+            'nav-guild': 'profiles', 'card-guild': 'profiles',
+            'nav-guides': 'guides', 'card-guides': 'guides',
+            'nav-mod': 'moderation', 'card-mod': 'moderation',
+            'nav-logs': 'logs', 'card-logs': 'logs',
             'nav-rr': 'reactionroles', 'card-rr': 'reactionroles',
             'nav-rem': 'reminders', 'card-rem': 'reminders',
-            'nav-mod': 'moderation', 'card-mod': 'moderation',
-            'nav-emb': 'custom', 'card-emb': 'custom',
-            'nav-guides': 'guides', 'card-guides': 'guides',
-            'nav-guild': 'profiles', 'card-guild': 'profiles', // Ведет на страницу профилей
-            'nav-logs': 'logs', 'card-logs': 'logs'
+            'nav-emb': 'custom', 'card-emb': 'custom'
         };
 
         for (const [id, path] of Object.entries(links)) {
