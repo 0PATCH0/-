@@ -253,26 +253,32 @@ app.post('/api/guild/:id/roster-config', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     const { columns } = req.body;
     
-    // --- МАГИЯ КОНВЕРТАЦИИ ЭМОДЗИ ---
     const client = req.app.get('botClient');
     const guild = client.guilds.cache.get(req.params.id);
 
     const processedColumns = columns.map(col => {
         let newName = col.name;
         
-        // Ищем паттерн :name: и заменяем на <:name:id>
-        const emojiRegex = /:([a-zA-Z0-9_]+):/g;
-        newName = newName.replace(emojiRegex, (match, emojiName) => {
-            // Ищем эмодзи на сервере по его имени
+        // Ищем формат :emoji_name: или <:emoji_name:id>
+        // 1. Если пользователь написал просто :tank:
+        const shortEmojiRegex = /:([a-zA-Z0-9_]+):/g;
+        newName = newName.replace(shortEmojiRegex, (match, emojiName) => {
+            // Ищем эмодзи по имени на сервере
             const emoji = guild.emojis.cache.find(e => e.name === emojiName);
-            if (emoji) {
-                return `<:${emoji.name}:${emoji.id}>`; // Возвращаем правильный код Discord
-            }
-            return match; // Если не нашли, оставляем как есть
+            if (emoji) return `<:${emoji.name}:${emoji.id}>`; // Меняем на правильный код
+            return match; 
         });
 
-        return { ...col, name: newName };
+        return { roleId: col.roleId, name: newName, color: col.color || '#5865F2' };
     });
+
+    await RosterConfig.findOneAndUpdate(
+        { guildId: req.params.id },
+        { columns: processedColumns },
+        { upsert: true }
+    );
+    res.json({ success: true });
+});
 
     await RosterConfig.findOneAndUpdate(
         { guildId: req.params.id },
