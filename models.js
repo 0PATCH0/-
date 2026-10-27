@@ -26,11 +26,18 @@ const RosterConfigSchema = new mongoose.Schema({
     guildId: String, columns: [{ roleId: String, name: String, color: { type: String, default: '#5865F2' } }]
 });
 
-// Хранит ID сообщений (может быть несколько в разных каналах)
 const RosterMessageSchema = new mongoose.Schema({
+    guildId: String, channelId: String, messageId: String
+});
+
+// НОВАЯ МОДЕЛЬ: Логи действий
+const LogSchema = new mongoose.Schema({
     guildId: String,
-    channelId: String,
-    messageId: String
+    userId: String,       // Кто сделал
+    username: String,     // Имя того, кто сделал
+    action: String,       // Действие (мут, сбор и т.д.)
+    details: String,      // Подробности
+    date: { type: Date, default: Date.now }
 });
 
 module.exports = {
@@ -40,5 +47,6 @@ module.exports = {
     SentMessage: mongoose.model('SentMessage', SentMessageSchema),
     Roster: mongoose.model('Roster', RosterSchema),
     RosterConfig: mongoose.model('RosterConfig', RosterConfigSchema),
-    RosterMessage: mongoose.model('RosterMessage', RosterMessageSchema)
+    RosterMessage: mongoose.model('RosterMessage', RosterMessageSchema),
+    Log: mongoose.model('Log', LogSchema) // Экспортируем
 };
