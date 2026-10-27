@@ -93,21 +93,32 @@ module.exports = {
             if (i.customId === 'finish_setup') {
                 if (state.columns.length === 0) return;
 
-                await i.update({ content: '⏳ Обновляю базу участников (подождите пару секунд)...', components: [] });
+                await i.update({ content: '⏳ Собираю данные (это может занять до 10 секунд)...', components: [] });
 
                 try {
-                    // Пытаемся обновить кэш всех участников, но не ждем дольше 10 секунд
-                    await Promise.race([
-                        interaction.guild.members.fetch(),
-                        new Promise(resolve => setTimeout(resolve, 10000))
-                    ]);
-
                     const memberRolesMap = new Map();
                     const columnData = [];
-                    const allMembers = interaction.guild.members.cache; // Берем из обновленного кэша
 
+                    // Проходимся по каждой выбранной роли и принудительно запрашиваем её участников
                     for (const col of state.columns) {
-                        const roleMembers = allMembers.filter(m => !m.user.bot && m.roles.cache.has(col.roleId));
+                        const role = interaction.guild.roles.cache.get(col.roleId);
+                        if (!role) continue;
+
+                        let roleMembers;
+                        try {
+                            // Пытаемся запросить участников конкретной роли с большим таймаутом (15 сек)
+                            const fetchedMembers = await interaction.guild.members.fetch({ 
+                                role: col.roleId, 
+                                time: 15000, 
+                                force: true 
+                            });
+                            roleMembers = Array.from(fetchedMembers.values()).filter(m => !m.user.bot);
+                        } catch (e) {
+                            // Если не удалось (таймаут), берем из кэша
+                            console.log(`Таймаут для роли ${role.name}, используем кэш.`);
+                            roleMembers = Array.from(role.members.values()).filter(m => !m.user.bot);
+                        }
+                        
                         columnData.push({ ...col, members: roleMembers });
 
                         roleMembers.forEach(m => {
@@ -143,8 +154,8 @@ module.exports = {
                     await i.editReply({ content: '✅ Список успешно создан!', components: [] });
                     
                 } catch (error) {
-                    console.error("Ошибка при генерации:", error);
-                    await i.editReply({ content: '❌ Ошибка при сборе данных.', components: [] });
+                    console.error("Ошибка:", error);
+                    await i.editReply({ content: '❌ Ошибка. Попробуйте еще раз.', components: [] });
                 }
                 
                 setupStates.delete(userId);
