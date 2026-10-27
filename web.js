@@ -23,7 +23,7 @@ const {
 const OWNER_ID = 439798786059927552; 
 
 const app = express();
-app.use(express.json());
+app.use(express.json()); 
 app.use(session({ secret: 'super_secret_bot_key_123', resave: false, saveUninitialized: false, cookie: { secure: false } }));
 app.use(passport.initialize());
 app.use(passport.session());
@@ -112,7 +112,12 @@ app.get('/api/profile/:guildId', async (req, res) => {
 
     let profile = await PlayerProfile.findOne({ userId: targetUserId, guildId: req.params.guildId });
     
-    // Если профиля нет, создаем пустой шаблон
+    // Если профиль не найден на этом сервере, ищем глобальный
+    if (!profile) {
+        profile = await PlayerProfile.findOne({ userId: targetUserId, isGlobal: true });
+    }
+
+    // Если всё равно нет, создаем пустой шаблон
     if (!profile) {
         profile = { 
             userId: targetUserId, 
