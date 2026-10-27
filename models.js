@@ -34,20 +34,18 @@ const LogSchema = new mongoose.Schema({
     guildId: String, userId: String, username: String, action: String, details: String, date: { type: Date, default: Date.now }
 });
 
-// ОБНОВЛЕННАЯ МОДЕЛЬ ГАЙДОВ
 const GuideSchema = new mongoose.Schema({
-    guildId: String,
-    name: String, 
-    description: String, 
-    chapters: [{
-        title: String,
-        content: String,
-        color: String,
-        imageUrl: String,
-        attachmentUrl: String,  // Ссылка на файл (PDF и т.д.)
-        attachmentName: String  // Название кнопки (например, "Скачать PDF")
-    }],
-    date: { type: Date, default: Date.now }
+    guildId: String, name: String, description: String, chapters: [{ title: String, content: String, color: String, imageUrl: String, attachmentUrl: String, attachmentName: String }], date: { type: Date, default: Date.now }
+});
+
+// НОВАЯ МОДЕЛЬ: Профиль игрока
+const PlayerProfileSchema = new mongoose.Schema({
+    userId: { type: String, required: true, unique: true }, // ID в Discord
+    gameNickname: { type: String, default: '' },           // Ник в игре
+    guildName: { type: String, default: '' },              // Название гильдии в игре
+    classRole: { type: String, default: '' },              // Класс (Танк, ДД, Хил)
+    weapon: { type: String, default: '' },                 // Оружие
+    bio: { type: String, default: '' }                     // О себе
 });
 
 module.exports = {
@@ -59,5 +57,6 @@ module.exports = {
     RosterConfig: mongoose.model('RosterConfig', RosterConfigSchema),
     RosterMessage: mongoose.model('RosterMessage', RosterMessageSchema),
     Log: mongoose.model('Log', LogSchema),
-    Guide: mongoose.model('Guide', GuideSchema)
+    Guide: mongoose.model('Guide', GuideSchema),
+    PlayerProfile: mongoose.model('PlayerProfile', PlayerProfileSchema) // Экспорт
 };
