@@ -10,51 +10,59 @@
     <div class="sidebar">
         <h2 id="server-name">Загрузка...</h2>
         <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
-        <hr style="border-color: var(--border-color);">
-        <a href="#" class="active">🏠 Главная</a>
+        <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+        <a href="#" class="active" id="nav-home">🏠 Обзор</a>
+        <a href="#" id="nav-roster">🛡️ Состав гильдии</a>
+        <a href="#" id="nav-rr">🎭 Роли по кнопкам</a>
+        <a href="#" id="nav-rem">⏰ Напоминания</a>
+        <a href="#" id="nav-mod">⚙️ Модерация</a>
+        <a href="#" id="nav-emb">📨 Эмбеды</a>
+        <a href="#" id="nav-logs">📜 Логи действий</a>
     </div>
     <div class="content">
-        <div class="header"><h1>Панель управления</h1></div>
+        <div class="header"><h1>Обзор сервера</h1></div>
         <div class="grid">
-            <a href="#" id="link-roster" class="card">
+            <a href="#" id="card-roster" class="card">
                 <h3>🛡️ Состав гильдии</h3>
                 <p>Просмотр списка участников и настройка колонок.</p>
             </a>
-            <a href="#" id="link-reaction-roles" class="card">
+            <a href="#" id="card-rr" class="card">
                 <h3>🎭 Роли по кнопкам</h3>
                 <p>Выдача ролей по клику на кнопку.</p>
             </a>
-            <a href="#" id="link-reminders" class="card">
+            <a href="#" id="card-rem" class="card">
                 <h3>⏰ Напоминания</h3>
                 <p>Управление активными напоминаниями.</p>
             </a>
-            <a href="#" id="link-moderation" class="card">
-                <h3>🛡️ Модерация</h3>
-                <p>Выдача прав на использование команд.</p>
+            <a href="#" id="card-mod" class="card">
+                <h3>⚙️ Модерация</h3>
+                <p>Права на мут и другие команды.</p>
             </a>
-            <a href="#" id="link-custom" class="card">
+            <a href="#" id="card-emb" class="card">
                 <h3>📨 Эмбед-сообщения</h3>
                 <p>Создание и редактирование сообщений.</p>
             </a>
-            <!-- НОВАЯ КАРТОЧКА ЛОГОВ -->
-            <a href="#" id="link-logs" class="card">
+            <a href="#" id="card-logs" class="card">
                 <h3>📜 Логи действий</h3>
-                <p>История мутов, анмутов и других действий модераторов.</p>
+                <p>История действий модераторов.</p>
             </a>
         </div>
     </div>
-    <script src="/js/ui.js"></script>
     <script>
         const guildId = window.location.pathname.split('/').pop();
-        fetch(`/api/guild/${guildId}`, { cache: 'no-store' }).then(res => res.json()).then(data => {
-            document.getElementById('server-name').innerText = data.name;
-            document.getElementById('link-roster').href = `/manage/${guildId}/roster`;
-            document.getElementById('link-reaction-roles').href = `/manage/${guildId}/reactionroles`;
-            document.getElementById('link-reminders').href = `/manage/${guildId}/reminders`;
-            document.getElementById('link-moderation').href = `/manage/${guildId}/moderation`;
-            document.getElementById('link-custom').href = `/manage/${guildId}/custom`;
-            document.getElementById('link-logs').href = `/manage/${guildId}/logs`;
-        });
+        const links = {
+            'nav-roster': 'roster', 'card-roster': 'roster',
+            'nav-rr': 'reactionroles', 'card-rr': 'reactionroles',
+            'nav-rem': 'reminders', 'card-rem': 'reminders',
+            'nav-mod': 'moderation', 'card-mod': 'moderation',
+            'nav-emb': 'custom', 'card-emb': 'custom',
+            'nav-logs': 'logs', 'card-logs': 'logs'
+        };
+        for (const [id, path] of Object.entries(links)) {
+            const el = document.getElementById(id);
+            if (el) el.href = `/manage/${guildId}/${path}`;
+        }
+        fetch(`/api/guild/${guildId}`).then(r=>r.json()).then(d => document.getElementById('server-name').innerText = d.name);
     </script>
 </body>
 </html>
