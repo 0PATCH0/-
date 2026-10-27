@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Гильдия - Профили</title>
     <link rel="stylesheet" href="/css/style.css">
-    <script src="/js/ui.js"></script> <!-- Подключаем красивые уведомления -->
+    <script src="/js/ui.js"></script>
 </head>
 <body class="bg-forest">
     <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
@@ -40,61 +40,62 @@
 
         fetch(`/api/guild/${guildId}`).then(r=>r.json()).then(d => document.getElementById('server-name').innerText = d.name);
 
-        fetch(`/api/guild/${guildId}/profiles`).then(res => res.json()).then(data => {
-            const grid = document.getElementById('profiles-grid');
-            if (data.length === 0) {
-                grid.innerHTML = '<p style="color: var(--text-muted);">Пока никто не заполнил свой профиль.</p>';
-                return;
-            }
-            grid.innerHTML = '';
-            data.forEach(p => {
-                let charactersHtml = '';
-                if (p.characters && p.characters.length > 0) {
-                    charactersHtml = p.characters.map(char => `
-                        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; margin-bottom: 10px; border-left: 2px solid var(--accent);">
-                            <h4 style="color: var(--text-main); margin-bottom: 5px;">${char.gameNickname || 'Без ника'}</h4>
-                            <p style="font-size: 13px; margin: 0;"><b>Класс:</b> ${char.classRole || 'Не указан'} | <b>Оружие:</b> ${char.weapon || 'Не указано'}</p>
-                            <p style="font-size: 13px; margin: 0;"><b>Гильдия:</b> ${char.guildName || 'Не указана'}</p>
-                            ${char.bio ? `<p style="font-size: 12px; font-style: italic; color: var(--text-muted); margin-top: 5px;">"${char.bio}"</p>` : ''}
-                        </div>
-                    `).join('');
-                } else {
-                    charactersHtml = '<p style="color: var(--text-muted);">Персонажи не заполнены.</p>';
+        function loadProfiles() {
+            fetch(`/api/guild/${guildId}/profiles`).then(res => res.json()).then(data => {
+                const grid = document.getElementById('profiles-grid');
+                if (data.length === 0) {
+                    grid.innerHTML = '<p style="color: var(--text-muted);">Пока никто не заполнил свой профиль.</p>';
+                    return;
                 }
+                grid.innerHTML = '';
+                data.forEach(p => {
+                    let charactersHtml = '';
+                    if (p.characters && p.characters.length > 0) {
+                        charactersHtml = p.characters.map(char => `
+                            <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; margin-bottom: 10px; border-left: 2px solid var(--accent);">
+                                <h4 style="color: var(--text-main); margin-bottom: 5px;">${char.gameNickname || 'Без ника'}</h4>
+                                <p style="font-size: 13px; margin: 0;"><b>Класс:</b> ${char.classRole || 'Не указан'} | <b>Оружие:</b> ${char.weapon || 'Не указано'}</p>
+                                <p style="font-size: 13px; margin: 0;"><b>Гильдия:</b> ${char.guildName || 'Не указана'}</p>
+                                ${char.bio ? `<p style="font-size: 12px; font-style: italic; color: var(--text-muted); margin-top: 5px;">"${char.bio}"</p>` : ''}
+                            </div>
+                        `).join('');
+                    } else {
+                        charactersHtml = '<p style="color: var(--text-muted);">Персонажи не заполнены.</p>';
+                    }
 
-                grid.innerHTML += `
-                    <div class="card profile-card" style="display: block;">
-                        <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
-                            <img src="${p.avatar}" class="profile-avatar" style="width: 60px; height: 60px;">
-                            <div>
-                                <h3 style="margin: 0; color: var(--accent); font-family: 'Cinzel', serif;">@${p.discordName}</h3>
-                                ${p.isGlobal ? '<span style="font-size: 12px; color: #2ECC71;">🌐 Глобальный</span>' : ''}
+                    grid.innerHTML += `
+                        <div class="card profile-card" style="display: block;">
+                            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
+                                <img src="${p.avatar}" class="profile-avatar" style="width: 60px; height: 60px;">
+                                <div>
+                                    <h3 style="margin: 0; color: var(--accent); font-family: 'Cinzel', serif;">@${p.discordName}</h3>
+                                    ${p.isGlobal ? '<span style="font-size: 12px; color: #2ECC71;">🌐 Глобальный</span>' : ''}
+                                </div>
+                            </div>
+                            <div>${charactersHtml}</div>
+                            <!-- КНОПКИ УПРАВЛЕНИЯ -->
+                            <div style="display: flex; gap: 10px; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                                <a href="/profile?guild=${guildId}&user=${p.userId}" class="btn btn-small" style="flex: 1; background: var(--accent); color: black;">✏️ Ред.</a>
+                                <button class="btn btn-danger btn-small" style="flex: 1;" onclick="deleteProfile('${p.userId}', '${p.discordName}')">🗑️ Удалить</button>
                             </div>
                         </div>
-                        <div>${charactersHtml}</div>
-                        <!-- КНОПКИ УПРАВЛЕНИЯ -->
-                        <div style="display: flex; gap: 10px; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
-                            <a href="/profile?guild=${guildId}&user=${p.userId}" class="btn btn-small" style="flex: 1; background: var(--accent); color: black;">✏️ Редактировать</a>
-                            <button class="btn btn-danger btn-small" style="flex: 1;" onclick="deleteProfile('${p.userId}', '${p.discordName}')">🗑️ Удалить</button>
-                        </div>
-                    </div>
-                `;
+                    `;
+                });
             });
-        });
+        }
+        loadProfiles();
 
         function deleteProfile(userId, username) {
-            if (!confirm(`ВНИМАНИЕ! Вы уверены, что хотите УДАЛИТЬ профиль игрока @${username}? Это действие необратимо.`)) return;
-            
-            fetch(`/api/guild/${guildId}/profiles/${userId}`, { method: 'DELETE' })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        showToast('Профиль удален!', 'success');
-                        setTimeout(() => window.location.reload(), 1000);
-                    } else {
-                        showToast('Ошибка: ' + data.error, 'error');
-                    }
-                });
+            showConfirm('Удаление профиля', `Вы уверены, что хотите удалить профиль игрока @${username}?`, () => {
+                fetch(`/api/guild/${guildId}/profiles/${userId}`, { method: 'DELETE' })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            showToast('Профиль удален!', 'success');
+                            loadProfiles();
+                        } else showToast('Ошибка: ' + data.error, 'error');
+                    });
+            });
         }
     </script>
 </body>
