@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ComponentType } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 const { Guide } = require('../models');
 
 module.exports = {
@@ -46,18 +46,26 @@ module.exports = {
 
             await i.update({ content: `✅ Гайд **${selectedGuide.name}** отправлен в чат!`, components: [] });
 
-            const embedsToSend = selectedGuide.chapters.map(ch => {
+            // Отправляем каждую главу отдельным сообщением
+            for (const ch of selectedGuide.chapters) {
                 const embed = new EmbedBuilder()
                     .setTitle(ch.title || 'Без названия')
                     .setDescription(ch.content || 'Пусто')
                     .setColor(ch.color || '#d4af37');
+                
                 if (ch.imageUrl) embed.setImage(ch.imageUrl);
-                return embed;
-            });
 
-            // Отправляем сообщения пачками по 10 штук
-            for (let j = 0; j < embedsToSend.length; j += 10) {
-                await interaction.channel.send({ embeds: embedsToSend.slice(j, j + 10) });
+                const components = [];
+                // Если есть ссылка на файл, создаем красивую кнопку
+                if (ch.attachmentUrl) {
+                    const btn = new ButtonBuilder()
+                        .setLabel(ch.attachmentName || '📄 Скачать вложение')
+                        .setURL(ch.attachmentUrl)
+                        .setStyle(ButtonStyle.Link);
+                    components.push(new ActionRowBuilder().addComponents(btn));
+                }
+
+                await interaction.channel.send({ embeds: [embed], components: components });
             }
         });
     },
