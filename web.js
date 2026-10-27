@@ -259,27 +259,28 @@ app.post('/api/guild/:id/roster-config', async (req, res) => {
         { upsert: true }
     );
     
-    // Сразу обновляем сообщение в Discord, чтобы применились новые настройки
     const { refreshRosterMessage } = require('./index.js');
     await refreshRosterMessage(req.params.id, client);
 
     res.json({ success: true });
 });
 
-// УДАЛЕНИЕ СООБЩЕНИЯ ИЗ DISCORD
+// УДАЛЕНИЕ ВСЕХ СООБЩЕНИЙ С СПИСКОМ
 app.delete('/api/guild/:id/roster/message', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     const client = req.app.get('botClient');
-    const msgRecord = await RosterMessage.findOne({ guildId: req.params.id });
+    const msgRecords = await RosterMessage.find({ guildId: req.params.id });
 
-    if (msgRecord) {
+    for (const record of msgRecords) {
         try {
-            const channel = await client.channels.fetch(msgRecord.channelId);
-            const message = await channel.messages.fetch(msgRecord.messageId);
+            const channel = await client.channels.fetch(record.channelId);
+            const message = await channel.messages.fetch(record.messageId);
             if (message) await message.delete();
-        } catch (e) {}
-        await RosterMessage.deleteOne({ guildId: req.params.id });
+        } catch (e) {} 
     }
+    
+    // Удаляем все записи из БД
+    await RosterMessage.deleteMany({ guildId: req.params.id });
     res.json({ success: true });
 });
 
