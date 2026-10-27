@@ -7,6 +7,7 @@ module.exports = {
         .setDescription('Отправить в чат красивый список участников (по одному Embed на класс)'),
 
     async execute(interaction) {
+        // Проверка прав
         const hasDiscordPerm = interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
         let hasCustomPerm = false;
         
@@ -37,30 +38,29 @@ module.exports = {
         const embedsToSend = [];
         let totalUnique = new Set();
 
-        // Генерируем Embed для каждой настроенной колонки
-        config.columns.forEach((col, index) => {
+        // Генерируем отдельный Embed для каждой настроенной колонки
+        config.columns.forEach((col) => {
             const roleData = rosterData.data[col.roleId] || [];
             
             roleData.forEach(m => totalUnique.add(m.id));
 
             let memberList = roleData.length > 0 ? roleData.map(m => `<@${m.id}>`).join('\n') : '*Никого нет*';
             
-            // Если текст слишком длинный, обрезаем
             if (memberList.length > 4000) {
                 memberList = memberList.substring(0, 4000) + '\n...и другие';
             }
 
-            // Создаем отдельный Embed для этой роли
+            // Создаем Embed для этой роли
             const embed = new EmbedBuilder()
-                .setTitle(col.name) // Эмодзи в заголовке будет работать!
-                .setColor(col.color || '#5865F2') // Твой цвет полоски
+                .setTitle(col.name) // Эмодзи в заголовке будет работать идеально
+                .setColor(col.color || '#5865F2') // Цвет полоски из настроек
                 .setDescription(memberList)
-                .setFooter({ text: `Участников в роли: ${roleData.length} • Обновлено: ${new Date(rosterData.lastUpdated).toLocaleString('ru-RU')}` });
+                .setFooter({ text: `Участников: ${roleData.length} • Обновлено: ${new Date(rosterData.lastUpdated).toLocaleString('ru-RU')}` });
 
             embedsToSend.push(embed);
         });
 
-        // Добавляем самый первый Embed со статистикой
+        // Добавляем самое первое сообщение (заголовок)
         const headerEmbed = new EmbedBuilder()
             .setTitle('🛡️ Состав гильдии')
             .setColor('#2b2d31')
@@ -69,13 +69,12 @@ module.exports = {
         
         embedsToSend.unshift(headerEmbed);
 
-        // Отправляем сообщения пачками (Discord разрешает максимум 10 Embed в одном сообщении)
+        // Отправляем сообщения пачками по 10 штук (лимит Discord)
         for (let i = 0; i < embedsToSend.length; i += 10) {
             const chunk = embedsToSend.slice(i, i + 10);
             await interaction.followUp({ embeds: chunk });
         }
 
-        // Удаляем сообщение "Бот думает..."
         await interaction.editReply({ content: '✅ Список отправлен!', embeds: [] });
     },
 };
