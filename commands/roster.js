@@ -1,13 +1,12 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
-const { Settings, Roster } = require('../models'); 
+const { Settings, Roster, RosterConfig } = require('../models'); 
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('список')
-        .setDescription('Отправить в чат красивый список участников по ролям'),
+        .setDescription('Отправить в чат красивый список участников по настроенным ролям'),
 
     async execute(interaction) {
-        // 1. ПРОВЕРКА ПРАВ
         const hasDiscordPerm = interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
         let hasCustomPerm = false;
         
@@ -16,56 +15,60 @@ module.exports = {
             if (guildSettings && guildSettings.modRoles) {
                 hasCustomPerm = interaction.member.roles.cache.some(role => guildSettings.modRoles.includes(role.id));
             }
-        } catch (e) {
-            console.error("Ошибка при проверке прав из БД:", e);
-        }
+        } catch (e) { console.error(e); }
 
         if (!hasDiscordPerm && !hasCustomPerm) {
             return interaction.reply({ content: 'У вас нет прав для использования этой команды!', ephemeral: true });
         }
 
-        // 2. ПОЛУЧАЕМ ДАННЫЕ ИЗ БАЗЫ
-        await interaction.deferReply(); // Говорим Дискорду "подожди", чтобы не было ошибки таймаута
+        await interaction.deferReply();
+
+        const config = await RosterConfig.findOne({ guildId: interaction.guild.id });
+        
+        if (!config || !config.columns || config.columns.length === 0) {
+            return interaction.editReply({ content: 'Сначала настройте колонки на сайте в разделе "Состав гильдии" -> "Настроить колонки".' });
+        }
+
         const rosterData = await Roster.findOne({ guildId: interaction.guild.id });
 
         if (!rosterData || !rosterData.data || Object.keys(rosterData.data).length === 0) {
-            return interaction.editReply({ content: 'Список пуст. Зайдите на сайт в раздел "Состав гильдии" и нажмите "Обновить данные".' });
+            return interaction.editReply({ content: 'Данные пусты. Зайдите на сайт в раздел "Состав гильдии" и нажмите "Обновить данные".' });
         }
 
-        // 3. ФОРМИРУЕМ EMBED
         const embed = new EmbedBuilder()
             .setTitle('🛡️ Состав гильдии')
             .setColor('#2b2d31')
             .setDescription('Актуальный список участников по ролям.')
-            .setFooter({ text: `Последнее обновление: ${new Date(rosterData.lastUpdated).toLocaleString('ru-RU')}` });
+            .setFooter({ text: `Обновлено: ${new Date(rosterData.lastUpdated).toLocaleString('ru-RU')}` });
 
-        // Считаем уникальных людей (для статистики)
-        const uniqueMembers = new Set();
-        
-        // Проходимся по всем ролям, которые сохранились в базе
-        for (const [roleName, members] of Object.entries(rosterData.data)) {
-            if (members.length === 0) continue;
+        let totalUnique = new Set();
 
-            members.forEach(m => uniqueMembers.add(m.id));
-
-            // Формируем строчку с именами
-            let memberList = members.map(m => `<@${m.id}>`).join(', ');
+        for (const col of config.columns) {
+            const roleData = rosterData.data[col.roleId]; 
             
-            // Ограничиваем длину, чтобы не превысить лимиты Discord
-            if (memberList.length > 1000) {
-                memberList = memberList.substring(0, 1000) + '... и другие';
-            }
+            if (roleData && roleData.length > 0) {
+                let memberList = roleData.map(m => `<@${m.id}>`).join(', ');
+                if (memberList.length > 1000) memberList = memberList.substring(0, 1000) + '...';
+                
+                // ВАЖНО: col.name теперь содержит правильный код эмодзи (например: <:tank:1234> Танки)
+                embed.addFields({ 
+                    name: `${col.name} (${roleData.length})`, 
+                    value: memberList, 
+                    inline: false 
+                });
 
-            embed.addFields({ 
-                name: `${roleName} (${members.length})`, 
-                value: memberList, 
-                inline: false 
-            });
+                roleData.forEach(m => totalUnique.add(m.id));
+            } else {
+                embed.addFields({ 
+                    name: `${col.name} (0)`, 
+                    value: '*Никого нет*', 
+                    inline: false 
+                });
+            }
         }
 
-        embed.setDescription(`**Всего участников:** ${uniqueMembers.size}\nАктуальный список участников по ролям.`);
+        embed.setDescription(`**Всего участников:** ${totalUnique.size}\nАктуальный список участников по ролям.`);
 
-        // 4. ОТПРАВЛЯЕМ В ЧАТ
         await interaction.editReply({ embeds: [embed] });
     },
 };
