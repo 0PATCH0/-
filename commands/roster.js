@@ -7,7 +7,6 @@ module.exports = {
         .setDescription('Отправить в чат красивый список участников (по одному Embed на класс)'),
 
     async execute(interaction) {
-        // Проверка прав
         const hasDiscordPerm = interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
         let hasCustomPerm = false;
         
@@ -38,7 +37,6 @@ module.exports = {
         const embedsToSend = [];
         let totalUnique = new Set();
 
-        // Генерируем отдельный Embed для каждой настроенной колонки
         config.columns.forEach((col) => {
             const roleData = rosterData.data[col.roleId] || [];
             
@@ -50,17 +48,15 @@ module.exports = {
                 memberList = memberList.substring(0, 4000) + '\n...и другие';
             }
 
-            // Создаем Embed для этой роли
             const embed = new EmbedBuilder()
-                .setTitle(col.name) // Эмодзи в заголовке будет работать идеально
-                .setColor(col.color || '#5865F2') // Цвет полоски из настроек
+                .setTitle(col.name) 
+                .setColor(col.color || '#5865F2') 
                 .setDescription(memberList)
                 .setFooter({ text: `Участников: ${roleData.length} • Обновлено: ${new Date(rosterData.lastUpdated).toLocaleString('ru-RU')}` });
 
             embedsToSend.push(embed);
         });
 
-        // Добавляем самое первое сообщение (заголовок)
         const headerEmbed = new EmbedBuilder()
             .setTitle('🛡️ Состав гильдии')
             .setColor('#2b2d31')
@@ -69,7 +65,6 @@ module.exports = {
         
         embedsToSend.unshift(headerEmbed);
 
-        // Отправляем сообщения пачками по 10 штук (лимит Discord)
         for (let i = 0; i < embedsToSend.length; i += 10) {
             const chunk = embedsToSend.slice(i, i + 10);
             await interaction.followUp({ embeds: chunk });
