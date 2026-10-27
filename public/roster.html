@@ -17,7 +17,10 @@
     <div class="content">
         <div class="header">
             <h1>🛡️ Состав гильдии</h1>
-            <button class="btn" onclick="forceUpdate()" id="btn-update">🔄 Обновить данные</button>
+            <div style="display: flex; gap: 10px;">
+                <a href="#" id="btn-config" class="btn" style="background: var(--bg-card); border: 1px solid var(--border-color);">⚙️ Настроить колонки</a>
+                <button class="btn" onclick="forceUpdate()" id="btn-update">🔄 Обновить данные</button>
+            </div>
         </div>
         <p id="last-updated" style="color: var(--text-muted); margin-bottom: 20px;">Последнее обновление: Загрузка...</p>
         
@@ -28,36 +31,60 @@
     <script>
         const guildId = window.location.pathname.split('/')[2];
         document.getElementById('link-back').href = `/manage/${guildId}`;
+        document.getElementById('btn-config').href = `/manage/${guildId}/roster-config`;
 
         fetch(`/api/guild/${guildId}`).then(res => res.json()).then(data => {
             document.getElementById('server-name').innerText = data.name;
         });
 
         function loadRoster() {
-            fetch(`/api/guild/${guildId}/roster`).then(res => res.json()).then(data => {
+            // Загружаем и настройки колонок, и сами данные
+            Promise.all([
+                fetch(`/api/guild/${guildId}/roster`).then(res => res.json()),
+                fetch(`/api/guild/${guildId}/roster-config`).then(res => res.json())
+            ]).then(([rosterData, configData]) => {
                 const grid = document.getElementById('roster-grid');
                 const lastUpdatedEl = document.getElementById('last-updated');
 
-                if (!data.lastUpdated || !data.data || Object.keys(data.data).length === 0) {
+                if (!rosterData.lastUpdated || !rosterData.data) {
                     grid.innerHTML = '<p>Список пуст. Нажмите "Обновить данные", чтобы собрать его.</p>';
                     return;
                 }
 
-                const date = new Date(data.lastUpdated).toLocaleString('ru-RU');
+                const date = new Date(rosterData.lastUpdated).toLocaleString('ru-RU');
                 lastUpdatedEl.innerText = `Последнее обновление: ${date}`;
 
+                // Если настройки не заданы — показываем сообщение
+                if (!configData.columns || configData.columns.length === 0) {
+                    grid.innerHTML = '<p>Колонки не настроены. Нажмите "⚙️ Настроить колонки" сверху.</p>';
+                    return;
+                }
+
                 grid.innerHTML = '';
-                for (const colName in data.data) {
-                    const members = data.data[colName];
+                let totalUnique = new Set();
+
+                // Идем по настройкам (какие роли показывать)
+                configData.columns.forEach(col => {
+                    const members = rosterData.data[col.roleId] || [];
+                    
+                    members.forEach(m => totalUnique.add(m.id));
+
                     let membersHtml = members.length > 0 ? members.map(m => `<div>@${m.name}</div>`).join('') : '<i>Никого нет</i>';
                     
                     grid.innerHTML += `
                         <div class="card" style="background: var(--bg-card);">
-                            <h3>${colName} (${members.length})</h3>
+                            <h3>${col.name} (${members.length})</h3>
                             <div style="margin-top: 15px; color: var(--text-muted);">${membersHtml}</div>
                         </div>
                     `;
-                }
+                });
+
+                // Добавляем общее число в начало
+                grid.innerHTML = `
+                    <div class="card" style="grid-column: 1 / -1; background: transparent; border: none; padding: 0;">
+                        <p style="color: var(--text-main); font-size: 18px;">Всего участников: <b>${totalUnique.size}</b></p>
+                    </div>
+                ` + grid.innerHTML;
             });
         }
 
