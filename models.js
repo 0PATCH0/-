@@ -40,11 +40,19 @@ const SentMessageSchema = new mongoose.Schema({
     author: String
 });
 
-// НОВАЯ МОДЕЛЬ: Сохраненный состав гильдии
 const RosterSchema = new mongoose.Schema({
     guildId: String,
     lastUpdated: { type: Date, default: Date.now },
-    data: { type: Object, default: {} } // Здесь будем хранить готовые колонки и участников
+    data: { type: Object, default: {} }
+});
+
+// НОВАЯ МОДЕЛЬ: Настройки колонок для команды /список
+const RosterConfigSchema = new mongoose.Schema({
+    guildId: String,
+    columns: [{
+        roleId: String, // ID роли в Discord
+        name: String,   // Название колонки (например, "⚔️ ДД")
+    }]
 });
 
 module.exports = {
@@ -52,5 +60,6 @@ module.exports = {
     Reminder: mongoose.model('Reminder', ReminderSchema),
     ReactionRole: mongoose.model('ReactionRole', ReactionRoleSchema),
     SentMessage: mongoose.model('SentMessage', SentMessageSchema),
-    Roster: mongoose.model('Roster', RosterSchema)
+    Roster: mongoose.model('Roster', RosterSchema),
+    RosterConfig: mongoose.model('RosterConfig', RosterConfigSchema) // Экспортируем
 };
