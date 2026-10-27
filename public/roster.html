@@ -20,7 +20,7 @@
             <h1>🛡️ Состав гильдии</h1>
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                 <a href="#" id="btn-config" class="btn" style="background: var(--bg-card); border: 1px solid var(--border-color);">⚙️ Настроить</a>
-                <button class="btn btn-danger" onclick="deleteMessage()" id="btn-delete-msg">🗑️ Удалить сообщение</button>
+                <button class="btn btn-danger" onclick="deleteMessage()" id="btn-delete-msg">🗑️ Удалить сообщения</button>
                 <button class="btn" onclick="forceUpdate()" id="btn-update">🔄 Обновить данные</button>
             </div>
         </div>
@@ -48,7 +48,7 @@
                 const lastUpdatedEl = document.getElementById('last-updated');
 
                 if (!rosterData.lastUpdated || !rosterData.data) {
-                    grid.innerHTML = '<p>Список пуст. Нажмите "Обновить данные", чтобы собрать его.</p>';
+                    grid.innerHTML = '<p>Список пуст. Нажмите "Обновить данные".</p>';
                     return;
                 }
 
@@ -102,12 +102,12 @@
         }
 
         function deleteMessage() {
-            if (!confirm('Вы уверены, что хотите удалить сообщение со списком из Discord?')) return;
+            if (!confirm('Вы уверены? Это удалит ВСЕ сообщения с составом гильдии из всех каналов Discord.')) return;
             
             fetch(`/api/guild/${guildId}/roster/message`, { method: 'DELETE' })
                 .then(res => res.json())
                 .then(data => {
-                    alert('✅ Сообщение удалено из Discord!');
+                    alert('✅ Все сообщения удалены из Discord!');
                 });
         }
 
