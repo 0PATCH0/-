@@ -7,53 +7,30 @@ const SettingsSchema = new mongoose.Schema({
 
 const ReminderSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true },
-    userId: String,
-    channelId: String,
-    text: String,
-    targetId: String,
-    targetType: String,
-    repeat: String,
-    nextTime: Number,
-    hour: Number,
-    minute: Number,
-    timezone: Number,
-    warned: { type: Boolean, default: false }
+    userId: String, channelId: String, text: String, targetId: String, targetType: String, repeat: String, nextTime: Number, hour: Number, minute: Number, timezone: Number, warned: { type: Boolean, default: false }
 });
 
 const ReactionRoleSchema = new mongoose.Schema({
-    guildId: String,
-    channelId: String,
-    messageId: String,
-    mode: String,
-    roles: [{ roleId: String, label: String }]
+    guildId: String, channelId: String, messageId: String, mode: String, roles: [{ roleId: String, label: String }]
 });
 
 const SentMessageSchema = new mongoose.Schema({
-    guildId: String,
-    channelId: String,
-    messageId: String,
-    title: String,
-    description: String,
-    color: String,
-    image: String,
-    footer: String,
-    author: String
+    guildId: String, channelId: String, messageId: String, title: String, description: String, color: String, image: String, footer: String, author: String
 });
 
 const RosterSchema = new mongoose.Schema({
-    guildId: String,
-    lastUpdated: { type: Date, default: Date.now },
-    data: { type: Object, default: {} }
+    guildId: String, lastUpdated: { type: Date, default: Date.now }, data: { type: Object, default: {} }
 });
 
-// Схема для настройки колонок (только ОДИН раз!)
 const RosterConfigSchema = new mongoose.Schema({
+    guildId: String, columns: [{ roleId: String, name: String, color: { type: String, default: '#5865F2' } }]
+});
+
+// Хранит ID сообщения, которое бот редактирует
+const RosterMessageSchema = new mongoose.Schema({
     guildId: String,
-    columns: [{
-        roleId: String, 
-        name: String,   
-        color: { type: String, default: '#5865F2' }
-    }]
+    channelId: String,
+    messageId: String
 });
 
 module.exports = {
@@ -62,5 +39,6 @@ module.exports = {
     ReactionRole: mongoose.model('ReactionRole', ReactionRoleSchema),
     SentMessage: mongoose.model('SentMessage', SentMessageSchema),
     Roster: mongoose.model('Roster', RosterSchema),
-    RosterConfig: mongoose.model('RosterConfig', RosterConfigSchema)
+    RosterConfig: mongoose.model('RosterConfig', RosterConfigSchema),
+    RosterMessage: mongoose.model('RosterMessage', RosterMessageSchema)
 };
