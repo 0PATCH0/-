@@ -38,11 +38,11 @@ async function registerCommands() {
     } catch (error) { console.error(error); }
 }
 
-// --- ФУНКЦИЯ ОБНОВЛЕНИЯ СООБЩЕНИЯ В DISCORD ---
+// --- ФУНКЦИЯ ОБНОВЛЕНИЯ ВСЕХ СООБЩЕНИЙ В DISCORD ---
 async function refreshRosterMessage(guildId, client) {
     try {
-        const msgRecord = await RosterMessage.findOne({ guildId });
-        if (!msgRecord) return; 
+        const msgRecords = await RosterMessage.find({ guildId });
+        if (msgRecords.length === 0) return; 
 
         const config = await RosterConfig.findOne({ guildId });
         const rosterData = await Roster.findOne({ guildId });
@@ -65,22 +65,26 @@ async function refreshRosterMessage(guildId, client) {
         embedsToSend.unshift(new EmbedBuilder().setTitle('🛡️ Состав гильдии').setColor('#2b2d31')
             .setDescription(`**Всего уникальных участников:** ${totalUnique.size}`).setTimestamp());
 
-        const channel = await client.channels.fetch(msgRecord.channelId).catch(() => null);
-        if (!channel) return;
-        const message = await channel.messages.fetch(msgRecord.messageId).catch(() => null);
-        if (!message) {
-            await RosterMessage.deleteOne({ guildId });
-            return;
+        for (const record of msgRecords) {
+            const channel = await client.channels.fetch(record.channelId).catch(() => null);
+            if (!channel) {
+                await RosterMessage.deleteOne({ _id: record._id }); // Канал удален
+                continue;
+            }
+            const message = await channel.messages.fetch(record.messageId).catch(() => null);
+            if (!message) {
+                await RosterMessage.deleteOne({ _id: record._id }); // Сообщение удалено
+                continue;
+            }
+            await message.edit({ embeds: embedsToSend.slice(0, 10) });
+            console.log(`[ROSTER] Сообщение в канале #${channel.name} обновлено.`);
         }
-
-        await message.edit({ embeds: embedsToSend.slice(0, 10) });
-        console.log(`[ROSTER] Сообщение в гильдии ${guildId} успешно обновлено.`);
     } catch (e) {
-        console.error('[ROSTER] Ошибка при обновлении сообщения:', e);
+        console.error('[ROSTER] Ошибка при обновлении сообщений:', e);
     }
 }
 
-// ФУНКЦИЯ СОХРАНЕНИЯ СПИСКА В БД
+// ФУНКЦИЯ СБОРА ДАННЫХ
 async function updateRosterForGuild(guild) {
     try {
         await guild.members.fetch({ time: 120000, force: true });
@@ -104,7 +108,7 @@ async function updateRosterForGuild(guild) {
     }
 }
 
-// --- ЗАДЕРЖКА (DEBOUNCE) ДЛЯ СОБЫТИЙ ---
+// ЗАДЕРЖКА ОБНОВЛЕНИЙ (чтобы не спамить при массовой выдаче ролей)
 const updateTimers = new Map();
 function scheduleUpdate(guildId) {
     if (updateTimers.has(guildId)) clearTimeout(updateTimers.get(guildId));
