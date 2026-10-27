@@ -38,9 +38,11 @@ const GuideSchema = new mongoose.Schema({
     guildId: String, name: String, description: String, chapters: [{ title: String, content: String, color: String, imageUrl: String, attachmentUrl: String, attachmentName: String }], date: { type: Date, default: Date.now }
 });
 
-// ОБНОВЛЕННАЯ МОДЕЛЬ: Теперь массив персонажей
+// ОБНОВЛЕННАЯ МОДЕЛЬ ПРОФИЛЯ
 const PlayerProfileSchema = new mongoose.Schema({
-    userId: { type: String, required: true, unique: true },
+    userId: { type: String, required: true },
+    guildId: { type: String, required: true }, // Привязка к серверу
+    isGlobal: { type: Boolean, default: false }, // Показывать на всех серверах или только тут
     characters: [{
         gameNickname: { type: String, default: '' },
         guildName: { type: String, default: '' },
@@ -49,6 +51,8 @@ const PlayerProfileSchema = new mongoose.Schema({
         bio: { type: String, default: '' }
     }]
 });
+// Составной индекс, чтобы у 1 юзера был 1 профиль на 1 сервере
+PlayerProfileSchema.index({ userId: 1, guildId: 1 }, { unique: true });
 
 module.exports = {
     Settings: mongoose.model('Settings', SettingsSchema),
