@@ -1,15 +1,14 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
-const { Settings, Roster, RosterConfig } = require('../models'); 
+const { Settings, Roster, RosterConfig, RosterMessage } = require('../models'); 
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('список')
-        .setDescription('Отправить в чат красивый список участников (по одному Embed на класс)'),
+        .setDescription('Создать автоматически обновляемый список участников в этом канале'),
 
     async execute(interaction) {
         const hasDiscordPerm = interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
         let hasCustomPerm = false;
-        
         try {
             const guildSettings = await Settings.findOne({ guildId: interaction.guild.id });
             if (guildSettings && guildSettings.modRoles) {
@@ -18,64 +17,53 @@ module.exports = {
         } catch (e) { console.error(e); }
 
         if (!hasDiscordPerm && !hasCustomPerm) {
-            return interaction.reply({ content: 'У вас нет прав для использования этой команды!', ephemeral: true });
+            return interaction.reply({ content: 'У вас нет прав!', ephemeral: true });
         }
 
-        // Сначала отвечаем "Думаю...", чтобы Discord не выдал ошибку таймаута
         await interaction.deferReply({ ephemeral: true });
 
         const config = await RosterConfig.findOne({ guildId: interaction.guild.id });
         const rosterData = await Roster.findOne({ guildId: interaction.guild.id });
 
-        if (!config || !config.columns || config.columns.length === 0) {
-            return interaction.editReply({ content: 'Сначала настройте колонки на сайте.' });
+        if (!config || !config.columns || config.columns.length === 0) return interaction.editReply({ content: 'Настройте колонки на сайте.' });
+        if (!rosterData || !rosterData.data) return interaction.editReply({ content: 'Данные пусты. Обновите их на сайте.' });
+
+        const buildEmbeds = () => {
+            const embeds = [];
+            let totalUnique = new Set();
+            config.columns.forEach((col) => {
+                const roleData = rosterData.data[col.roleId] || [];
+                roleData.forEach(m => totalUnique.add(m.id));
+                let memberList = roleData.length > 0 ? roleData.map(m => `<@${m.id}>`).join('\n') : '*Никого нет*';
+                if (memberList.length > 4000) memberList = memberList.substring(0, 4000) + '\n...и другие';
+                embeds.push(new EmbedBuilder().setTitle(col.name).setColor(col.color || '#5865F2').setDescription(memberList).setFooter({ text: `Участников: ${roleData.length}` }));
+            });
+            embeds.unshift(new EmbedBuilder().setTitle('🛡️ Состав гильдии').setColor('#2b2d31').setDescription(`**Всего участников:** ${totalUnique.size}`).setTimestamp());
+            return embeds;
+        };
+
+        // Ищем, есть ли уже сообщение от этого бота в ТЕКУЩЕМ канале
+        const messages = await interaction.channel.messages.fetch({ limit: 50 });
+        const existingMsg = messages.find(m => m.author.id === interaction.client.user.id && m.embeds.length > 0);
+
+        if (existingMsg) {
+            // Если есть, редактируем
+            await existingMsg.edit({ embeds: buildEmbeds().slice(0, 10) });
+            await RosterMessage.findOneAndUpdate(
+                { guildId: interaction.guild.id },
+                { channelId: interaction.channelId, messageId: existingMsg.id },
+                { upsert: true }
+            );
+            await interaction.editReply({ content: '✅ Существующее сообщение обновлено!' });
+        } else {
+            // Если нет, создаем новое
+            const sentMsg = await interaction.channel.send({ embeds: buildEmbeds().slice(0, 10) });
+            await RosterMessage.findOneAndUpdate(
+                { guildId: interaction.guild.id },
+                { channelId: sentMsg.channelId, messageId: sentMsg.id },
+                { upsert: true }
+            );
+            await interaction.editReply({ content: '✅ Сообщение создано и сохранено!' });
         }
-
-        if (!rosterData || !rosterData.data) {
-            return interaction.editReply({ content: 'Данные пусты. Обновите их на сайте.' });
-        }
-
-        const embedsToSend = [];
-        let totalUnique = new Set();
-
-        config.columns.forEach((col) => {
-            const roleData = rosterData.data[col.roleId] || [];
-            
-            roleData.forEach(m => totalUnique.add(m.id));
-
-            let memberList = roleData.length > 0 ? roleData.map(m => `<@${m.id}>`).join('\n') : '*Никого нет*';
-            
-            if (memberList.length > 4000) {
-                memberList = memberList.substring(0, 4000) + '\n...и другие';
-            }
-
-            const embed = new EmbedBuilder()
-                .setTitle(col.name) 
-                .setColor(col.color || '#5865F2') 
-                .setDescription(memberList)
-                .setFooter({ text: `Участников: ${roleData.length} • Обновлено: ${new Date(rosterData.lastUpdated).toLocaleString('ru-RU')}` });
-
-            embedsToSend.push(embed);
-        });
-
-        const headerEmbed = new EmbedBuilder()
-            .setTitle('🛡️ Состав гильдии')
-            .setColor('#2b2d31')
-            .setDescription(`**Всего уникальных участников:** ${totalUnique.size}\nНиже представлен список по классам.`)
-            .setTimestamp();
-        
-        embedsToSend.unshift(headerEmbed);
-
-        // ОТПРАВЛЯЕМ В КАНАЛ, ЧТОБЫ ОНИ НЕ ПРОПАДАЛИ
-        for (let i = 0; i < embedsToSend.length; i += 10) {
-            const chunk = embedsToSend.slice(i, i + 10);
-            await interaction.channel.send({ embeds: chunk });
-        }
-
-        // Удаляем служебное сообщение "Список отправлен!", чтобы не засорять чат
-        await interaction.editReply({ content: '✅ Список отправлен в чат!' });
-        
-        // Опционально: удалить ответ бота через 3 секунды, чтобы вообще ничего не висело
-        setTimeout(() => interaction.deleteReply().catch(() => {}), 3000);
     },
 };
