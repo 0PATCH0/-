@@ -262,4 +262,58 @@ textarea { resize: vertical; height: 120px; }
     .btn {
         width: 100%; /* Кнопки на всю ширину на мобилке */
     }
+
+    /* ========================================= */
+/* КРАСИВЫЕ УВЕДОМЛЕНИЯ (TOASTS)             */
+/* ========================================= */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 9999;
+}
+.toast {
+    background: var(--bg-card);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    border-left: 5px solid var(--accent);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideIn 0.3s forwards, fadeOut 0.5s 2.5s forwards;
+    min-width: 250px;
+}
+.toast.success { border-left-color: var(--success); }
+.toast.error { border-left-color: var(--danger); }
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+@keyframes fadeOut {
+    to { opacity: 0; visibility: hidden; }
+}
+
+/* ========================================= */
+/* СКЕЛЕТОНЫ (Заглушки при загрузке)         */
+/* ========================================= */
+.skeleton {
+    background: linear-gradient(90deg, #1e202b 25%, #2a2c3a 50%, #1e202b 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 5px;
+    color: transparent !important;
+}
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+.skeleton-text { height: 20px; width: 100%; margin-bottom: 10px; }
+.skeleton-title { height: 30px; width: 60%; margin-bottom: 15px; }
 }
