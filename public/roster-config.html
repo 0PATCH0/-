@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Настройка списка</title>
+    <title>Настройка колонок</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -15,9 +15,9 @@
         <a href="#" class="active">⚙️ Настройка колонок</a>
     </div>
     <div class="content">
-        <div class="header"><h1>⚙️ Настройка колонок для /список</h1></div>
+        <div class="header"><h1>⚙️ Настройка колонок для списка</h1></div>
         <div class="form-card">
-            <p style="color: var(--text-muted); margin-bottom: 20px;">Добавьте роли, которые будут отображаться в команде /список, и задайте им красивые названия.</p>
+            <p style="color: var(--text-muted); margin-bottom: 20px;">Выберите роли, которые будут отображаться в команде /список, и придумайте для них красивые названия.</p>
             
             <div id="columns-container"></div>
             
@@ -34,7 +34,6 @@
         document.getElementById('link-back').href = `/manage/${guildId}`;
         let serverRoles = [];
 
-        // Загружаем роли и текущие настройки
         Promise.all([
             fetch(`/api/guild/${guildId}`).then(res => res.json()),
             fetch(`/api/guild/${guildId}/roster-config`).then(res => res.json())
@@ -45,7 +44,7 @@
             if (configData && configData.columns && configData.columns.length > 0) {
                 configData.columns.forEach(col => addColumn(col.roleId, col.name));
             } else {
-                addColumn(); // Добавляем пустую, если настроек нет
+                addColumn(); 
             }
         });
 
@@ -78,7 +77,10 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ columns })
             }).then(res => res.json()).then(data => {
-                if (data.success) alert('✅ Настройки сохранены! Теперь используйте /список в Discord.');
+                if (data.success) {
+                    alert('✅ Настройки сохранены! Теперь вернитесь к составу гильдии и нажмите "Обновить".');
+                    window.location.href = `/manage/${guildId}/roster`; // Возвращаемся к списку
+                }
                 else alert('❌ Ошибка: ' + data.error);
             });
         }
