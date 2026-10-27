@@ -59,4 +59,24 @@
                         </div>
                     `).join('');
                 } else {
-                    charactersHtml = '<p style="color
+                    charactersHtml = '<p style="color: var(--text-muted);">Персонажи не заполнены.</p>';
+                }
+
+                grid.innerHTML += `
+                    <div class="card profile-card" style="display: block;">
+                        <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
+                            <img src="${p.avatar}" class="profile-avatar" style="width: 60px; height: 60px;">
+                            <div>
+                                <h3 style="margin: 0; color: var(--accent); font-family: 'Cinzel', serif;">@${p.discordName}</h3>
+                            </div>
+                        </div>
+                        <div>
+                            ${charactersHtml}
+                        </div>
+                    </div>
+                `;
+            });
+        });
+    </script>
+</body>
+</html>
