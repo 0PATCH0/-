@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Состав гильдии</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
@@ -17,8 +18,9 @@
     <div class="content">
         <div class="header">
             <h1>🛡️ Состав гильдии</h1>
-            <div style="display: flex; gap: 10px;">
-                <a href="#" id="btn-config" class="btn" style="background: var(--bg-card); border: 1px solid var(--border-color);">⚙️ Настроить колонки</a>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <a href="#" id="btn-config" class="btn" style="background: var(--bg-card); border: 1px solid var(--border-color);">⚙️ Настроить</a>
+                <button class="btn btn-danger" onclick="deleteMessage()" id="btn-delete-msg">🗑️ Удалить сообщение</button>
                 <button class="btn" onclick="forceUpdate()" id="btn-update">🔄 Обновить данные</button>
             </div>
         </div>
@@ -38,10 +40,9 @@
         });
 
         function loadRoster() {
-            // Загружаем и настройки колонок, и сами данные
             Promise.all([
-                fetch(`/api/guild/${guildId}/roster`).then(res => res.json()),
-                fetch(`/api/guild/${guildId}/roster-config`).then(res => res.json())
+                fetch(`/api/guild/${guildId}/roster`, { cache: 'no-store' }).then(res => res.json()),
+                fetch(`/api/guild/${guildId}/roster-config`, { cache: 'no-store' }).then(res => res.json())
             ]).then(([rosterData, configData]) => {
                 const grid = document.getElementById('roster-grid');
                 const lastUpdatedEl = document.getElementById('last-updated');
@@ -54,32 +55,27 @@
                 const date = new Date(rosterData.lastUpdated).toLocaleString('ru-RU');
                 lastUpdatedEl.innerText = `Последнее обновление: ${date}`;
 
-                // Если настройки не заданы — показываем сообщение
                 if (!configData.columns || configData.columns.length === 0) {
-                    grid.innerHTML = '<p>Колонки не настроены. Нажмите "⚙️ Настроить колонки" сверху.</p>';
+                    grid.innerHTML = '<p>Колонки не настроены. Нажмите "⚙️ Настроить".</p>';
                     return;
                 }
 
                 grid.innerHTML = '';
                 let totalUnique = new Set();
 
-                // Идем по настройкам (какие роли показывать)
                 configData.columns.forEach(col => {
                     const members = rosterData.data[col.roleId] || [];
-                    
                     members.forEach(m => totalUnique.add(m.id));
-
                     let membersHtml = members.length > 0 ? members.map(m => `<div>@${m.name}</div>`).join('') : '<i>Никого нет</i>';
                     
                     grid.innerHTML += `
-                        <div class="card" style="background: var(--bg-card);">
+                        <div class="card" style="background: var(--bg-card); border-left: 4px solid ${col.color || '#5865F2'};">
                             <h3>${col.name} (${members.length})</h3>
                             <div style="margin-top: 15px; color: var(--text-muted);">${membersHtml}</div>
                         </div>
                     `;
                 });
 
-                // Добавляем общее число в начало
                 grid.innerHTML = `
                     <div class="card" style="grid-column: 1 / -1; background: transparent; border: none; padding: 0;">
                         <p style="color: var(--text-main); font-size: 18px;">Всего участников: <b>${totalUnique.size}</b></p>
@@ -102,6 +98,16 @@
                 .finally(() => {
                     btn.innerText = '🔄 Обновить данные';
                     btn.disabled = false;
+                });
+        }
+
+        function deleteMessage() {
+            if (!confirm('Вы уверены, что хотите удалить сообщение со списком из Discord?')) return;
+            
+            fetch(`/api/guild/${guildId}/roster/message`, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    alert('✅ Сообщение удалено из Discord!');
                 });
         }
 
