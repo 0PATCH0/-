@@ -6,41 +6,49 @@
     <title>Модерация</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
+<body class="bg-mountain">
+    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
+
     <div class="sidebar">
         <h2 id="server-name">Загрузка...</h2>
         <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
-        <hr style="border-color: var(--border-color);">
-        <a href="#" id="link-back">🏠 На главную</a>
-        <a href="#" class="active">🛡️ Модерация</a>
+        <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+        <a href="#" id="nav-home">🏠 Обзор</a>
+        <a href="#" id="nav-roster">🛡️ Состав гильдии</a>
+        <a href="#" id="nav-rr">🎭 Роли по кнопкам</a>
+        <a href="#" id="nav-rem">⏰ Напоминания</a>
+        <a href="#" class="active">⚙️ Модерация</a>
+        <a href="#" id="nav-emb">📨 Эмбеды</a>
+        <a href="#" id="nav-logs">📜 Логи действий</a>
     </div>
+
     <div class="content">
-        <div class="header"><h1>🛡️ Настройки модерации</h1></div>
+        <div class="header"><h1>⚙️ Права модераторов</h1></div>
         <div class="form-card">
-            <p style="color: var(--text-muted); margin-bottom: 20px;">Выберите роли, которым разрешено использовать команды `/мут`, `/анмут`, `/сказать` и `/очистить`.</p>
-            <div id="roles-list" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px;"></div>
-            <button class="btn" onclick="saveModeration()">💾 Сохранить настройки</button>
+            <p style="color: var(--text-muted); margin-bottom: 20px;">Выберите роли, которым разрешены команды (/мут, /очистить, /сказать).</p>
+            <div id="roles-list" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px; padding-right: 10px;"></div>
+            <button class="btn" onclick="saveModeration()">💾 Сохранить права</button>
         </div>
     </div>
+
     <script>
         const guildId = window.location.pathname.split('/')[2];
-        document.getElementById('link-back').href = `/manage/${guildId}`;
-        let allRoles = [];
+        const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-emb': '/custom', 'nav-logs': '/logs'};
+        for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
 
         Promise.all([
             fetch(`/api/guild/${guildId}`).then(res => res.json()),
             fetch(`/api/guild/${guildId}/moderation`).then(res => res.json())
         ]).then(([guildData, modData]) => {
             document.getElementById('server-name').innerText = guildData.name;
-            allRoles = guildData.roles;
-            
             const list = document.getElementById('roles-list');
-            allRoles.forEach(role => {
+            
+            guildData.roles.forEach(role => {
                 const isChecked = modData.modRoles.includes(role.id) ? 'checked' : '';
                 list.innerHTML += `
-                    <label style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #14151c; border-radius: 5px; margin-bottom: 5px; cursor: pointer;">
-                        <input type="checkbox" value="${role.id}" ${isChecked} style="width: 20px; height: 20px;">
-                        <span>${role.name}</span>
+                    <label style="display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 6px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; transition: 0.2s;" onmouseover="this.style.borderColor='var(--border-color)'" onmouseout="this.style.borderColor='transparent'">
+                        <input type="checkbox" value="${role.id}" ${isChecked} style="width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer;">
+                        <span style="font-weight: bold; color: var(--text-main);">${role.name}</span>
                     </label>
                 `;
             });
@@ -49,9 +57,7 @@
         function saveModeration() {
             const checked = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
             fetch(`/api/guild/${guildId}/moderation`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ modRoles: checked })
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ modRoles: checked })
             }).then(() => alert('✅ Настройки модерации сохранены!'));
         }
     </script>
