@@ -47,21 +47,16 @@
             }
             grid.innerHTML = '';
             data.forEach(p => {
-                grid.innerHTML += `
-                    <div class="card profile-card">
-                        <img src="${p.avatar}" class="profile-avatar" alt="avatar">
-                        <div class="profile-info" style="flex: 1;">
-                            <h3>${p.gameNickname || p.discordName}</h3>
-                            <p><b>Гильдия:</b> ${p.guildName || 'Не указана'}</p>
-                            <p><b>Класс:</b> ${p.classRole || 'Не указан'}</p>
-                            <p><b>Оружие:</b> ${p.weapon || 'Не указано'}</p>
-                            ${p.bio ? `<div class="profile-bio">"${p.bio}"</div>` : ''}
-                            <div class="stat-badge">Discord: @${p.discordName}</div>
+                let charactersHtml = '';
+                
+                if (p.characters && p.characters.length > 0) {
+                    charactersHtml = p.characters.map(char => `
+                        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; margin-bottom: 10px; border-left: 2px solid var(--accent);">
+                            <h4 style="color: var(--text-main); margin-bottom: 5px;">${char.gameNickname || 'Без ника'}</h4>
+                            <p style="font-size: 13px; margin: 0;"><b style="color: var(--accent);">Класс:</b> ${char.classRole || 'Не указан'} | <b style="color: var(--accent);">Оружие:</b> ${char.weapon || 'Не указано'}</p>
+                            <p style="font-size: 13px; margin: 0;"><b style="color: var(--accent);">Гильдия:</b> ${char.guildName || 'Не указана'}</p>
+                            ${char.bio ? `<p style="font-size: 12px; font-style: italic; color: var(--text-muted); margin-top: 5px;">"${char.bio}"</p>` : ''}
                         </div>
-                    </div>
-                `;
-            });
-        });
-    </script>
-</body>
-</html>
+                    `).join('');
+                } else {
+                    charactersHtml = '<p style="color
