@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мои серверы</title>
     <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .user-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); backdrop-filter: var(--glass-blur); }
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .user-info img { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--accent); }
+    </style>
 </head>
 <body class="bg-mountain">
     <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
@@ -12,12 +17,20 @@
     <div class="sidebar">
         <h2>Панель управления</h2>
         <a href="/dashboard" class="active">🏠 Мои серверы</a>
+        <a href="/profile">👤 Мой профиль</a>
         <a href="/logout" style="margin-top: 50px; color: var(--danger);">🚪 Выйти</a>
     </div>
 
     <div class="content">
+        <div class="user-header">
+            <div class="user-info" id="user-profile">
+                <!-- Сюда JS вставит аватарку и имя -->
+            </div>
+            <a href="/profile" class="btn btn-small">✏️ Редактировать профиль</a>
+        </div>
+
         <div class="header">
-            <h1 id="welcome-text">Загрузка...</h1>
+            <h1>Мои серверы</h1>
         </div>
         <div class="grid" id="server-list">
             <p style="color: var(--text-muted);">Поиск серверов...</p>
@@ -26,9 +39,17 @@
 
     <script>
         fetch('/api/user').then(res => res.json()).then(data => {
-            document.getElementById('welcome-text').innerText = `Привет, ${data.user.username}!`;
+            // Вывод профиля пользователя
+            const avatar = data.user.avatar ? `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png';
+            document.getElementById('user-profile').innerHTML = `
+                <img src="${avatar}" alt="avatar">
+                <div>
+                    <h3 style="margin: 0; color: var(--text-main);">${data.user.username}</h3>
+                    <p style="margin: 0; font-size: 13px; color: var(--text-muted);">Discord ID: ${data.user.id}</p>
+                </div>
+            `;
+
             const grid = document.getElementById('server-list');
-            
             if (data.guilds.length === 0) {
                 grid.innerHTML = '<p style="color: var(--text-muted);">У вас нет серверов, где вы администратор.</p>';
                 return;
