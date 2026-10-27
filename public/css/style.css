@@ -252,3 +252,11 @@ body.bg-default {
 .profile-info b { color: var(--text-main); }
 .profile-bio { margin-top: 15px; font-style: italic; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; border-left: 3px solid var(--accent); }
 .stat-badge { display: inline-block; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); padding: 5px 12px; border-radius: 20px; font-size: 12px; color: var(--accent); font-weight: bold; margin-top: 10px; }
+
+
+/* Стили для красивых уведомлений */
+.toast-container { position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 15px; z-index: 9999; }
+.toast { background: rgba(20, 22, 30, 0.95); backdrop-filter: blur(10px); padding: 15px 25px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); border: 1px solid var(--border-color); position: relative; overflow: hidden; animation: slideIn 0.3s forwards; min-width: 250px; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }
+@keyframes shrink { from { width: 100%; } to { width: 0%; } }
