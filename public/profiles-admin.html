@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Гильдия - Профили</title>
     <link rel="stylesheet" href="/css/style.css">
-    <script src="/js/ui.js"></script>
+    <script src="/js/ui.js"></script> <!-- Подключаем красивые уведомления -->
 </head>
 <body class="bg-forest">
     <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
@@ -62,14 +62,6 @@
                     charactersHtml = '<p style="color: var(--text-muted);">Персонажи не заполнены.</p>';
                 }
 
-                // Кнопки удаления/редактирования для админа
-                const adminButtons = `
-                    <div style="display: flex; gap: 10px; margin-top: 15px;">
-                        <a href="/profile?guild=${guildId}&user=${p.userId}" class="btn btn-small" style="flex: 1; background: var(--accent); color: black;">✏️ Редактировать</a>
-                        <button class="btn btn-danger btn-small" style="flex: 1;" onclick="deleteProfile('${p.userId}', '${p.discordName}')">🗑️ Удалить</button>
-                    </div>
-                `;
-
                 grid.innerHTML += `
                     <div class="card profile-card" style="display: block;">
                         <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
@@ -80,7 +72,11 @@
                             </div>
                         </div>
                         <div>${charactersHtml}</div>
-                        ${adminButtons}
+                        <!-- КНОПКИ УПРАВЛЕНИЯ -->
+                        <div style="display: flex; gap: 10px; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                            <a href="/profile?guild=${guildId}&user=${p.userId}" class="btn btn-small" style="flex: 1; background: var(--accent); color: black;">✏️ Редактировать</a>
+                            <button class="btn btn-danger btn-small" style="flex: 1;" onclick="deleteProfile('${p.userId}', '${p.discordName}')">🗑️ Удалить</button>
+                        </div>
                     </div>
                 `;
             });
