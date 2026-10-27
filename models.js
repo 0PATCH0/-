@@ -30,13 +30,21 @@ const RosterMessageSchema = new mongoose.Schema({
     guildId: String, channelId: String, messageId: String
 });
 
-// НОВАЯ МОДЕЛЬ: Логи действий
 const LogSchema = new mongoose.Schema({
+    guildId: String, userId: String, username: String, action: String, details: String, date: { type: Date, default: Date.now }
+});
+
+// НОВАЯ МОДЕЛЬ: Гайды
+const GuideSchema = new mongoose.Schema({
     guildId: String,
-    userId: String,       // Кто сделал
-    username: String,     // Имя того, кто сделал
-    action: String,       // Действие (мут, сбор и т.д.)
-    details: String,      // Подробности
+    name: String, // Название гайда (например, "ГВГ Гайд")
+    description: String, // Краткое описание для меню
+    chapters: [{
+        title: String,
+        content: String,
+        color: String,
+        imageUrl: String
+    }],
     date: { type: Date, default: Date.now }
 });
 
@@ -48,5 +56,6 @@ module.exports = {
     Roster: mongoose.model('Roster', RosterSchema),
     RosterConfig: mongoose.model('RosterConfig', RosterConfigSchema),
     RosterMessage: mongoose.model('RosterMessage', RosterMessageSchema),
-    Log: mongoose.model('Log', LogSchema) // Экспортируем
+    Log: mongoose.model('Log', LogSchema),
+    Guide: mongoose.model('Guide', GuideSchema) // Экспортируем
 };
