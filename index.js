@@ -5,25 +5,26 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 
 const { startWebServer } = require('./web'); 
-const { Reminder, ReactionRole } = require('./models');
+const { Reminder, ReactionRole, Roster } = require('./models');
 
 const client = new Client({ 
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers // ВАЖНО: Добавлено для работы с участниками
     ] 
 });
 
 client.commands = new Collection();
 const commandsArray = [];
 
+// Загрузка команд
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
 for (const file of commandFiles) {
-    const filePath = path.join(commandsPath, file);
-    const command = require(filePath);
+    const command = require(path.join(commandsPath, file));
     if ('data' in command && 'execute' in command) {
         client.commands.set(command.data.name, command);
         commandsArray.push(command.data.toJSON());
@@ -35,70 +36,63 @@ async function registerCommands() {
     try {
         await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commandsArray });
         console.log('Слэш-команды успешно зарегистрированы!');
-    } catch (error) {
-        console.error('Ошибка регистрации:', error);
+    } catch (error) { console.error(error); }
+}
+
+// Функция для принудительного обновления данных
+async function forceFetchMembers(guild) {
+    console.log(`[ROSTER] Начинаю обновление участников для ${guild.name}...`);
+    try {
+        // Используем опцию force: true и таймаут 60 сек, чтобы точно дождаться ответа
+        const members = await guild.members.fetch({ time: 60000, force: true });
+        console.log(`[ROSTER] Успешно загружено ${members.size} участников.`);
+        return true;
+    } catch (e) {
+        console.error(`[ROSTER] Ошибка при загрузке участников: ${e.message}`);
+        return false;
     }
 }
 
 client.on('interactionCreate', async interaction => {
-    // 1. Стандартные слэш-команды
-    if (interaction.isChatInputCommand()) {
-        const command = interaction.client.commands.get(interaction.commandName);
-        if (!command) return;
-        try { await command.execute(interaction); } catch (error) { console.error(error); }
-    }
+    if (!interaction.isChatInputCommand()) return;
 
-    // 2. Кнопки Ролей по кнопкам
-    if (interaction.isButton() && interaction.customId.startsWith('rr_')) {
-        const roleId = interaction.customId.split('_')[1];
-        const member = interaction.member;
-        const role = interaction.guild.roles.cache.get(roleId);
+    const command = client.commands.get(interaction.commandName);
+    if (!command) return;
 
-        if (!role) return interaction.reply({ content: 'Роль удалена.', ephemeral: true });
-
-        try {
-            const config = await ReactionRole.findOne({ messageId: interaction.message.id });
-            const mode = config ? config.mode : 'multiple';
-
-            if (mode === 'single' && config) {
-                for (const r of config.roles) {
-                    if (r.roleId !== roleId && member.roles.cache.has(r.roleId)) {
-                        await member.roles.remove(r.roleId).catch(() => {});
-                    }
-                }
-            }
-
-            if (member.roles.cache.has(roleId)) {
-                await member.roles.remove(roleId);
-                await interaction.reply({ content: `✅ Вы сняли роль **${role.name}**`, ephemeral: true });
-            } else {
-                await member.roles.add(roleId);
-                await interaction.reply({ content: `✅ Вы получили роль **${role.name}**`, ephemeral: true });
-            }
-        } catch (error) {
-            await interaction.reply({ content: 'Не удалось изменить роль. Проверьте иерархию.', ephemeral: true });
-        }
+    try {
+        await command.execute(interaction);
+    } catch (error) {
+        console.error(error);
+        await interaction.reply({ content: 'Ошибка при выполнении!', ephemeral: true });
     }
 });
 
 client.once('ready', async () => {
     console.log(`Бот ${client.user.tag} в сети!`);
-    await registerCommands(); 
+    await registerCommands();
 
-    // Восстанавливаем напоминания
+    // Первичная загрузка для всех серверов
+    client.guilds.cache.forEach(guild => forceFetchMembers(guild));
+
+    // Периодическое обновление каждые 30 минут (чтобы сайт не показывал устаревшие данные)
+    setInterval(() => {
+        client.guilds.cache.forEach(guild => forceFetchMembers(guild));
+    }, 30 * 60 * 1000);
+    
+    // Восстановление напоминаний
     try {
         const reminders = await Reminder.find();
         if (reminders.length > 0) {
             const remindCommand = require('./commands/remind.js');
-            reminders.forEach(reminder => remindCommand.setReminderTimeout(reminder, client));
+            reminders.forEach(rem => remindCommand.setReminderTimeout(rem, client));
         }
     } catch (e) { console.error(e); }
-
-    // ПРИНУДИТЕЛЬНО ЗАГРУЖАЕМ ВСЕХ УЧАСТНИКОВ В КЭШ (в фоне, чтобы не блокировать бота)
-    console.log("Начинаю фоновую загрузку участников...");
-    client.guilds.cache.forEach(guild => {
-        guild.members.fetch()
-            .then(members => console.log(`✅ Загружено ${members.size} участников для сервера ${guild.name}`))
-            .catch(err => console.log(`❌ Не удалось загрузить участников для ${guild.name}: ${err.message}`));
-    });
 });
+
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => {
+        console.log('✅ Успешное подключение к базе данных!');
+        startWebServer(client); 
+        client.login(process.env.TOKEN);
+    })
+    .catch(err => console.error('❌ Ошибка подключения к БД:', err));
