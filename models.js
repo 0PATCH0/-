@@ -34,16 +34,18 @@ const LogSchema = new mongoose.Schema({
     guildId: String, userId: String, username: String, action: String, details: String, date: { type: Date, default: Date.now }
 });
 
-// НОВАЯ МОДЕЛЬ: Гайды
+// ОБНОВЛЕННАЯ МОДЕЛЬ ГАЙДОВ
 const GuideSchema = new mongoose.Schema({
     guildId: String,
-    name: String, // Название гайда (например, "ГВГ Гайд")
-    description: String, // Краткое описание для меню
+    name: String, 
+    description: String, 
     chapters: [{
         title: String,
         content: String,
         color: String,
-        imageUrl: String
+        imageUrl: String,
+        attachmentUrl: String,  // Ссылка на файл (PDF и т.д.)
+        attachmentName: String  // Название кнопки (например, "Скачать PDF")
     }],
     date: { type: Date, default: Date.now }
 });
@@ -57,5 +59,5 @@ module.exports = {
     RosterConfig: mongoose.model('RosterConfig', RosterConfigSchema),
     RosterMessage: mongoose.model('RosterMessage', RosterMessageSchema),
     Log: mongoose.model('Log', LogSchema),
-    Guide: mongoose.model('Guide', GuideSchema) // Экспортируем
+    Guide: mongoose.model('Guide', GuideSchema)
 };
