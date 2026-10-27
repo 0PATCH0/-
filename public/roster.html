@@ -47,45 +47,52 @@
         fetch(`/api/guild/${guildId}`).then(res => res.json()).then(data => document.getElementById('server-name').innerText = data.name);
 
         function loadRoster() {
-            Promise.all([
-                fetch(`/api/guild/${guildId}/roster`, { cache: 'no-store' }).then(res => res.json()),
-                fetch(`/api/guild/${guildId}/roster-config`, { cache: 'no-store' }).then(res => res.json())
-            ]).then(([rosterData, configData]) => {
-                const grid = document.getElementById('roster-grid');
-                const lastUpdatedEl = document.getElementById('last-updated');
+    Promise.all([
+        fetch(`/api/guild/${guildId}/roster`, { cache: 'no-store' }).then(res => res.json()),
+        fetch(`/api/guild/${guildId}/roster-config`, { cache: 'no-store' }).then(res => res.json())
+    ]).then(([rosterData, configData]) => {
+        const grid = document.getElementById('roster-grid');
+        const lastUpdatedEl = document.getElementById('last-updated');
 
-                if (!rosterData.lastUpdated || !rosterData.data) {
-                    grid.innerHTML = '<p style="color: var(--text-muted);">Список пуст. Нажмите "Обновить".</p>';
-                    return;
-                }
+        if (!rosterData.lastUpdated || !rosterData.data) {
+            grid.innerHTML = '<p style="color: var(--text-muted);">Список пуст. Нажмите "Обновить".</p>';
+            return;
+        }
 
-                lastUpdatedEl.innerText = `Последнее обновление: ${new Date(rosterData.lastUpdated).toLocaleString('ru-RU')}`;
+        lastUpdatedEl.innerText = `Последнее обновление: ${new Date(rosterData.lastUpdated).toLocaleString('ru-RU')}`;
 
-                if (!configData.columns || configData.columns.length === 0) {
-                    grid.innerHTML = '<p style="color: var(--text-muted);">Колонки не настроены. Нажмите "⚙️ Настроить".</p>';
-                    return;
-                }
+        if (!configData.columns || configData.columns.length === 0) {
+            grid.innerHTML = '<p style="color: var(--text-muted);">Колонки не настроены.</p>';
+            return;
+        }
 
-                grid.innerHTML = '';
-                let totalUnique = new Set();
+        grid.innerHTML = '';
+        let totalUnique = new Set();
 
-                configData.columns.forEach(col => {
-                    const members = rosterData.data[col.roleId] || [];
-                    members.forEach(m => totalUnique.add(m.id));
-                    let membersHtml = members.length > 0 ? members.map(m => `<div style="margin-bottom: 6px; font-size: 14px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 4px;"><span style="color: var(--accent);">@</span>${m.name}</div>`).join('') : '<div style="color: var(--text-muted); font-style: italic;">Никого нет</div>';
-                    
-                    grid.innerHTML += `
-                        <div class="card" style="border-top: 3px solid ${col.color || '#d4af37'};">
-                            <h3>${col.name} <span style="font-size: 14px; color: var(--text-muted); font-weight: normal;">(${members.length})</span></h3>
-                            <div style="margin-top: 15px;">${membersHtml}</div>
-                        </div>
-                    `;
-                });
+        configData.columns.forEach(col => {
+            const members = rosterData.data[col.roleId] || [];
+            members.forEach(m => totalUnique.add(m.id));
+            
+            // Формируем список с аватарками и упоминаниями
+            let membersHtml = members.length > 0 ? members.map(m => `
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 4px;">
+                    <img src="https://cdn.discordapp.com/embed/avatars/0.png" style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--accent);">
+                    <span style="font-size: 14px; color: var(--text-main);">${m.name}</span>
+                </div>
+            `).join('') : '<div style="color: var(--text-muted); font-style: italic;">Никого нет</div>';
+            
+            grid.innerHTML += `
+                <div class="card" style="border-top: 3px solid ${col.color || '#d4af37'};">
+                    <h3>${col.name} <span style="font-size: 14px; color: var(--text-muted); font-weight: normal;">(${members.length})</span></h3>
+                    <div style="margin-top: 15px;">${membersHtml}</div>
+                </div>
+            `;
+        });
 
-                grid.innerHTML = `<div class="card" style="grid-column: 1 / -1; background: transparent; border: none; box-shadow: none; padding: 0;">
-                        <p style="color: var(--text-main); font-size: 18px;">Всего уникальных участников: <b style="color: var(--accent);">${totalUnique.size}</b></p>
-                    </div>` + grid.innerHTML;
-            });
+        grid.innerHTML = `<div class="card" style="grid-column: 1 / -1; background: transparent; border: none; box-shadow: none; padding: 0;">
+                <p style="color: var(--text-main); font-size: 18px;">Всего участников: <b style="color: var(--accent);">${totalUnique.size}</b></p>
+            </div>` + grid.innerHTML;
+    });
         }
 
         function forceUpdate() {
