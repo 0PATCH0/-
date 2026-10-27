@@ -4,7 +4,7 @@ const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
 const path = require('path');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { ReactionRole, Settings, Reminder, SentMessage } = require('./models');
+const { ReactionRole, Settings, Reminder, SentMessage, Roster } = require('./models');
 
 const app = express();
 app.use(express.json());
@@ -29,6 +29,7 @@ passport.use(new DiscordStrategy({
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
+// --- АВТОРИЗАЦИЯ ---
 app.get('/auth/discord', passport.authenticate('discord'));
 app.get('/auth/discord/callback', passport.authenticate('discord', { failureRedirect: '/' }), (req, res) => res.redirect('/dashboard'));
 app.get('/logout', (req, res) => req.logout(() => res.redirect('/')));
@@ -40,6 +41,7 @@ app.get('/manage/:id/reactionroles', (req, res) => { if (!req.user) return res.r
 app.get('/manage/:id/reminders', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'reminders.html')); });
 app.get('/manage/:id/moderation', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'moderation.html')); });
 app.get('/manage/:id/custom', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'custom.html')); });
+app.get('/manage/:id/roster', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'roster.html')); });
 
 // --- API БАЗОВЫЕ ---
 app.get('/api/user', (req, res) => {
@@ -119,18 +121,13 @@ app.post('/api/guild/:id/moderation', async (req, res) => {
     res.json({ success: true });
 });
 
-// ==========================================
-// API EMBED-СООБЩЕНИЯ (УПРАВЛЕНИЕ)
-// ==========================================
-
-// Получить список отправленных сообщений
+// --- API ЭМБЕД-СООБЩЕНИЯ ---
 app.get('/api/guild/:id/embeds', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     const messages = await SentMessage.find({ guildId: req.params.id });
     res.json(messages);
 });
 
-// Создать и отправить сообщение
 app.post('/api/guild/:id/embeds', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     const { title, description, color, image, footer, author, channelId } = req.body;
@@ -140,70 +137,51 @@ app.post('/api/guild/:id/embeds', async (req, res) => {
         const channel = await client.channels.fetch(channelId).catch(() => null);
         if (!channel) return res.status(400).json({ error: 'Канал не найден или бот не имеет прав.' });
 
-        const embed = new EmbedBuilder()
-            .setTitle(title || null)
-            .setDescription(description || null)
-            .setColor(color || '#5865F2');
-
+        const embed = new EmbedBuilder().setTitle(title || null).setDescription(description || null).setColor(color || '#5865F2');
         if (image) embed.setImage(image);
         if (footer) embed.setFooter({ text: footer });
         if (author) embed.setAuthor({ name: author });
 
         const msg = await channel.send({ embeds: [embed] });
-
-        await SentMessage.create({
-            guildId: req.params.id, channelId, messageId: msg.id,
-            title, description, color, image, footer, author
-        });
-
+        await SentMessage.create({ guildId: req.params.id, channelId, messageId: msg.id, title, description, color, image, footer, author });
         res.json({ success: true });
     } catch (error) {
-        console.error(error);
         res.status(500).json({ error: 'Ошибка при отправке' });
     }
 });
 
-// Редактировать сообщение
 app.put('/api/guild/:id/embeds/:messageId', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     const { title, description, color, image, footer, author } = req.body;
     const client = req.app.get('botClient');
-    const { id, messageId } = req.params;
+    const { messageId } = req.params;
 
     try {
         const dbMsg = await SentMessage.findOne({ messageId });
-        if (!dbMsg) return res.status(404).json({ error: 'Сообщение не найдено в БД' });
+        if (!dbMsg) return res.status(404).json({ error: 'Сообщение не найдено' });
 
         const channel = await client.channels.fetch(dbMsg.channelId).catch(() => null);
         if (!channel) return res.status(400).json({ error: 'Канал не найден' });
 
         const discordMsg = await channel.messages.fetch(messageId).catch(() => null);
-        if (!discordMsg) return res.status(400).json({ error: 'Сообщение было удалено в Discord' });
+        if (!discordMsg) return res.status(400).json({ error: 'Сообщение удалено в Discord' });
 
-        const embed = new EmbedBuilder()
-            .setTitle(title || null)
-            .setDescription(description || null)
-            .setColor(color || '#5865F2');
-
+        const embed = new EmbedBuilder().setTitle(title || null).setDescription(description || null).setColor(color || '#5865F2');
         if (image) embed.setImage(image);
         if (footer) embed.setFooter({ text: footer });
         if (author) embed.setAuthor({ name: author });
 
         await discordMsg.edit({ embeds: [embed] });
         
-        // Обновляем в БД
         dbMsg.title = title; dbMsg.description = description; dbMsg.color = color;
         dbMsg.image = image; dbMsg.footer = footer; dbMsg.author = author;
         await dbMsg.save();
-
         res.json({ success: true });
     } catch (error) {
-        console.error(error);
         res.status(500).json({ error: 'Ошибка при редактировании' });
     }
 });
 
-// Удалить сообщение
 app.delete('/api/guild/:id/embeds/:messageId', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     const client = req.app.get('botClient');
@@ -223,6 +201,29 @@ app.delete('/api/guild/:id/embeds/:messageId', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Ошибка при удалении' });
+    }
+});
+
+// --- API ROSTER (СОСТАВ ГИЛЬДИИ) ---
+app.get('/api/guild/:id/roster', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    let roster = await Roster.findOne({ guildId: req.params.id });
+    res.json(roster || { data: {}, lastUpdated: null });
+});
+
+app.post('/api/guild/:id/roster/update', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    const client = req.app.get('botClient');
+    const guild = client.guilds.cache.get(req.params.id);
+    if (!guild) return res.status(404).json({ error: 'Сервер не найден' });
+
+    try {
+        // Скачиваем всех участников (увеличиваем таймаут)
+        await guild.members.fetch({ time: 60000, force: true });
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Не удалось обновить данные (таймаут)' });
     }
 });
 
