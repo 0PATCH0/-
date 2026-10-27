@@ -38,15 +38,16 @@ async function registerCommands() {
     } catch (error) { console.error(error); }
 }
 
-// ФУНКЦИЯ СОХРАНЕНИЯ СПИСКА В БД
+// ФУНКЦИЯ СОХРАНЕНИЯ СПИСКА В БД (по ID ролей)
 async function updateRosterForGuild(guild) {
     try {
         console.log(`[ROSTER] Обновляю данные для ${guild.name}...`);
         // Скачиваем всех участников
         await guild.members.fetch({ time: 120000, force: true });
         
-        // Группируем людей по ролям
         const rolesData = {};
+        
+        // Проходимся по всем ролям на сервере
         guild.roles.cache.forEach(role => {
             if (role.id === guild.id || role.managed) return; // Пропускаем @everyone и роли ботов
             
@@ -56,7 +57,7 @@ async function updateRosterForGuild(guild) {
             }));
 
             if (membersInRole.length > 0) {
-                rolesData[role.name] = membersInRole;
+                rolesData[role.id] = membersInRole; // СОХРАНЯЕМ ПО ID РОЛИ!
             }
         });
 
@@ -107,7 +108,7 @@ client.once('ready', async () => {
     } catch (e) { console.error(e); }
 });
 
-// Глобальный экспорт, чтобы сайт мог вызвать обновление вручную
+// Экспортируем функцию, чтобы сайт мог вызвать её вручную
 module.exports.updateRosterForGuild = updateRosterForGuild;
 
 mongoose.connect(process.env.MONGO_URI)
