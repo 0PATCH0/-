@@ -40,27 +40,19 @@ const SentMessageSchema = new mongoose.Schema({
     author: String
 });
 
-const RosterConfigSchema = new mongoose.Schema({
-    guildId: String,
-    columns: [{
-        roleId: String, 
-        name: String,   
-        color: { type: String, default: '#5865F2' } // Добавили цвет
-    }]
-});
-
 const RosterSchema = new mongoose.Schema({
     guildId: String,
     lastUpdated: { type: Date, default: Date.now },
     data: { type: Object, default: {} }
 });
 
-// НОВАЯ МОДЕЛЬ: Настройки колонок для команды /список
+// Схема для настройки колонок (только ОДИН раз!)
 const RosterConfigSchema = new mongoose.Schema({
     guildId: String,
     columns: [{
-        roleId: String, // ID роли в Discord
-        name: String,   // Название колонки (например, "⚔️ ДД")
+        roleId: String, 
+        name: String,   
+        color: { type: String, default: '#5865F2' }
     }]
 });
 
@@ -70,5 +62,5 @@ module.exports = {
     ReactionRole: mongoose.model('ReactionRole', ReactionRoleSchema),
     SentMessage: mongoose.model('SentMessage', SentMessageSchema),
     Roster: mongoose.model('Roster', RosterSchema),
-    RosterConfig: mongoose.model('RosterConfig', RosterConfigSchema) // Экспортируем
+    RosterConfig: mongoose.model('RosterConfig', RosterConfigSchema)
 };
