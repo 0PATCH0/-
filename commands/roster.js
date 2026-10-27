@@ -26,10 +26,6 @@ module.exports = {
             return interaction.reply({ content: 'У вас нет прав для использования этой команды!', ephemeral: true });
         }
 
-        // ФОНОВАЯ ЗАГРУЗКА ВСЕХ УЧАСТНИКОВ (пока ты настраиваешь колонки)
-        // Бот начнет скачивать всех, чтобы к моменту завершения они были у него в памяти.
-        interaction.guild.members.fetch().catch(err => console.log("Фоновая загрузка завершилась с ошибкой (это нормально для Render)"));
-
         const userId = interaction.user.id;
         setupStates.set(userId, { columns: [], tempRoleId: null, tempRoleName: null });
 
@@ -97,57 +93,53 @@ module.exports = {
             if (i.customId === 'finish_setup') {
                 if (state.columns.length === 0) return;
 
-                await i.update({ content: '⏳ Генерирую список (беру данные из памяти)...', components: [] });
+                await i.update({ content: '⏳ Генерирую список из памяти...', components: [] });
 
-                try {
-                    const memberRolesMap = new Map();
-                    const columnData = [];
+                // БЕРЕМ ВСЕХ УЧАСТНИКОВ ТОЛЬКО ИЗ КЭША (они уже загружены при старте бота)
+                const allMembers = interaction.guild.members.cache;
+                
+                if (allMembers.size === 0) {
+                    return i.editReply({ content: '❌ Кэш пуст. Бот не успел загрузить участников при старте. Подождите 1-2 минуты после перезапуска и попробуйте снова.', components: [] });
+                }
+
+                const memberRolesMap = new Map();
+                const columnData = [];
+
+                for (const col of state.columns) {
+                    const roleMembers = allMembers.filter(m => !m.user.bot && m.roles.cache.has(col.roleId));
+                    columnData.push({ ...col, members: roleMembers });
+
+                    roleMembers.forEach(m => {
+                        if (!memberRolesMap.has(m.id)) memberRolesMap.set(m.id, new Set());
+                        memberRolesMap.get(m.id).add(col.name);
+                    });
+                }
+
+                const totalUnique = memberRolesMap.size;
+
+                const finalEmbed = new EmbedBuilder()
+                    .setTitle('🛡️ Состав гильдии')
+                    .setDescription(`**Всего участников (уникальных):** ${totalUnique}\n\n🔹 — участник имеет несколько ролей из списка (мультикласс)`)
+                    .setColor('#2b2d31')
+                    .setTimestamp();
+
+                columnData.forEach(col => {
+                    const sortedMembers = Array.from(col.members.values()).sort((a, b) => a.displayName.localeCompare(b.displayName));
                     
-                    // Берем всех участников, которых бот успел закешировать за время твоей настройки
-                    const allMembers = interaction.guild.members.cache;
-
-                    for (const col of state.columns) {
-                        // Ищем в кэше тех, у кого есть нужная роль
-                        const roleMembers = allMembers.filter(m => !m.user.bot && m.roles.cache.has(col.roleId));
-                        columnData.push({ ...col, members: roleMembers });
-
-                        roleMembers.forEach(m => {
-                            if (!memberRolesMap.has(m.id)) memberRolesMap.set(m.id, new Set());
-                            memberRolesMap.get(m.id).add(col.name);
-                        });
+                    let membersStr = '*Никого нет*';
+                    if (sortedMembers.length > 0) {
+                        membersStr = sortedMembers.slice(0, 20).map(m => {
+                            const hasMultiple = memberRolesMap.get(m.id).size > 1;
+                            return `<@${m.id}>${hasMultiple ? ' 🔹' : ''}`;
+                        }).join('\n');
+                        if (sortedMembers.length > 20) membersStr += `\n*...и еще ${sortedMembers.length - 20}*`;
                     }
 
-                    const totalUnique = memberRolesMap.size;
+                    finalEmbed.addFields({ name: `${col.name} (${sortedMembers.length})`, value: membersStr, inline: true });
+                });
 
-                    const finalEmbed = new EmbedBuilder()
-                        .setTitle('🛡️ Состав гильдии')
-                        .setDescription(`**Всего участников (уникальных):** ${totalUnique}\n\n🔹 — участник имеет несколько ролей из списка (мультикласс)`)
-                        .setColor('#2b2d31')
-                        .setTimestamp();
-
-                    columnData.forEach(col => {
-                        const sortedMembers = Array.from(col.members.values()).sort((a, b) => a.displayName.localeCompare(b.displayName));
-                        
-                        let membersStr = '*Никого нет*';
-                        if (sortedMembers.length > 0) {
-                            membersStr = sortedMembers.slice(0, 20).map(m => {
-                                const hasMultiple = memberRolesMap.get(m.id).size > 1;
-                                return `<@${m.id}>${hasMultiple ? ' 🔹' : ''}`;
-                            }).join('\n');
-                            if (sortedMembers.length > 20) membersStr += `\n*...и еще ${sortedMembers.length - 20}*`;
-                        }
-
-                        finalEmbed.addFields({ name: `${col.name} (${sortedMembers.length})`, value: membersStr, inline: true });
-                    });
-
-                    await interaction.channel.send({ embeds: [finalEmbed] });
-                    await i.editReply({ content: '✅ Список успешно создан!', components: [] });
-                    
-                } catch (error) {
-                    console.error("Ошибка:", error);
-                    await i.editReply({ content: '❌ Ошибка при генерации.', components: [] });
-                }
-                
+                await interaction.channel.send({ embeds: [finalEmbed] });
+                await i.editReply({ content: '✅ Список успешно создан!', components: [] });
                 setupStates.delete(userId);
             }
         });
