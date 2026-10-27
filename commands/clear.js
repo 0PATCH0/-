@@ -11,6 +11,8 @@ module.exports = {
     async execute(interaction) {
         const amount = interaction.options.getInteger('количество');
         await interaction.channel.bulkDelete(amount, true);
+        
+        await Log.create({ guildId: interaction.guild.id, userId: interaction.user.id, username: interaction.user.tag, action: 'Закрытие канала', details: `Закрыл #${interaction.channel.name}` });
         await interaction.reply({ content: `🧹 Удалено **${amount}** сообщений.`, ephemeral: true });
     },
 };
