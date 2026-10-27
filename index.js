@@ -120,24 +120,70 @@ function scheduleUpdate(guildId) {
 }
 
 client.on('interactionCreate', async interaction => {
-    if (!interaction.isChatInputCommand()) return;
-    const command = client.commands.get(interaction.commandName);
-    if (!command) return;
-    try { await command.execute(interaction); } catch (error) { console.error(error); }
-});
-
-client.once('ready', async () => {
-    console.log(`Бот ${client.user.tag} в сети!`);
-    await registerCommands();
-    client.guilds.cache.forEach(guild => updateRosterForGuild(guild));
-
-    try {
-        const reminders = await Reminder.find();
-        if (reminders.length > 0) {
-            const remindCommand = require('./commands/remind.js');
-            reminders.forEach(rem => remindCommand.setReminderTimeout(rem, client));
+    if (interaction.isChatInputCommand()) {
+        const command = client.commands.get(interaction.commandName);
+        if (!command) return;
+        try {
+            await command.execute(interaction);
+        } catch (error) {
+            console.error(error);
+            await interaction.reply({ content: 'Ошибка при выполнении!', ephemeral: true });
         }
-    } catch (e) { console.error(e); }
+    }
+
+    // Обработка кнопок (Роли и Списки классов)
+    if (interaction.isButton()) {
+        // Роли по кнопкам (старый код)
+        if (interaction.customId.startsWith('rr_')) {
+            const roleId = interaction.customId.split('_')[1];
+            const member = interaction.member;
+            const role = interaction.guild.roles.cache.get(roleId);
+            if (!role) return interaction.reply({ content: 'Роль удалена.', ephemeral: true });
+
+            try {
+                const config = await ReactionRole.findOne({ messageId: interaction.message.id });
+                const mode = config ? config.mode : 'multiple';
+
+                if (mode === 'single' && config) {
+                    for (const r of config.roles) {
+                        if (r.roleId !== roleId && member.roles.cache.has(r.roleId)) {
+                            await member.roles.remove(r.roleId).catch(() => {});
+                        }
+                    }
+                }
+
+                if (member.roles.cache.has(roleId)) {
+                    await member.roles.remove(roleId);
+                    await interaction.reply({ content: `✅ Вы сняли роль **${role.name}**`, ephemeral: true });
+                } else {
+                    await member.roles.add(roleId);
+                    await interaction.reply({ content: `✅ Вы получили роль **${role.name}**`, ephemeral: true });
+                }
+            } catch (error) {
+                await interaction.reply({ content: 'Не удалось изменить роль.', ephemeral: true });
+            }
+        }
+
+        // Обработка кнопки "Показать всех" из команды /профиль
+        if (interaction.customId.startsWith('show_class_')) {
+            const classRole = interaction.customId.replace('show_class_', '');
+            const { PlayerProfile } = require('./models');
+            
+            const profiles = await PlayerProfile.find({ classRole: classRole });
+            
+            if (profiles.length === 0) {
+                return interaction.reply({ content: `Пока никто не указал класс **${classRole}**.`, ephemeral: true });
+            }
+
+            const embed = new EmbedBuilder()
+                .setTitle(`📋 Список класса: ${classRole}`)
+                .setColor('#d4af37')
+                .setDescription(profiles.map(p => `**${p.gameNickname || 'Без ника'}** • ${p.weapon || 'Оружие не указано'} • <@${p.userId}>`).join('\n'))
+                .setFooter({ text: `Всего участников: ${profiles.length}` });
+
+            await interaction.reply({ embeds: [embed] });
+        }
+    }
 });
 
 client.on('guildMemberUpdate', (oldMember, newMember) => {
