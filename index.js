@@ -231,6 +231,24 @@ mongoose.connect(process.env.MONGO_URI)
     .then(() => {
         console.log('✅ Успешное подключение к базе данных!');
         startWebServer(client); 
-        client.login(process.env.TOKEN);
+        
+        // --- БЛОК ПРОВЕРКИ ТОКЕНА И ВХОДА ---
+        console.log('⏳ Попытка входа в Discord...');
+        let token = process.env.TOKEN;
+        
+        if (!token) {
+            console.error('❌ ОШИБКА: Переменная TOKEN не найдена в настройках Render!');
+            return;
+        }
+        
+        // Убираем случайные пробелы или кавычки
+        token = token.trim().replace(/['"]/g, '');
+        
+        client.login(token)
+            .then(() => console.log('✅ Вход в Discord выполнен успешно!'))
+            .catch(err => {
+                console.error('❌ ОШИБКА ВХОДА В DISCORD:');
+                console.error(err.message); // Выведет точную причину (например, "An invalid token was provided")
+            });
     })
     .catch(err => console.error('❌ Ошибка подключения к БД:', err));
