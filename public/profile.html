@@ -6,12 +6,16 @@
     <title>Мой игровой профиль</title>
     <link rel="stylesheet" href="/css/style.css">
     <style>
-        .profile-container { max-width: 600px; margin: 50px auto; padding: 20px; }
+        .profile-container { max-width: 700px; margin: 50px auto; padding: 20px; }
         .profile-header { text-align: center; margin-bottom: 30px; }
         .profile-header h1 { font-family: 'Cinzel', serif; color: var(--accent); font-size: 36px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
         .profile-header p { color: var(--text-muted); }
         .back-btn { display: block; text-align: center; margin-bottom: 20px; color: var(--text-muted); text-decoration: none; }
         .back-btn:hover { color: var(--accent); }
+        
+        .character-block { background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); padding: 20px; border-radius: 8px; margin-bottom: 20px; position: relative; }
+        .char-title { font-family: 'Cinzel', serif; color: var(--accent); margin-bottom: 15px; font-size: 18px; }
+        .remove-char-btn { position: absolute; top: 15px; right: 15px; background: var(--danger); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; display: none; }
     </style>
 </head>
 <body class="bg-forest">
@@ -19,62 +23,89 @@
         <a href="/dashboard" class="back-btn">← Вернуться в панель</a>
         
         <div class="profile-header">
-            <h1>Мой профиль</h1>
+            <h1>Мои персонажи</h1>
             <p>Эта информация будет видна другим игрокам</p>
         </div>
 
-        <div class="form-card">
-            <div class="form-group">
-                <label>Игровой ник (в Where Winds Meet)</label>
-                <input type="text" id="game-nickname" placeholder="Например: Koten-Ren">
-            </div>
-            <div class="form-group">
-                <label>Название гильдии в игре</label>
-                <input type="text" id="guild-name" placeholder="Например: СНОВА">
-            </div>
-            <div class="form-group">
-                <label>Ваш класс / роль</label>
-                <select id="class-role">
-                    <option value="">Не выбрано</option>
-                    <option value="Танк">Танк</option>
-                    <option value="ДД (Урон)">ДД (Урон)</option>
-                    <option value="Хил (Поддержка)">Хил (Поддержка)</option>
-                    <option value="Универсал">Универсал</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Основное оружие</label>
-                <input type="text" id="weapon" placeholder="Например: Меч и Веер">
-            </div>
-            <div class="form-group">
-                <label>О себе (био)</label>
-                <textarea id="bio" placeholder="Люблю PvP, играю по вечерам..." style="height: 80px;"></textarea>
-            </div>
-            
-            <button class="btn" onclick="saveProfile()" style="width: 100%; margin-top: 10px;">💾 Сохранить профиль</button>
-        </div>
+        <div id="characters-container"></div>
+        
+        <button class="btn btn-success" onclick="addCharacter()" id="btn-add" style="width: 100%; margin-bottom: 15px;">+ Добавить второго персонажа</button>
+        <button class="btn" onclick="saveProfile()" style="width: 100%;">💾 Сохранить профиль</button>
     </div>
 
     <script>
+        let charCount = 0;
+
+        function createCharacterBlock(data = {}, index = 0) {
+            charCount++;
+            const block = document.createElement('div');
+            block.className = 'character-block';
+            block.id = `char-block-${charCount}`;
+            
+            block.innerHTML = `
+                <button class="remove-char-btn" onclick="removeCharacter('${block.id}')">Удалить</button>
+                <div class="char-title">Персонаж ${index + 1}</div>
+                <div class="form-group"><label>Игровой ник</label><input type="text" class="c-nick" value="${data.gameNickname || ''}" placeholder="Например: Koten-Ren"></div>
+                <div class="form-group"><label>Гильдия</label><input type="text" class="c-guild" value="${data.guildName || ''}" placeholder="Например: СНОВА"></div>
+                <div class="form-group"><label>Класс / Роль</label>
+                    <select class="c-class">
+                        <option value="">Не выбрано</option>
+                        <option value="Танк" ${data.classRole === 'Танк' ? 'selected' : ''}>Танк</option>
+                        <option value="ДД (Урон)" ${data.classRole === 'ДД (Урон)' ? 'selected' : ''}>ДД (Урон)</option>
+                        <option value="Хил (Поддержка)" ${data.classRole === 'Хил (Поддержка)' ? 'selected' : ''}>Хил (Поддержка)</option>
+                        <option value="Универсал" ${data.classRole === 'Универсал' ? 'selected' : ''}>Универсал</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Оружие</label><input type="text" class="c-weapon" value="${data.weapon || ''}" placeholder="Например: Меч и Веер"></div>
+                <div class="form-group"><label>О себе</label><textarea class="c-bio" style="height: 60px;">${data.bio || ''}</textarea></div>
+            `;
+            document.getElementById('characters-container').appendChild(block);
+            updateRemoveButtons();
+        }
+
+        function addCharacter() {
+            if (charCount >= 2) return alert('Можно добавить не более 2 персонажей.');
+            createCharacterBlock({}, charCount);
+        }
+
+        function removeCharacter(id) {
+            document.getElementById(id).remove();
+            charCount--;
+            updateRemoveButtons();
+        }
+
+        function updateRemoveButtons() {
+            const blocks = document.querySelectorAll('.character-block');
+            blocks.forEach((block, index) => {
+                block.querySelector('.char-title').innerText = `Персонаж ${index + 1}`;
+                const removeBtn = block.querySelector('.remove-char-btn');
+                removeBtn.style.display = blocks.length > 1 ? 'block' : 'none';
+            });
+            document.getElementById('btn-add').style.display = blocks.length >= 2 ? 'none' : 'block';
+        }
+
         fetch('/api/profile').then(res => res.json()).then(data => {
-            if (data.gameNickname) document.getElementById('game-nickname').value = data.gameNickname;
-            if (data.guildName) document.getElementById('guild-name').value = data.guildName;
-            if (data.classRole) document.getElementById('class-role').value = data.classRole;
-            if (data.weapon) document.getElementById('weapon').value = data.weapon;
-            if (data.bio) document.getElementById('bio').value = data.bio;
+            if (data.characters && data.characters.length > 0) {
+                data.characters.forEach((char, idx) => createCharacterBlock(char, idx));
+            } else {
+                createCharacterBlock();
+            }
         });
 
         function saveProfile() {
-            const payload = {
-                gameNickname: document.getElementById('game-nickname').value,
-                guildName: document.getElementById('guild-name').value,
-                classRole: document.getElementById('class-role').value,
-                weapon: document.getElementById('weapon').value,
-                bio: document.getElementById('bio').value
-            };
+            const characters = [];
+            document.querySelectorAll('.character-block').forEach(block => {
+                characters.push({
+                    gameNickname: block.querySelector('.c-nick').value,
+                    guildName: block.querySelector('.c-guild').value,
+                    classRole: block.querySelector('.c-class').value,
+                    weapon: block.querySelector('.c-weapon').value,
+                    bio: block.querySelector('.c-bio').value
+                });
+            });
 
             fetch('/api/profile', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ characters })
             }).then(res => res.json()).then(data => {
                 if (data.success) alert('✅ Профиль сохранен!');
                 else alert('❌ Ошибка: ' + data.error);
