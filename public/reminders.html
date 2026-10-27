@@ -6,32 +6,37 @@
     <title>Напоминания</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body class="bg-mountain">
-    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
+<body>
 
-    <div class="sidebar">
-        <h2 id="server-name">Загрузка...</h2>
-        <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
-        <hr style="border-color: var(--border-color); margin-bottom: 20px;">
-        <a href="#" id="nav-home">🏠 Обзор</a>
-        <a href="#" id="nav-roster">🛡️ Состав гильдии</a>
-        <a href="#" id="nav-rr">🎭 Роли по кнопкам</a>
-        <a href="#" class="active">⏰ Напоминания</a>
-        <a href="#" id="nav-mod">⚙️ Модерация</a>
-        <a href="#" id="nav-emb">📨 Эмбеды</a>
-        <a href="#" id="nav-logs">📜 Логи действий</a>
-    </div>
+    <a href="/dashboard" class="top-banner"><h1>Главная</h1></a>
 
-    <div class="content">
-        <div class="header"><h1>⏰ Управление напоминаниями</h1></div>
-        <div class="grid" id="reminders-grid">
-            <p style="color: var(--text-muted);">Загрузка...</p>
+    <div class="main-container">
+        <div class="sidebar">
+            <h2 id="server-name">Загрузка...</h2>
+            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><i class="ph ph-arrow-left"></i> К списку серверов</a>
+            <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+            <a href="#" id="nav-home"><i class="ph ph-house"></i> Обзор</a>
+            <a href="#" id="nav-roster"><i class="ph ph-shield"></i> Состав гильдии</a>
+            <a href="#" id="nav-guild"><i class="ph ph-users"></i> Гильдия</a>
+            <a href="#" id="nav-guides"><i class="ph ph-book-open"></i> Гайды</a>
+            <a href="#" id="nav-rr"><i class="ph ph-masks"></i> Роли по кнопкам</a>
+            <a href="#" class="active"><i class="ph ph-alarm"></i> Напоминания</a>
+            <a href="#" id="nav-mod"><i class="ph ph-gear"></i> Модерация</a>
+            <a href="#" id="nav-logs"><i class="ph ph-scroll"></i> Логи действий</a>
+            <a href="#" id="nav-emb"><i class="ph ph-envelope"></i> Эмбеды</a>
+        </div>
+
+        <div class="content">
+            <div class="header"><h1><i class="ph ph-alarm"></i> Управление напоминаниями</h1></div>
+            <div class="grid" id="reminders-grid">
+                <p style="color: var(--text-muted);">Загрузка...</p>
+            </div>
         </div>
     </div>
 
     <script>
         const guildId = window.location.pathname.split('/')[2];
-        const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-rr': '/reactionroles', 'nav-mod': '/moderation', 'nav-emb': '/custom', 'nav-logs': '/logs'};
+        const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-guild': '/profiles', 'nav-guides': '/guides', 'nav-rr': '/reactionroles', 'nav-mod': '/moderation', 'nav-logs': '/logs', 'nav-emb': '/custom'};
         for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
 
         fetch(`/api/guild/${guildId}`).then(res => res.json()).then(data => document.getElementById('server-name').innerText = data.name);
@@ -46,11 +51,11 @@
             data.forEach(r => {
                 const time = new Date(r.nextTime).toLocaleString('ru-RU');
                 grid.innerHTML += `
-                    <div class="card" style="border-left: 4px solid var(--accent);">
-                        <h3>${r.text}</h3>
-                        <p style="margin-top: 10px;">Сработает: <b>${time}</b></p>
-                        <p>Повтор: ${r.repeat}</p>
-                        <button class="btn btn-danger btn-small" style="margin-top: 15px;" onclick="deleteReminder('${r.id}')">Удалить</button>
+                    <div class="card" style="border-left: 3px solid var(--accent-gold);">
+                        <h3><i class="ph ph-alarm"></i> ${r.text}</h3>
+                        <p style="margin-top: 10px; color: var(--text-main);">Сработает: <b>${time}</b></p>
+                        <p style="color: var(--text-muted);">Повтор: ${r.repeat}</p>
+                        <button class="btn btn-danger btn-small" style="margin-top: 15px;" onclick="deleteReminder('${r.id}')"><i class="ph ph-trash"></i> Удалить</button>
                     </div>
                 `;
             });
