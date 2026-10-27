@@ -4,7 +4,7 @@ const { Settings, Roster, RosterConfig, RosterMessage } = require('../models');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('список')
-        .setDescription('Создать автоматически обновляемый список участников в этом канале'),
+        .setDescription('Создать или обновить автоматический список участников в этом канале'),
 
     async execute(interaction) {
         const hasDiscordPerm = interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
@@ -42,28 +42,33 @@ module.exports = {
             return embeds;
         };
 
-        // Ищем, есть ли уже сообщение от этого бота в ТЕКУЩЕМ канале
-        const messages = await interaction.channel.messages.fetch({ limit: 50 });
-        const existingMsg = messages.find(m => m.author.id === interaction.client.user.id && m.embeds.length > 0);
+        // Ищем запись ТОЛЬКО для этого канала
+        const existingMsgRecord = await RosterMessage.findOne({ 
+            guildId: interaction.guild.id, 
+            channelId: interaction.channelId 
+        });
 
-        if (existingMsg) {
-            // Если есть, редактируем
-            await existingMsg.edit({ embeds: buildEmbeds().slice(0, 10) });
-            await RosterMessage.findOneAndUpdate(
-                { guildId: interaction.guild.id },
-                { channelId: interaction.channelId, messageId: existingMsg.id },
-                { upsert: true }
-            );
-            await interaction.editReply({ content: '✅ Существующее сообщение обновлено!' });
-        } else {
-            // Если нет, создаем новое
-            const sentMsg = await interaction.channel.send({ embeds: buildEmbeds().slice(0, 10) });
-            await RosterMessage.findOneAndUpdate(
-                { guildId: interaction.guild.id },
-                { channelId: sentMsg.channelId, messageId: sentMsg.id },
-                { upsert: true }
-            );
-            await interaction.editReply({ content: '✅ Сообщение создано и сохранено!' });
+        if (existingMsgRecord) {
+            // Проверяем, существует ли еще это сообщение в Discord
+            const message = await interaction.channel.messages.fetch(existingMsgRecord.messageId).catch(() => null);
+            
+            if (message) {
+                // Если сообщение есть, редактируем его
+                await message.edit({ embeds: buildEmbeds().slice(0, 10) });
+                return interaction.editReply({ content: '✅ Существующее сообщение обновлено!' });
+            } else {
+                // Если сообщение удалили вручную, удаляем старую запись
+                await RosterMessage.deleteOne({ _id: existingMsgRecord._id });
+            }
         }
+
+        // Если сообщения нет (или его удалили), создаем новое
+        const sentMsg = await interaction.channel.send({ embeds: buildEmbeds().slice(0, 10) });
+        await RosterMessage.create({ 
+            guildId: interaction.guild.id, 
+            channelId: sentMsg.channelId, 
+            messageId: sentMsg.id 
+        });
+        await interaction.editReply({ content: '✅ Новое сообщение создано и сохранено!' });
     },
 };
