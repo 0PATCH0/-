@@ -17,7 +17,6 @@
         .char-title { font-family: 'Cinzel', serif; color: var(--accent); margin-bottom: 15px; font-size: 18px; }
         .remove-char-btn { position: absolute; top: 15px; right: 15px; background: var(--danger); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; display: none; }
         
-        /* Переключатель (Тумблер) */
         .switch-container { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border-color); }
         .switch { position: relative; display: inline-block; width: 50px; height: 26px; flex-shrink: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -33,7 +32,7 @@
         
         <div class="profile-header">
             <h1 id="page-title">Мои персонажи</h1>
-            <p>Эта информация будет видна другим игрокам</p>
+            <p id="page-subtitle">Эта информация будет видна другим игрокам</p>
         </div>
 
         <div class="switch-container" id="switch-global">
@@ -55,7 +54,6 @@
     </div>
 
     <script>
-        // Получаем параметры из URL
         const urlParams = new URLSearchParams(window.location.search);
         const guildId = urlParams.get('guild') || window.location.pathname.split('/').pop();
         const targetUserId = urlParams.get('user'); 
@@ -63,7 +61,11 @@
         let charCount = 0;
         let isNewProfile = true;
 
-        // Заполнение блока персонажа
+        if (targetUserId) {
+            document.getElementById('page-title').innerText = 'Редактирование профиля';
+            document.getElementById('page-subtitle').innerText = `Вы редактируете профиль пользователя <@${targetUserId}>`;
+        }
+
         function createCharacterBlock(data = {}, index = 0) {
             charCount++;
             const block = document.createElement('div');
@@ -112,29 +114,32 @@
             document.getElementById('btn-add').style.display = blocks.length >= 2 ? 'none' : 'block';
         }
 
-        // Загрузка данных профиля
-        // Если targetUserId есть, значит мы редактируем чужой профиль (админ)
+        // ЗАГРУЗКА ПРОФИЛЯ
         const fetchUrl = targetUserId 
             ? `/api/profile/${guildId}?user=${targetUserId}` 
             : `/api/profile/${guildId}`;
 
         fetch(fetchUrl)
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error('Ошибка загрузки');
+                return res.json();
+            })
             .then(data => {
-                if (targetUserId) {
-                    document.getElementById('page-title').innerText = 'Редактирование профиля игрока';
-                }
-
                 if (data.characters && data.characters.length > 0) {
                     isNewProfile = false;
-                    document.getElementById('btn-delete-profile').style.display = 'block'; // Показываем кнопку удаления
+                    // Показываем кнопку удаления только если это свой профиль
+                    if (!targetUserId) document.getElementById('btn-delete-profile').style.display = 'block';
+                    
                     if (data.isGlobal) document.getElementById('is-global').checked = true;
                     data.characters.forEach((char, idx) => createCharacterBlock(char, idx));
                 } else {
                     createCharacterBlock();
                 }
             })
-            .catch(() => createCharacterBlock());
+            .catch(err => {
+                showToast('Не удалось загрузить профиль', 'error');
+                createCharacterBlock();
+            });
 
         function saveProfile() {
             const characters = [];
@@ -160,7 +165,6 @@
             }).then(res => res.json()).then(data => {
                 if (data.success) {
                     showToast('Профиль сохранен!', 'success');
-                    // Перезагружаем страницу, чтобы показать актуальные данные
                     setTimeout(() => window.location.reload(), 1000);
                 } else {
                     showToast('Ошибка: ' + data.error, 'error');
