@@ -16,6 +16,10 @@
     <div class="content">
         <div class="header"><h1>Панель управления</h1></div>
         <div class="grid">
+            <a href="#" id="link-roster" class="card">
+                <h3>🛡️ Состав гильдии</h3>
+                <p>Просмотр списка участников, настройка колонок и отправка в Discord.</p>
+            </a>
             <a href="#" id="link-reaction-roles" class="card">
                 <h3>🎭 Роли по кнопкам</h3>
                 <p>Выдача ролей по клику на кнопку в Embed-сообщении.</p>
@@ -32,22 +36,17 @@
                 <h3>📨 Эмбед-сообщения</h3>
                 <p>Создание, редактирование и удаление красивых сообщений в каналах.</p>
             </a>
-            <!-- НОВАЯ КАРТОЧКА -->
-            <a href="#" id="link-roster" class="card">
-                <h3>🛡️ Состав гильдии</h3>
-                <p>Просмотр и обновление списка участников по ролям в реальном времени.</p>
-            </a>
         </div>
     </div>
     <script>
         const guildId = window.location.pathname.split('/').pop();
         fetch(`/api/guild/${guildId}`).then(res => res.json()).then(data => {
             document.getElementById('server-name').innerText = data.name;
+            document.getElementById('link-roster').href = `/manage/${guildId}/roster`;
             document.getElementById('link-reaction-roles').href = `/manage/${guildId}/reactionroles`;
             document.getElementById('link-reminders').href = `/manage/${guildId}/reminders`;
             document.getElementById('link-moderation').href = `/manage/${guildId}/moderation`;
             document.getElementById('link-custom').href = `/manage/${guildId}/custom`;
-            document.getElementById('link-roster').href = `/manage/${guildId}/roster`; // Ссылка на новую страницу
         });
     </script>
 </body>
