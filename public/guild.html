@@ -3,21 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Управление сервером</title>
+    <title>Обзор сервера</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<!-- ВАЖНО: Указываем класс фона для этой страницы -->
-<body class="bg-guild">
-
-    <!-- Кнопка мобильного меню -->
+<body class="bg-ruins">
     <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
 
     <div class="sidebar">
         <h2 id="server-name">Загрузка...</h2>
         <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
         <hr style="border-color: var(--border-color); margin-bottom: 20px;">
-        
-        <!-- Меню с активным классом -->
         <a href="#" class="active" id="nav-home">🏠 Обзор</a>
         <a href="#" id="nav-roster">🛡️ Состав гильдии</a>
         <a href="#" id="nav-rr">🎭 Роли по кнопкам</a>
@@ -32,27 +27,27 @@
         <div class="grid">
             <a href="#" id="card-roster" class="card">
                 <h3>🛡️ Состав гильдии</h3>
-                <p>Просмотр списка участников и настройка колонок.</p>
+                <p>Просмотр списка участников и настройка колонок в реальном времени.</p>
             </a>
             <a href="#" id="card-rr" class="card">
                 <h3>🎭 Роли по кнопкам</h3>
-                <p>Выдача ролей по клику на кнопку.</p>
+                <p>Выдача ролей по клику на кнопку в красивом Embed-сообщении.</p>
             </a>
             <a href="#" id="card-rem" class="card">
                 <h3>⏰ Напоминания</h3>
-                <p>Управление активными напоминаниями.</p>
+                <p>Управление активными напоминаниями и событиями сервера.</p>
             </a>
             <a href="#" id="card-mod" class="card">
                 <h3>⚙️ Модерация</h3>
-                <p>Права на мут и другие команды.</p>
+                <p>Выдача прав на использование мутов и других команд.</p>
             </a>
             <a href="#" id="card-emb" class="card">
                 <h3>📨 Эмбед-сообщения</h3>
-                <p>Создание и редактирование сообщений.</p>
+                <p>Создание, редактирование и удаление красивых сообщений.</p>
             </a>
             <a href="#" id="card-logs" class="card">
                 <h3>📜 Логи действий</h3>
-                <p>История действий модераторов.</p>
+                <p>История мутов, закрытий каналов и других действий модераторов.</p>
             </a>
         </div>
     </div>
