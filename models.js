@@ -38,14 +38,16 @@ const GuideSchema = new mongoose.Schema({
     guildId: String, name: String, description: String, chapters: [{ title: String, content: String, color: String, imageUrl: String, attachmentUrl: String, attachmentName: String }], date: { type: Date, default: Date.now }
 });
 
-// НОВАЯ МОДЕЛЬ: Профиль игрока
+// ОБНОВЛЕННАЯ МОДЕЛЬ: Теперь массив персонажей
 const PlayerProfileSchema = new mongoose.Schema({
-    userId: { type: String, required: true, unique: true }, // ID в Discord
-    gameNickname: { type: String, default: '' },           // Ник в игре
-    guildName: { type: String, default: '' },              // Название гильдии в игре
-    classRole: { type: String, default: '' },              // Класс (Танк, ДД, Хил)
-    weapon: { type: String, default: '' },                 // Оружие
-    bio: { type: String, default: '' }                     // О себе
+    userId: { type: String, required: true, unique: true },
+    characters: [{
+        gameNickname: { type: String, default: '' },
+        guildName: { type: String, default: '' },
+        classRole: { type: String, default: '' },
+        weapon: { type: String, default: '' },
+        bio: { type: String, default: '' }
+    }]
 });
 
 module.exports = {
@@ -58,5 +60,5 @@ module.exports = {
     RosterMessage: mongoose.model('RosterMessage', RosterMessageSchema),
     Log: mongoose.model('Log', LogSchema),
     Guide: mongoose.model('Guide', GuideSchema),
-    PlayerProfile: mongoose.model('PlayerProfile', PlayerProfileSchema) // Экспорт
+    PlayerProfile: mongoose.model('PlayerProfile', PlayerProfileSchema)
 };
