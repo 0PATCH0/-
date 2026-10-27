@@ -4,7 +4,7 @@ const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
 const path = require('path');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { ReactionRole, Settings, Reminder, SentMessage, Roster, RosterConfig } = require('./models');
+const { ReactionRole, Settings, Reminder, SentMessage, Roster, RosterConfig, RosterMessage } = require('./models');
 
 const app = express();
 app.use(express.json());
@@ -235,7 +235,6 @@ app.get('/api/guild/:id/roster-config', async (req, res) => {
     res.json(config || { columns: [] });
 });
 
-// ВОТ ЗДЕСЬ БЫЛА ОШИБКА, Я ДОБАВИЛ ASYNC
 app.post('/api/guild/:id/roster-config', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     const { columns } = req.body;
@@ -245,14 +244,12 @@ app.post('/api/guild/:id/roster-config', async (req, res) => {
 
     const processedColumns = columns.map(col => {
         let newName = col.name;
-        
         const shortEmojiRegex = /:([a-zA-Z0-9_]+):/g;
         newName = newName.replace(shortEmojiRegex, (match, emojiName) => {
             const emoji = guild.emojis.cache.find(e => e.name === emojiName);
             if (emoji) return `<:${emoji.name}:${emoji.id}>`;
             return match; 
         });
-
         return { roleId: col.roleId, name: newName, color: col.color || '#5865F2' };
     });
 
@@ -261,6 +258,28 @@ app.post('/api/guild/:id/roster-config', async (req, res) => {
         { columns: processedColumns },
         { upsert: true }
     );
+    
+    // Сразу обновляем сообщение в Discord, чтобы применились новые настройки
+    const { refreshRosterMessage } = require('./index.js');
+    await refreshRosterMessage(req.params.id, client);
+
+    res.json({ success: true });
+});
+
+// УДАЛЕНИЕ СООБЩЕНИЯ ИЗ DISCORD
+app.delete('/api/guild/:id/roster/message', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    const client = req.app.get('botClient');
+    const msgRecord = await RosterMessage.findOne({ guildId: req.params.id });
+
+    if (msgRecord) {
+        try {
+            const channel = await client.channels.fetch(msgRecord.channelId);
+            const message = await channel.messages.fetch(msgRecord.messageId);
+            if (message) await message.delete();
+        } catch (e) {}
+        await RosterMessage.deleteOne({ guildId: req.params.id });
+    }
     res.json({ success: true });
 });
 
