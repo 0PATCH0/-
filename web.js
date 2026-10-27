@@ -43,20 +43,14 @@ passport.deserializeUser((obj, done) => done(null, obj));
 // МИДДЛВАРЫ БЕЗОПАСНОСТИ
 // ==========================================
 
-// Проверка на Модератора (или Админа) сервера
 async function isModerator(req, res, next) {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
-    
-    // Создатель бота имеет доступ ко всему
     if (req.user.id === OWNER_ID) return next();
 
     const guild = req.user.guilds.find(g => g.id === req.params.id);
     if (!guild) return res.status(403).json({ error: 'Доступ запрещен' });
-    
-    // Если есть права Администратора в Discord
     if ((BigInt(guild.permissions) & BigInt(0x8)) === BigInt(0x8)) return next();
 
-    // Если есть роль модератора в БД
     const settings = await Settings.findOne({ guildId: req.params.id });
     const client = req.app.get('botClient');
     const discordGuild = client.guilds.cache.get(req.params.id);
@@ -65,7 +59,6 @@ async function isModerator(req, res, next) {
         const member = await discordGuild.members.fetch(req.user.id).catch(() => null);
         if (member && member.roles.cache.some(r => settings.modRoles.includes(r.id))) return next();
     }
-    
     return res.status(403).json({ error: 'Требуются права модератора' });
 }
 
@@ -92,7 +85,7 @@ app.get('/manage/:id/roster-config', (req, res) => { if (!req.user) return res.r
 app.get('/manage/:id/logs', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'logs.html')); });
 app.get('/manage/:id/profiles', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'profiles-admin.html')); });
 
-// Страница профиля игрока (доступна всем)
+// Страница профиля (доступна всем, кто авторизован)
 app.get('/profile', (req, res) => { 
     if (!req.user) return res.redirect('/'); 
     res.sendFile(path.join(__dirname, 'public', 'profile.html')); 
@@ -102,13 +95,12 @@ app.get('/profile', (req, res) => {
 // API ПРОФИЛЕЙ
 // ==========================================
 
-// Получить свой профиль для конкретного сервера
+// Получить профиль (свой или чужой, если админ)
 app.get('/api/profile/:guildId', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     
     const targetUserId = req.query.user || req.user.id;
     
-    // Если админ редактирует чужой профиль, проверяем его права
     if (targetUserId !== req.user.id) {
         const guild = req.user.guilds.find(g => g.id === req.params.guildId);
         if (!guild || (BigInt(guild.permissions) & BigInt(0x8)) !== BigInt(0x8)) {
@@ -119,6 +111,8 @@ app.get('/api/profile/:guildId', async (req, res) => {
     }
 
     let profile = await PlayerProfile.findOne({ userId: targetUserId, guildId: req.params.guildId });
+    
+    // Если профиля нет, создаем пустой шаблон
     if (!profile) {
         profile = { 
             userId: targetUserId, 
@@ -137,7 +131,6 @@ app.post('/api/profile/:guildId', async (req, res) => {
     
     const finalUserId = targetUser || req.user.id;
 
-    // Проверка прав при сохранении чужого профиля
     if (finalUserId !== req.user.id) {
         const guild = req.user.guilds.find(g => g.id === req.params.guildId);
         if (!guild || (BigInt(guild.permissions) & BigInt(0x8)) !== BigInt(0x8)) {
@@ -188,9 +181,8 @@ app.delete('/api/guild/:id/profiles/:userId', isModerator, async (req, res) => {
     // Ищем профиль именно на этом сервере
     const profile = await PlayerProfile.findOne({ userId: req.params.userId, guildId: req.params.id });
     
-    // Если профиля нет на этом сервере, возможно, он глобальный
     if (!profile) {
-        // Глобальный профиль может удалить только Создатель бота
+        // Если профиля нет на этом сервере, возможно, он глобальный
         if (req.user.id !== OWNER_ID) {
             return res.status(403).json({ error: 'Вы не можете удалить этот профиль (он принадлежит другому серверу)' });
         }
@@ -205,7 +197,7 @@ app.delete('/api/guild/:id/profiles/:userId', isModerator, async (req, res) => {
 
 
 // ==========================================
-// ОСТАЛЬНЫЕ API
+// ОСТАЛЬНЫЕ API (БЕЗ ИЗМЕНЕНИЙ)
 // ==========================================
 
 app.get('/api/user', (req, res) => {
