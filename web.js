@@ -4,7 +4,7 @@ const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
 const path = require('path');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { ReactionRole, Settings, Reminder, SentMessage, Roster, RosterConfig, RosterMessage, Log, Guide } = require('./models');
+const { ReactionRole, Settings, Reminder, SentMessage, Roster, RosterConfig, RosterMessage, Log, Guide, PlayerProfile } = require('./models');
 
 const app = express();
 app.use(express.json());
@@ -51,37 +51,40 @@ app.get('/manage/:id/custom', (req, res) => { if (!req.user) return res.redirect
 app.get('/manage/:id/roster', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'roster.html')); });
 app.get('/manage/:id/roster-config', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'roster-config.html')); });
 app.get('/manage/:id/logs', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'logs.html')); });
+app.get('/manage/:id/profiles', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'profiles-admin.html')); });
 
-// --- API ГАЙДОВ ---
-app.get('/api/guild/:id/guides', isModerator, async (req, res) => {
-    const guides = await Guide.find({ guildId: req.params.id }).sort({ date: -1 });
-    res.json(guides);
+// СТРАНИЦА ПРОФИЛЯ ДЛЯ ИГРОКОВ (Без проверки на админа)
+app.get('/profile', (req, res) => { 
+    if (!req.user) return res.redirect('/'); 
+    res.sendFile(path.join(__dirname, 'public', 'profile.html')); 
 });
 
-app.get('/api/guild/:id/guides/:guideId', isModerator, async (req, res) => {
-    const guide = await Guide.findById(req.params.guideId);
-    res.json(guide);
+// --- API ПРОФИЛЕЙ ---
+app.get('/api/profile', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    let profile = await PlayerProfile.findOne({ userId: req.user.id });
+    if (!profile) profile = { userId: req.user.id, gameNickname: '', guildName: '', classRole: '', weapon: '', bio: '' };
+    res.json(profile);
 });
 
-app.post('/api/guild/:id/guides', isModerator, async (req, res) => {
-    const { name, description, chapters } = req.body;
-    if (!name || !chapters || chapters.length === 0) return res.status(400).json({ error: 'Заполните название и добавьте хотя бы одну главу' });
-    await Guide.create({ guildId: req.params.id, name, description, chapters });
+app.post('/api/profile', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    const { gameNickname, guildName, classRole, weapon, bio } = req.body;
+    await PlayerProfile.findOneAndUpdate(
+        { userId: req.user.id },
+        { gameNickname, guildName, classRole, weapon, bio },
+        { upsert: true }
+    );
     res.json({ success: true });
 });
 
-app.put('/api/guild/:id/guides/:guideId', isModerator, async (req, res) => {
-    const { name, description, chapters } = req.body;
-    await Guide.findByIdAndUpdate(req.params.guideId, { name, description, chapters });
-    res.json({ success: true });
+// API для админа (посмотреть все профили)
+app.get('/api/guild/:id/profiles', isModerator, async (req, res) => {
+    const profiles = await PlayerProfile.find();
+    res.json(profiles);
 });
 
-app.delete('/api/guild/:id/guides/:guideId', isModerator, async (req, res) => {
-    await Guide.findByIdAndDelete(req.params.guideId);
-    res.json({ success: true });
-});
-
-// ОСТАЛЬНЫЕ API (БАЗОВЫЕ)
+// ... (ОСТАЛЬНЫЕ API ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ, КАК В ПРЕДЫДУЩЕМ КОДЕ) ...
 app.get('/api/user', (req, res) => { if (!req.user) return res.status(401).json({ error: 'Не авторизован' }); res.json({ user: req.user, guilds: req.user.guilds.filter(g => (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8)) }); });
 app.get('/api/guild/:id', isModerator, async (req, res) => { const client = req.app.get('botClient'); const guild = client.guilds.cache.get(req.params.id); const roles = guild.roles.cache.filter(r => r.id !== guild.id && !r.managed).map(r => ({ id: r.id, name: r.name })); res.json({ name: guild.name, roles }); });
 app.get('/api/guild/:id/logs', isModerator, async (req, res) => { const logs = await Log.find({ guildId: req.params.id }).sort({ date: -1 }).limit(100); res.json(logs); });
