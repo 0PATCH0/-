@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактирование гайда</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="bg-mountain">
+    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
+
+    <div class="sidebar">
+        <h2 id="server-name">Загрузка...</h2>
+        <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
+        <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+        <a href="#" id="nav-home">🏠 Обзор</a>
+        <a href="#" id="nav-roster">🛡️ Состав гильдии</a>
+        <a href="#" id="nav-rr">🎭 Роли по кнопкам</a>
+        <a href="#" id="nav-rem">⏰ Напоминания</a>
+        <a href="#" id="nav-mod">⚙️ Модерация</a>
+        <a href="#" id="nav-emb">📨 Эмбеды</a>
+        <a href="#" class="active">📖 Гайды</a>
+        <a href="#" id="nav-logs">📜 Логи действий</a>
+    </div>
+
+    <div class="content">
+        <div class="header">
+            <h1 id="page-title">Создание гайда</h1>
+            <a href="#" id="btn-back" class="btn btn-small" style="background: rgba(0,0,0,0.5); border: 1px solid var(--accent); color: var(--accent);">← Назад</a>
+        </div>
+        
+        <div class="form-card" style="margin-bottom: 20px;">
+            <div class="form-group">
+                <label>Название гайда (отображается в меню)</label>
+                <input type="text" id="guide-name" placeholder="Например: ГВГ Полный гайд">
+            </div>
+            <div class="form-group">
+                <label>Краткое описание (для меню)</label>
+                <input type="text" id="guide-desc" placeholder="Например: Тактики, сборки и советы">
+            </div>
+        </div>
+
+        <div class="header" style="margin-top: 40px;">
+            <h2 style="color: var(--accent); font-family: 'Cinzel', serif;">Главы гайда</h2>
+            <button class="btn btn-success btn-small" onclick="addChapter()">+ Добавить главу</button>
+        </div>
+        <div id="chapters-container"></div>
+
+        <div style="margin-top: 30px; display: flex; gap: 15px;">
+            <button class="btn" onclick="saveGuide()" id="btn-save">💾 Сохранить гайд</button>
+            <button class="btn btn-danger" onclick="deleteGuide()" id="btn-delete" style="display: none;">🗑️ Удалить гайд</button>
+        </div>
+    </div>
+
+    <script>
+        const guildId = window.location.pathname.split('/')[2];
+        const guideId = window.location.pathname.split('/')[4]; // 'new' или ID
+        const isNew = guideId === 'new';
+
+        const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-emb': '/custom', 'nav-logs': '/logs'};
+        for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
+        document.getElementById('btn-back').href = `/manage/${guildId}/guides`;
+
+        fetch(`/api/guild/${guildId}`).then(res => res.json()).then(data => document.getElementById('server-name').innerText = data.name);
+
+        function addChapter(data = { title: '', content: '', color: '#d4af37', imageUrl: '' }) {
+            const container = document.getElementById('chapters-container');
+            const block = document.createElement('div');
+            block.className = 'form-card';
+            block.style.marginBottom = '15px';
+            block.style.position = 'relative';
+
+            block.innerHTML = `
+                <button class="btn btn-danger btn-small" style="position: absolute; top: 15px; right: 15px;" onclick="this.parentElement.remove()">X</button>
+                <div class="form-group"><label>Заголовок главы</label><input type="text" class="ch-title" value="${data.title}"></div>
+                <div class="form-group"><label>Текст (Поддерживает Markdown)</label><textarea class="ch-content" style="height: 120px;">${data.content}</textarea></div>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1;"><label>Цвет полоски</label><input type="color" class="ch-color" value="${data.color}" style="height: 45px; padding: 5px;"></div>
+                    <div class="form-group" style="flex: 2;"><label>Ссылка на картинку (URL)</label><input type="text" class="ch-image" value="${data.imageUrl}" placeholder="https://..."></div>
+                </div>
+            `;
+            container.appendChild(block);
+        }
+
+        if (!isNew) {
+            document.getElementById('page-title').innerText = 'Редактирование гайда';
+            document.getElementById('btn-delete').style.display = 'block';
+            fetch(`/api/guild/${guildId}/guides/${guideId}`).then(res => res.json()).then(guide => {
+                document.getElementById('guide-name').value = guide.name;
+                document.getElementById('guide-desc').value = guide.description || '';
+                guide.chapters.forEach(ch => addChapter(ch));
+            });
+        } else {
+            addChapter();
+        }
+
+        function saveGuide() {
+            const name = document.getElementById('guide-name').value;
+            const description = document.getElementById('guide-desc').value;
+            const chapters = [];
+
+            document.querySelectorAll('#chapters-container .form-card').forEach(block => {
+                chapters.push({
+                    title: block.querySelector('.ch-title').value,
+                    content: block.querySelector('.ch-content').value,
+                    color: block.querySelector('.ch-color').value,
+                    imageUrl: block.querySelector('.ch-image').value
+                });
+            });
+
+            if (!name || chapters.length === 0) return alert('Заполните название и добавьте хотя бы одну главу!');
+
+            const method = isNew ? 'POST' : 'PUT';
+            const url = isNew ? `/api/guild/${guildId}/guides` : `/api/guild/${guildId}/guides/${guideId}`;
+
+            fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, description, chapters }) })
+                .then(res => res.json()).then(data => {
+                    if (data.success) {
+                        alert('✅ Гайд сохранен!');
+                        window.location.href = `/manage/${guildId}/guides`;
+                    } else alert('❌ Ошибка: ' + data.error);
+                });
+        }
+
+        function deleteGuide() {
+            if (!confirm('Удалить этот гайд навсегда?')) return;
+            fetch(`/api/guild/${guildId}/guides/${guideId}`, { method: 'DELETE' }).then(() => {
+                window.location.href = `/manage/${guildId}/guides`;
+            });
+        }
+    </script>
+</body>
+</html>
