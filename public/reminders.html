@@ -6,45 +6,55 @@
     <title>Напоминания</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
+<body class="bg-mountain">
+    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
+
     <div class="sidebar">
         <h2 id="server-name">Загрузка...</h2>
         <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;">← К списку серверов</a>
-        <hr style="border-color: var(--border-color);">
-        <a href="#" id="link-back">🏠 На главную</a>
+        <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+        <a href="#" id="nav-home">🏠 Обзор</a>
+        <a href="#" id="nav-roster">🛡️ Состав гильдии</a>
+        <a href="#" id="nav-rr">🎭 Роли по кнопкам</a>
         <a href="#" class="active">⏰ Напоминания</a>
+        <a href="#" id="nav-mod">⚙️ Модерация</a>
+        <a href="#" id="nav-emb">📨 Эмбеды</a>
+        <a href="#" id="nav-logs">📜 Логи действий</a>
     </div>
+
     <div class="content">
         <div class="header"><h1>⏰ Управление напоминаниями</h1></div>
-        <div class="grid" id="reminders-list">
-            <p>Загрузка...</p>
+        <div class="grid" id="reminders-grid">
+            <p style="color: var(--text-muted);">Загрузка...</p>
         </div>
     </div>
+
     <script>
         const guildId = window.location.pathname.split('/')[2];
-        document.getElementById('link-back').href = `/manage/${guildId}`;
+        const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-rr': '/reactionroles', 'nav-mod': '/moderation', 'nav-emb': '/custom', 'nav-logs': '/logs'};
+        for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
 
-        fetch(`/api/guild/${guildId}/reminders`)
-            .then(res => res.json())
-            .then(data => {
-                const list = document.getElementById('reminders-list');
-                if (data.length === 0) {
-                    list.innerHTML = '<p>Активных напоминаний нет.</p>';
-                    return;
-                }
-                list.innerHTML = '';
-                data.forEach(r => {
-                    const time = new Date(r.nextTime).toLocaleString('ru-RU');
-                    list.innerHTML += `
-                        <div class="card" style="cursor: default;">
-                            <h3>${r.text}</h3>
-                            <p>Сработает: <b>${time}</b></p>
-                            <p>Повтор: ${r.repeat}</p>
-                            <button class="btn btn-danger btn-small" style="margin-top: 15px;" onclick="deleteReminder('${r.id}')">Удалить</button>
-                        </div>
-                    `;
-                });
+        fetch(`/api/guild/${guildId}`).then(res => res.json()).then(data => document.getElementById('server-name').innerText = data.name);
+
+        fetch(`/api/guild/${guildId}/reminders`).then(res => res.json()).then(data => {
+            const grid = document.getElementById('reminders-grid');
+            if (data.length === 0) {
+                grid.innerHTML = '<p style="color: var(--text-muted);">Активных напоминаний нет.</p>';
+                return;
+            }
+            grid.innerHTML = '';
+            data.forEach(r => {
+                const time = new Date(r.nextTime).toLocaleString('ru-RU');
+                grid.innerHTML += `
+                    <div class="card" style="border-left: 4px solid var(--accent);">
+                        <h3>${r.text}</h3>
+                        <p style="margin-top: 10px;">Сработает: <b>${time}</b></p>
+                        <p>Повтор: ${r.repeat}</p>
+                        <button class="btn btn-danger btn-small" style="margin-top: 15px;" onclick="deleteReminder('${r.id}')">Удалить</button>
+                    </div>
+                `;
             });
+        });
 
         function deleteReminder(id) {
             if (!confirm('Удалить напоминание?')) return;
