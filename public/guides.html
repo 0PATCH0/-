@@ -8,7 +8,7 @@
 </head>
 <body>
 
-    <a href="/dashboard" class="top-banner"><h1>Главная</h1></a>
+    <a href="#" id="top-banner-link" class="top-banner"><h1>Главная</h1></a>
 
     <div class="main-container">
         <div class="sidebar">
@@ -39,6 +39,7 @@
 
     <script>
         const guildId = window.location.pathname.split('/')[2];
+        document.getElementById('top-banner-link').href = `/manage/${guildId}`;
         const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-guild': '/profiles', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-logs': '/logs', 'nav-emb': '/custom'};
         for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
         document.getElementById('btn-create').href = `/manage/${guildId}/guides/edit/new`;
