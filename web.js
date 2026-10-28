@@ -32,7 +32,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 passport.use(new DiscordStrategy({
     clientID: process.env.CLIENT_ID, 
     clientSecret: process.env.CLIENT_SECRET,
-    callbackURL: 'https://discord-bot-24oz.onrender.com/auth/discord/callback', 
+    callbackURL: 'https://patchitos1234.fly.dev/auth/discord/callback', 
     scope: ['identify', 'guilds']
 }, (accessToken, refreshToken, profile, done) => done(null, profile)));
 
