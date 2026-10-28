@@ -48,6 +48,7 @@
 
     <script>
         const guildId = window.location.pathname.split('/')[2];
+        document.getElementById('top-banner-link').href = `/manage/${guildId}`;
         const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-guild': '/profiles', 'nav-guides': '/guides', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-emb': '/custom'};
         for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
 
