@@ -78,6 +78,7 @@
 
     <script>
         const guildId = window.location.pathname.split('/').pop();
+        document.getElementById('top-banner-link').href = `/manage/${guildId}`;
         const links = {
             'nav-roster': 'roster', 'card-roster': 'roster',
             'nav-guild': 'profiles', 'card-guild': 'profiles',
