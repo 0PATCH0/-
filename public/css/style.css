@@ -5,16 +5,20 @@
     --bg-base: #0a0b10;
     --bg-sidebar: rgba(15, 17, 23, 0.95);
     --bg-card: rgba(25, 28, 38, 0.85);
-    --accent-jade: #2ecc71; /* Нефритовый акцент */
-    --accent-gold: #d4af37; /* Оставим немного золота для контраста */
+    --accent-jade: #2ecc71;
+    --accent-gold: #d4af37;
     --text-main: #f0f2f5;
     --text-muted: #a0a6b5;
     --danger: #e74c3c;
-    --border-color: rgba(46, 204, 113, 0.2);
+    --border-color: rgba(46, 204, 113, 0.25);
     --glass-blur: blur(15px);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { 
+    box-sizing: border-box; 
+    margin: 0; 
+    padding: 0; 
+}
 
 body {
     font-family: 'Noto Sans', sans-serif;
@@ -24,7 +28,7 @@ body {
     flex-direction: column;
     min-height: 100vh;
     overflow-x: hidden;
-    padding-top: 80px; /* Отступ под фиксированный баннер */
+    padding-top: 70px; /* Отступ под фиксированный баннер */
 }
 
 /* --- АНИМИРОВАННЫЙ БАННЕР-КНОПКА --- */
@@ -33,42 +37,49 @@ body {
     top: 0;
     left: 0;
     width: 100%;
-    height: 80px;
-    background: linear-gradient(rgba(10, 11, 16, 0.8), rgba(10, 11, 16, 0.95)), url('https://images.unsplash.com/photo-1599599810769-bcde5a160d32?q=80&w=2070&auto=format&fit=crop'); /* Пример фона с бамбуком */
-    background-size: cover;
-    background-position: center;
+    height: 70px;
+    /* Тот самый фон с бамбуком и анимацией */
+    background: linear-gradient(rgba(10, 11, 16, 0.7), rgba(10, 11, 16, 0.9)), url('https://images.unsplash.com/photo-1599599810769-bcde5a160d32?q=80&w=2070&auto=format&fit=crop');
+    background-size: 100% 150%;
+    background-position: center 0%;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
     cursor: pointer;
     text-decoration: none;
-    border-bottom: 1px solid var(--border-color);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-    animation: sway 6s ease-in-out infinite; /* Анимация покачивания */
+    border-bottom: 1px solid var(--accent-gold);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+    animation: sway 8s ease-in-out infinite;
 }
 
 .top-banner h1 {
     font-family: 'Cinzel', serif;
     color: var(--accent-gold);
-    font-size: 28px;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
-    letter-spacing: 2px;
+    font-size: 26px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.9);
+    letter-spacing: 3px;
     transition: 0.3s;
 }
-.top-banner:hover h1 { color: var(--text-main); text-shadow: 0 0 15px var(--accent-jade); }
-
-@keyframes sway {
-    0% { background-position: center 50%; }
-    50% { background-position: center 55%; }
-    100% { background-position: center 50%; }
+.top-banner:hover h1 { 
+    color: var(--accent-jade); 
+    text-shadow: 0 0 20px var(--accent-jade); 
 }
 
-/* --- ОСНОВНОЙ КОНТЕНТ --- */
+/* Анимация легкого покачивания бамбука */
+@keyframes sway {
+    0% { background-position: center 45%; }
+    50% { background-position: center 55%; }
+    100% { background-position: center 45%; }
+}
+
+/* --- ОСНОВНОЙ МАКЕТ --- */
 .main-container {
     display: flex;
     flex: 1;
     width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
 }
 
 .sidebar {
@@ -76,15 +87,23 @@ body {
     flex-shrink: 0;
     background: var(--bg-sidebar);
     backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     padding: 20px;
     border-right: 1px solid var(--border-color);
-    height: calc(100vh - 80px);
+    height: calc(100vh - 70px);
     position: sticky;
-    top: 80px;
+    top: 70px;
     overflow-y: auto;
 }
 
-.sidebar h2 { font-family: 'Cinzel', serif; font-size: 18px; color: var(--accent-gold); margin-bottom: 20px; text-align: center; }
+.sidebar h2 { 
+    font-family: 'Cinzel', serif; 
+    font-size: 18px; 
+    color: var(--accent-gold); 
+    margin-bottom: 20px; 
+    text-align: center; 
+}
+
 .sidebar a {
     display: flex;
     align-items: center;
@@ -96,54 +115,189 @@ body {
     margin-bottom: 5px;
     transition: 0.3s;
     font-weight: 600;
+    font-size: 15px;
 }
+
 .sidebar a:hover, .sidebar a.active {
     background: rgba(46, 204, 113, 0.1);
     color: var(--accent-jade);
     transform: translateX(5px);
+    border-left: 3px solid var(--accent-jade);
 }
 
 .content {
     flex: 1;
     padding: 30px 40px;
-    max-width: 1400px;
-    margin: 0 auto;
+    width: 100%;
+    overflow-x: hidden;
 }
 
-.header { margin-bottom: 30px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
-.header h1 { font-family: 'Cinzel', serif; font-size: 32px; color: var(--accent-gold); }
+.header { 
+    margin-bottom: 30px; 
+    border-bottom: 1px solid var(--border-color); 
+    padding-bottom: 15px; 
+}
+.header h1 { 
+    font-family: 'Cinzel', serif; 
+    font-size: 32px; 
+    color: var(--accent-gold); 
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
 
 /* --- СЕТКА КАРТОЧЕК --- */
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+.grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+    gap: 20px; 
+}
 
 .card {
     background: var(--bg-card);
     backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     padding: 25px;
     border-radius: 12px;
     border: 1px solid var(--border-color);
-    transition: 0.4s;
+    transition: all 0.4s ease;
     text-decoration: none;
     color: var(--text-main);
     display: block;
     box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    position: relative;
+    overflow: hidden;
 }
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 3px;
+    background: var(--accent-jade);
+    opacity: 0;
+    transition: 0.3s;
+}
+
 .card:hover {
     transform: translateY(-5px);
     border-color: var(--accent-jade);
     box-shadow: 0 15px 40px rgba(46, 204, 113, 0.15);
 }
-.card h3 { font-family: 'Cinzel', serif; margin-bottom: 10px; color: var(--accent-gold); font-size: 20px; display: flex; align-items: center; gap: 10px; }
+
+.card:hover::before { opacity: 1; }
+
+.card h3 { 
+    font-family: 'Cinzel', serif; 
+    margin-bottom: 10px; 
+    color: var(--accent-gold); 
+    font-size: 20px; 
+    display: flex; 
+    align-items: center; 
+    gap: 10px; 
+}
 .card p { color: var(--text-muted); font-size: 14px; line-height: 1.5; }
 
-/* Стили для иконок Phosphor */
-.card i, .sidebar i { font-size: 1.4em; }
+/* Стили для иконок */
+.ph { font-size: 1.3em; color: var(--accent-jade); }
+
+/* --- ФОРМЫ (исправлены белые поля) --- */
+.form-card {
+    background: var(--bg-card);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    padding: 30px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    width: 100%;
+}
+
+.form-group { margin-bottom: 20px; }
+.form-group label { 
+    display: block; 
+    margin-bottom: 8px; 
+    color: var(--accent-gold); 
+    font-weight: 600; 
+    font-size: 14px; 
+}
+.form-group input, .form-group textarea, .form-group select {
+    width: 100%;
+    padding: 14px;
+    background: rgba(0, 0, 0, 0.6); /* Темный фон для полей */
+    border: 1px solid var(--border-color);
+    color: #fff;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 15px;
+    transition: 0.3s;
+}
+.form-group input:focus, .form-group textarea:focus { 
+    outline: none; 
+    border-color: var(--accent-jade); 
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.2);
+}
+
+/* --- КНОПКИ --- */
+.btn {
+    background: rgba(46, 204, 113, 0.1);
+    color: var(--accent-jade);
+    border: 1px solid var(--accent-jade);
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 15px;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.btn:hover { 
+    background: var(--accent-jade);
+    color: #000;
+    box-shadow: 0 0 15px rgba(46, 204, 113, 0.4);
+}
+.btn-danger { 
+    background: rgba(231, 76, 60, 0.1);
+    border-color: var(--danger);
+    color: var(--danger); 
+}
+.btn-danger:hover {
+    background: var(--danger);
+    color: white;
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.4);
+}
+.btn-success { 
+    background: rgba(46, 204, 113, 0.2); 
+    border-color: var(--accent-jade);
+    color: var(--accent-jade);
+}
+.btn-small { padding: 8px 14px; font-size: 13px; }
+
+/* Ряды ролей */
+.role-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    background: rgba(0,0,0,0.4);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    align-items: center;
+    flex-wrap: wrap;
+}
+.role-row select, .role-row input { flex: 1; min-width: 150px; margin: 0; }
+.color-picker { width: 45px; height: 45px; padding: 0; border: 2px solid var(--accent-jade); border-radius: 6px; cursor: pointer; background: transparent; }
 
 /* --- АДАПТИВНОСТЬ --- */
 @media (max-width: 900px) {
     .main-container { flex-direction: column; }
     .sidebar { width: 100%; height: auto; position: relative; top: 0; display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; }
     .sidebar h2 { width: 100%; text-align: left; margin-bottom: 10px; }
-    .sidebar a { padding: 8px 12px; font-size: 14px; }
+    .sidebar a { padding: 8px 12px; font-size: 14px; border-left: none; border-bottom: 3px solid transparent; }
+    .sidebar a:hover, .sidebar a.active { transform: none; border-left: none; border-bottom: 3px solid var(--accent-jade); }
     .content { padding: 20px; }
+    .header h1 { font-size: 24px; }
 }
