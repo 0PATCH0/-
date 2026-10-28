@@ -58,17 +58,154 @@ async function registerCommands() {
     }
 }
 
-// ... (Функции updateRosterForGuild, refreshRosterMessage, scheduleUpdate остаются без изменений) ...
-// Вставь их сюда из предыдущего кода, они рабочие.
+// --- ФУНКЦИИ СОСТАВА ГИЛЬДИИ ---
+async function refreshRosterMessage(guildId, client) {
+    try {
+        const msgRecord = await RosterMessage.findOne({ guildId });
+        if (!msgRecord) return; 
 
+        const config = await RosterConfig.findOne({ guildId });
+        const rosterData = await Roster.findOne({ guildId });
+        if (!config || !rosterData) return;
+
+        const embedsToSend = [];
+        let totalUnique = new Set();
+
+        config.columns.forEach((col) => {
+            const roleData = rosterData.data[col.roleId] || [];
+            roleData.forEach(m => totalUnique.add(m.id));
+            let memberList = roleData.length > 0 ? roleData.map(m => `<@${m.id}>`).join('\n') : '*Никого нет*';
+            if (memberList.length > 4000) memberList = memberList.substring(0, 4000) + '\n...и другие';
+
+            embedsToSend.push(new EmbedBuilder()
+                .setTitle(col.name).setColor(col.color || '#5865F2').setDescription(memberList)
+                .setFooter({ text: `Участников: ${roleData.length} • Обновлено: ${new Date(rosterData.lastUpdated).toLocaleString('ru-RU')}` }));
+        });
+
+        embedsToSend.unshift(new EmbedBuilder().setTitle('🛡️ Состав гильдии').setColor('#2b2d31')
+            .setDescription(`**Всего уникальных участников:** ${totalUnique.size}`).setTimestamp());
+
+        const channel = await client.channels.fetch(msgRecord.channelId).catch(() => null);
+        if (!channel) return;
+        const message = await channel.messages.fetch(msgRecord.messageId).catch(() => null);
+        if (!message) {
+            await RosterMessage.deleteOne({ guildId });
+            return;
+        }
+
+        await message.edit({ embeds: embedsToSend.slice(0, 10) });
+    } catch (e) {
+        console.error('[ROSTER] Ошибка при обновлении сообщения:', e);
+    }
+}
+
+async function updateRosterForGuild(guild) {
+    try {
+        await guild.members.fetch({ time: 120000, force: true });
+        const rolesData = {};
+        guild.roles.cache.forEach(role => {
+            if (role.id === guild.id || role.managed) return; 
+            const membersInRole = role.members.filter(m => !m.user.bot).map(m => ({ id: m.id, name: m.displayName }));
+            if (membersInRole.length > 0) rolesData[role.id] = membersInRole;
+        });
+
+        await Roster.findOneAndUpdate(
+            { guildId: guild.id },
+            { data: rolesData, lastUpdated: new Date() },
+            { upsert: true }
+        );
+        
+        await refreshRosterMessage(guild.id, client);
+    } catch (e) {
+        console.error(`[ROSTER] Ошибка при обновлении ${guild.name}: ${e.message}`);
+    }
+}
+
+const updateTimers = new Map();
+function scheduleUpdate(guildId) {
+    if (updateTimers.has(guildId)) clearTimeout(updateTimers.get(guildId));
+    updateTimers.set(guildId, setTimeout(async () => {
+        const guild = client.guilds.cache.get(guildId);
+        if (guild) await updateRosterForGuild(guild);
+        updateTimers.delete(guildId);
+    }, 5000));
+}
+
+// --- ОБРАБОТКА ВЗАИМОДЕЙСТВИЙ ---
 client.on('interactionCreate', async interaction => {
-    // ... (Обработчик команд и кнопок остается без изменений) ...
+    if (interaction.isChatInputCommand()) {
+        const command = client.commands.get(interaction.commandName);
+        if (!command) return;
+        try {
+            await command.execute(interaction);
+        } catch (error) {
+            console.error(error);
+            await interaction.reply({ content: 'Ошибка при выполнении!', ephemeral: true });
+        }
+    }
+
+    if (interaction.isButton()) {
+        if (interaction.customId.startsWith('rr_')) {
+            const roleId = interaction.customId.split('_')[1];
+            const member = interaction.member;
+            const role = interaction.guild.roles.cache.get(roleId);
+            if (!role) return interaction.reply({ content: 'Роль удалена.', ephemeral: true });
+
+            try {
+                const config = await ReactionRole.findOne({ messageId: interaction.message.id });
+                const mode = config ? config.mode : 'multiple';
+
+                if (mode === 'single' && config) {
+                    for (const r of config.roles) {
+                        if (r.roleId !== roleId && member.roles.cache.has(r.roleId)) {
+                            await member.roles.remove(r.roleId).catch(() => {});
+                        }
+                    }
+                }
+
+                if (member.roles.cache.has(roleId)) {
+                    await member.roles.remove(roleId);
+                    await interaction.reply({ content: `✅ Вы сняли роль **${role.name}**`, ephemeral: true });
+                } else {
+                    await member.roles.add(roleId);
+                    await interaction.reply({ content: `✅ Вы получили роль **${role.name}**`, ephemeral: true });
+                }
+            } catch (error) {
+                await interaction.reply({ content: 'Не удалось изменить роль.', ephemeral: true });
+            }
+        }
+
+        if (interaction.customId.startsWith('show_class_')) {
+            const classRole = interaction.customId.replace('show_class_', '');
+            const { PlayerProfile } = require('./models');
+            
+            const profiles = await PlayerProfile.find({ 
+                $or: [ { classRole: classRole, guildId: interaction.guild.id }, { classRole: classRole, isGlobal: true } ] 
+            });
+            
+            if (profiles.length === 0) return interaction.reply({ content: `Пока никто не указал класс **${classRole}**.`, ephemeral: true });
+
+            const embed = new EmbedBuilder()
+                .setTitle(`📋 Список класса: ${classRole}`)
+                .setColor('#d4af37')
+                .setDescription(profiles.map(p => `**${p.characters[0].gameNickname || 'Без ника'}** • ${p.characters[0].weapon || 'Оружие не указано'} • <@${p.userId}>`).join('\n'))
+                .setFooter({ text: `Всего участников: ${profiles.length}` });
+
+            await interaction.reply({ embeds: [embed] });
+        }
+    }
 });
 
+// --- СОБЫТИЯ БОТА ---
 client.once('ready', async () => {
     console.log(`Бот ${client.user.tag} в сети!`);
-    setTimeout(async () => { await registerCommands(); }, 2000);
+    
+    setTimeout(async () => {
+        await registerCommands();
+    }, 2000);
+
     client.guilds.cache.forEach(guild => updateRosterForGuild(guild));
+
     try {
         const reminders = await Reminder.find();
         if (reminders.length > 0) {
@@ -87,7 +224,7 @@ client.on('guildMemberRemove', (member) => scheduleUpdate(member.guild.id));
 module.exports.updateRosterForGuild = updateRosterForGuild;
 module.exports.refreshRosterMessage = refreshRosterMessage;
 
-// --- ГЛАВНОЕ ИЗМЕНЕНИЕ: ПРАВИЛЬНЫЙ ПОРЯДОК ЗАПУСКА ---
+// --- ЗАПУСК ---
 mongoose.connect(process.env.MONGO_URI)
     .then(() => {
         console.log('✅ Успешное подключение к базе данных!');
@@ -100,11 +237,9 @@ mongoose.connect(process.env.MONGO_URI)
             return;
         }
 
-        // Сначала запускаем бота
         client.login(token)
             .then(() => {
                 console.log('✅ Вход в Discord выполнен успешно!');
-                // И только ПОСЛЕ этого запускаем сайт
                 console.log('🌐 Запуск веб-панели...');
                 startWebServer(client); 
             })
