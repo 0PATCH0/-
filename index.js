@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 require('dotenv').config();
+const dns = require('node:dns');
+dns.setDefaultResultOrder('ipv6first');
 
 const { startWebServer } = require('./web'); 
 const { Reminder, ReactionRole, Roster, RosterConfig, RosterMessage } = require('./models');
