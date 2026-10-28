@@ -389,7 +389,7 @@ app.delete('/api/guild/:id/embeds/:messageId', isModerator, async (req, res) => 
 
 function startWebServer(botClient) { 
     app.set('botClient', botClient); 
-    app.listen(process.env.PORT || 3000, () => console.log(`🌐 Веб-панель запущена`)); 
+    app.listen(process.env.PORT || 8080, () => console.log(`🌐 Веб-панель запущена`)); 
 }
 
 module.exports = { startWebServer };
