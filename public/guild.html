@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Обзор сервера</title>
+    <!-- ПРАВИЛЬНЫЙ ПУТЬ К CSS -->
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
+    <!-- БАННЕР С АНИМАЦИЕЙ -->
     <a href="#" id="top-banner-link" class="top-banner"><h1>Главная</h1></a>
 
     <div class="main-container">
@@ -78,7 +80,11 @@
 
     <script>
         const guildId = window.location.pathname.split('/').pop();
-        document.getElementById('top-banner-link').href = `/manage/${guildId}`;
+        
+        // ВОТ ЭТА СТРОЧКА ДЕЛАЕТ БАННЕР КЛИКАБЕЛЬНЫМ
+        const banner = document.getElementById('top-banner-link');
+        if (banner) banner.href = `/manage/${guildId}`;
+
         const links = {
             'nav-roster': 'roster', 'card-roster': 'roster',
             'nav-guild': 'profiles', 'card-guild': 'profiles',
@@ -93,6 +99,7 @@
             const el = document.getElementById(id);
             if (el) el.href = `/manage/${guildId}/${path}`;
         }
+        
         fetch(`/api/guild/${guildId}`).then(r=>r.json()).then(d => document.getElementById('server-name').innerText = d.name);
     </script>
 </body>
