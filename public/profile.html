@@ -4,59 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мой игровой профиль</title>
-    <link rel="stylesheet" href="/css/style.css?v=3">
+    <link rel="stylesheet" href="/css/style.css?v=4">
     <script src="/js/ui.js"></script>
     <style>
-        .profile-container { max-width: 700px; margin: 0 auto; padding: 20px; }
-        .profile-header { text-align: center; margin-bottom: 30px; }
-        .profile-header h1 { font-family: 'Georgia', serif; color: var(--accent-gold); font-size: 36px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
-        .back-btn { display: block; text-align: center; margin-bottom: 20px; color: var(--text-muted); text-decoration: none; }
-        .back-btn:hover { color: var(--accent-jade); }
-        
-        .character-block { background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); padding: 20px; border-radius: 8px; margin-bottom: 20px; position: relative; }
-        .char-title { font-family: 'Georgia', serif; color: var(--accent-jade); margin-bottom: 15px; font-size: 18px; }
+        .character-block { background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 20px; position: relative; }
+        .char-title { font-family: 'Cinzel', serif; color: var(--jade); margin-bottom: 15px; font-size: 20px; }
         .remove-char-btn { position: absolute; top: 15px; right: 15px; background: var(--danger); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; display: none; }
-        
-        .switch-container { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border-color); }
+        .switch-container { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border); }
         .switch { position: relative; display: inline-block; width: 50px; height: 26px; flex-shrink: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 34px; }
         .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--accent-jade); }
+        input:checked + .slider { background-color: var(--jade); }
         input:checked + .slider:before { transform: translateX(24px); }
     </style>
 </head>
 <body>
 
-    <a href="#" id="top-banner-link" class="top-banner"><h1>Главная</h1></a>
+    <a href="#" id="top-banner-link" class="top-banner"></a>
+    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
 
-    <div class="main-container" style="display: block;">
-        <div class="content" style="max-width: 800px;">
-            <div class="profile-container">
-                <a href="/dashboard" class="back-btn"><div class="icon icon-arrow-left"></div> Вернуться в панель</a>
-                
-                <div class="profile-header">
-                    <h1 id="page-title">Мои персонажи</h1>
-                    <p id="page-subtitle" style="color: var(--text-muted);">Эта информация будет видна другим игрокам</p>
-                </div>
+    <div class="main-container">
+        <div class="sidebar">
+            <h2 id="server-name">Загрузка...</h2>
+            <a href="/dashboard"><div class="icon icon-home"></div> К списку серверов</a>
+            <hr style="border-color: var(--border); margin: 15px 0;">
+            <a href="/dashboard"><div class="icon icon-arrow-left"></div> Назад в панель</a>
+        </div>
 
-                <div class="switch-container" id="switch-global">
-                    <div>
-                        <h4 style="margin: 0; color: var(--text-main);">Сделать профиль глобальным?</h4>
-                        <p style="margin: 5px 0 0 0; font-size: 12px; color: var(--text-muted);">Если включено, профиль будет виден на всех серверах бота.</p>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" id="is-global">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <div id="characters-container"></div>
-                
-                <button class="btn btn-success" onclick="addCharacter()" id="btn-add" style="width: 100%; margin-bottom: 15px;"><div class="icon icon-plus"></div> Добавить второго персонажа</button>
-                <button class="btn" onclick="saveProfile()" style="width: 100%; margin-bottom: 15px;"><div class="icon icon-floppy-disk"></div> Сохранить профиль</button>
-                <button class="btn btn-danger" onclick="deleteMyProfile()" id="btn-delete-profile" style="width: 100%; display: none;"><div class="icon icon-trash"></div> Удалить профиль</button>
+        <div class="content" style="max-width: 900px;">
+            <div class="header" style="text-align: center; border: none;">
+                <h1 style="font-size: 36px;" id="page-title">Мои персонажи</h1>
+                <p style="color: var(--text-muted); margin-top: 10px;">Эта информация будет видна другим игрокам</p>
             </div>
+
+            <div class="switch-container">
+                <div>
+                    <h4 style="margin: 0; color: var(--text-main);">Сделать профиль глобальным?</h4>
+                    <p style="margin: 5px 0 0 0; font-size: 12px; color: var(--text-muted);">Если включено, профиль будет виден на всех серверах бота.</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="is-global">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div id="characters-container"></div>
+            
+            <button class="btn btn-success" onclick="addCharacter()" id="btn-add" style="width: 100%; margin-bottom: 15px;"><div class="icon icon-home" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22%23000%22 viewBox=%220 0 24 24%22><path d=%22M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z%22/></svg>');"></div> Добавить персонажа</button>
+            <button class="btn" onclick="saveProfile()" style="width: 100%; margin-bottom: 15px;"><div class="icon icon-floppy-disk"></div> Сохранить профиль</button>
+            <button class="btn btn-danger" onclick="deleteMyProfile()" id="btn-delete-profile" style="width: 100%; display: none;"><div class="icon icon-trash"></div> Удалить профиль</button>
         </div>
     </div>
 
@@ -68,12 +65,16 @@
         const banner = document.getElementById('top-banner-link');
         if (banner) banner.href = `/manage/${guildId}`;
 
+        // Списки искусств и оружия
+        const ARTS_LIST = ['Nameless Sword', 'Strategic Sword', 'Nameless Spear', 'Heavenquaker Spear', 'Stormbreaker Spear', 'Panacea Fan', 'Inkwell Fan', 'Soulshade Umbrella', 'Vernal Umbrella', 'Infernal Twinblades', 'Thundercry Blade', 'Mortal Rope Dart'];
+        const WEAPONS_LIST = ['Sword', 'Spear', 'Fan', 'Umbrella', 'Twinblades', 'Blade', 'Rope Dart'];
+        const ROLES_LIST = ['Танк', 'ДД (Урон)', 'Хил (Поддержка)'];
+
         let charCount = 0;
         let isNewProfile = true;
 
         if (targetUserId) {
             document.getElementById('page-title').innerText = 'Редактирование профиля';
-            document.getElementById('page-subtitle').innerText = `Вы редактируете профиль пользователя <@${targetUserId}>`;
         }
 
         function createCharacterBlock(data = {}, index = 0) {
@@ -82,21 +83,49 @@
             block.className = 'character-block';
             block.id = `char-block-${charCount}`;
             
+            const artsHtml = ARTS_LIST.map(art => `
+                <label class="checkbox-item">
+                    <input type="checkbox" class="art-check" value="${art}" ${data.martialArts && data.martialArts.includes(art) ? 'checked' : ''}>
+                    <span class="custom-checkbox"></span>
+                    <span style="font-size: 13px;">${art}</span>
+                </label>
+            `).join('');
+
+            const weaponsHtml = WEAPONS_LIST.map(w => `
+                <label class="checkbox-item">
+                    <input type="checkbox" class="weapon-check" value="${w}" ${data.weapons && data.weapons.includes(w) ? 'checked' : ''}>
+                    <span class="custom-checkbox"></span>
+                    <span style="font-size: 13px;">${w}</span>
+                </label>
+            `).join('');
+
             block.innerHTML = `
-                <button class="remove-char-btn" onclick="removeCharacter('${block.id}')"><div class="icon icon-x"></div></button>
+                <button class="remove-char-btn" onclick="removeCharacter('${block.id}')">Удалить</button>
                 <div class="char-title">Персонаж ${index + 1}</div>
-                <div class="form-group"><label>Игровой ник</label><input type="text" class="c-nick" value="${data.gameNickname || ''}" placeholder="Например: Koten-Ren"></div>
-                <div class="form-group"><label>Гильдия</label><input type="text" class="c-guild" value="${data.guildName || ''}" placeholder="Например: СНОВА"></div>
-                <div class="form-group"><label>Класс / Роль</label>
-                    <select class="c-class">
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group"><label>Игровой ник</label><input type="text" class="c-nick" value="${data.gameNickname || ''}" placeholder="Например: Koten-Ren"></div>
+                    <div class="form-group"><label>Гильдия</label><input type="text" class="c-guild" value="${data.guildName || ''}" placeholder="Например: СНОВА"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Боевая роль</label>
+                    <select class="c-role" style="width: 100%; padding: 14px; background: rgba(0,0,0,0.5); border: 1px solid var(--border); color: #fff; border-radius: 6px;">
                         <option value="">Не выбрано</option>
-                        <option value="Танк" ${data.classRole === 'Танк' ? 'selected' : ''}>Танк</option>
-                        <option value="ДД (Урон)" ${data.classRole === 'ДД (Урон)' ? 'selected' : ''}>ДД (Урон)</option>
-                        <option value="Хил (Поддержка)" ${data.classRole === 'Хил (Поддержка)' ? 'selected' : ''}>Хил (Поддержка)</option>
-                        <option value="Универсал" ${data.classRole === 'Универсал' ? 'selected' : ''}>Универсал</option>
+                        ${ROLES_LIST.map(r => `<option value="${r}" ${data.role === r ? 'selected' : ''}>${r}</option>`).join('')}
                     </select>
                 </div>
-                <div class="form-group"><label>Оружие</label><input type="text" class="c-weapon" value="${data.weapon || ''}" placeholder="Например: Меч и Веер"></div>
+
+                <div class="form-group">
+                    <label>Боевые искусства (Можно выбрать несколько)</label>
+                    <div class="checkbox-grid">${artsHtml}</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Оружие (Можно выбрать несколько)</label>
+                    <div class="checkbox-grid">${weaponsHtml}</div>
+                </div>
+                
                 <div class="form-group"><label>О себе</label><textarea class="c-bio" style="height: 60px;">${data.bio || ''}</textarea></div>
             `;
             document.getElementById('characters-container').appendChild(block);
@@ -104,7 +133,7 @@
         }
 
         function addCharacter() {
-            if (charCount >= 2) return showToast('Можно добавить не более 2 персонажей.', 'error');
+            if (charCount >= 3) return showToast('Максимум 3 персонажа.', 'error');
             createCharacterBlock({}, charCount);
         }
 
@@ -121,55 +150,44 @@
                 const removeBtn = block.querySelector('.remove-char-btn');
                 removeBtn.style.display = blocks.length > 1 ? 'block' : 'none';
             });
-            document.getElementById('btn-add').style.display = blocks.length >= 2 ? 'none' : 'block';
+            document.getElementById('btn-add').style.display = blocks.length >= 3 ? 'none' : 'flex';
         }
 
-        const fetchUrl = targetUserId 
-            ? `/api/profile/${guildId}?user=${targetUserId}` 
-            : `/api/profile/${guildId}`;
+        const fetchUrl = targetUserId ? `/api/profile/${guildId}?user=${targetUserId}` : `/api/profile/${guildId}`;
 
-        fetch(fetchUrl)
-            .then(res => {
-                if (!res.ok) throw new Error('Ошибка загрузки');
-                return res.json();
-            })
-            .then(data => {
-                if (data.characters && data.characters.length > 0) {
-                    isNewProfile = false;
-                    if (!targetUserId) document.getElementById('btn-delete-profile').style.display = 'block';
-                    
-                    if (data.isGlobal) document.getElementById('is-global').checked = true;
-                    data.characters.forEach((char, idx) => createCharacterBlock(char, idx));
-                } else {
-                    createCharacterBlock();
-                }
-            })
-            .catch(err => {
-                showToast('Не удалось загрузить профиль', 'error');
+        fetch(fetchUrl).then(res => res.json()).then(data => {
+            if (data.characters && data.characters.length > 0) {
+                isNewProfile = false;
+                if (!targetUserId) document.getElementById('btn-delete-profile').style.display = 'block';
+                if (data.isGlobal) document.getElementById('is-global').checked = true;
+                data.characters.forEach((char, idx) => createCharacterBlock(char, idx));
+            } else {
                 createCharacterBlock();
-            });
+            }
+        }).catch(() => createCharacterBlock());
 
         function saveProfile() {
             const characters = [];
             document.querySelectorAll('.character-block').forEach(block => {
+                const arts = Array.from(block.querySelectorAll('.art-check:checked')).map(cb => cb.value);
+                const weapons = Array.from(block.querySelectorAll('.weapon-check:checked')).map(cb => cb.value);
+
                 characters.push({
                     gameNickname: block.querySelector('.c-nick').value,
                     guildName: block.querySelector('.c-guild').value,
-                    classRole: block.querySelector('.c-class').value,
-                    weapon: block.querySelector('.c-weapon').value,
+                    role: block.querySelector('.c-role').value,
+                    martialArts: arts,
+                    weapons: weapons,
                     bio: block.querySelector('.c-bio').value
                 });
             });
 
             const isGlobal = document.getElementById('is-global').checked;
-
             const payload = { characters, isGlobal };
             if (targetUserId) payload.targetUser = targetUserId;
 
             fetch(`/api/profile/${guildId}`, {
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(payload)
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
             }).then(res => res.json()).then(data => {
                 if (data.success) {
                     showToast('Профиль сохранен!', 'success');
@@ -182,14 +200,9 @@
 
         function deleteMyProfile() {
             if (!confirm('Вы уверены, что хотите удалить свой профиль?')) return;
-            fetch(`/api/profile/${guildId}`, { method: 'DELETE' })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        showToast('Профиль удален!', 'success');
-                        setTimeout(() => window.location.reload(), 1000);
-                    } else showToast('Ошибка: ' + data.error, 'error');
-                });
+            fetch(`/api/profile/${guildId}`, { method: 'DELETE' }).then(res => res.json()).then(data => {
+                if (data.success) { showToast('Профиль удален!', 'success'); setTimeout(() => window.location.reload(), 1000); }
+            });
         }
     </script>
 </body>
