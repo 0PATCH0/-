@@ -300,6 +300,62 @@ app.delete('/api/guild/:id/roster/message', isModerator, async (req, res) => {
     res.json({ success: true });
 });
 
+// --- API ГАЙДОВ ---
+
+// Получить список гайдов
+app.get('/api/guild/:id/guides', isModerator, async (req, res) => {
+    const guides = await Guide.find({ guildId: req.params.id }).sort({ date: -1 });
+    res.json(guides);
+});
+
+// Получить конкретный гайд
+app.get('/api/guild/:id/guides/:guideId', isModerator, async (req, res) => {
+    try {
+        const guide = await Guide.findById(req.params.guideId);
+        if (!guide) return res.status(404).json({ error: 'Гайд не найден' });
+        res.json(guide);
+    } catch (e) {
+        res.status(500).json({ error: 'Ошибка получения' });
+    }
+});
+
+// Создать гайд
+app.post('/api/guild/:id/guides', isModerator, async (req, res) => {
+    const { name, description, chapters } = req.body;
+    if (!name || !chapters || chapters.length === 0) {
+        return res.status(400).json({ error: 'Заполните название и добавьте хотя бы одну главу' });
+    }
+    try {
+        await Guide.create({ guildId: req.params.id, name, description, chapters });
+        res.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Ошибка при создании' });
+    }
+});
+
+// Обновить гайд (Редактирование)
+app.put('/api/guild/:id/guides/:guideId', isModerator, async (req, res) => {
+    const { name, description, chapters } = req.body;
+    try {
+        await Guide.findByIdAndUpdate(req.params.guideId, { name, description, chapters });
+        res.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Ошибка при обновлении' });
+    }
+});
+
+// Удалить гайд
+app.delete('/api/guild/:id/guides/:guideId', isModerator, async (req, res) => {
+    try {
+        await Guide.findByIdAndDelete(req.params.guideId);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: 'Ошибка удаления' });
+    }
+});
+
 // --- API РОЛЕЙ ПО КНОПКАМ ---
 
 // 1. Получить список активных сообщений
