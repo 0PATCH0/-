@@ -181,22 +181,33 @@ app.get('/api/guild/:id/profiles', isModerator, async (req, res) => {
     res.json(enriched);
 });
 
-// Удалить ЧУЖОЙ профиль (Админ или Создатель)
+// УДАЛЕНИЕ ЧУЖОГО ПРОФИЛЯ (Только Админ сервера или Создатель бота)
 app.delete('/api/guild/:id/profiles/:userId', isModerator, async (req, res) => {
-    // Ищем профиль именно на этом сервере
+    // Проверяем, является ли текущий пользователь Админом этого сервера
+    const guild = req.user.guilds.find(g => g.id === req.params.id);
+    const isAdmin = guild && (BigInt(guild.permissions) & BigInt(0x8)) === BigInt(0x8);
+
+    // Если он не админ и не создатель бота - запрещаем
+    if (!isAdmin && req.user.id !== OWNER_ID) {
+        return res.status(403).json({ error: 'Только администратор сервера может удалять профили' });
+    }
+
+    // Ищем профиль
     const profile = await PlayerProfile.findOne({ userId: req.params.userId, guildId: req.params.id });
     
     if (!profile) {
-        // Если профиля нет на этом сервере, возможно, он глобальный
-        if (req.user.id !== OWNER_ID) {
-            return res.status(403).json({ error: 'Вы не можете удалить этот профиль (он принадлежит другому серверу)' });
+        // Если локального нет, ищем глобальный
+        const globalProfile = await PlayerProfile.findOne({ userId: req.params.userId, isGlobal: true });
+        if (globalProfile) {
+            // Удаляем глобальный профиль, так как мы админ
+            await PlayerProfile.deleteOne({ userId: req.params.userId, isGlobal: true });
+            return res.json({ success: true });
         }
-        await PlayerProfile.findOneAndDelete({ userId: req.params.userId, isGlobal: true });
-        return res.json({ success: true });
+        return res.status(404).json({ error: 'Профиль не найден' });
     }
 
     // Удаляем локальный профиль
-    await PlayerProfile.findOneAndDelete({ userId: req.params.userId, guildId: req.params.id });
+    await PlayerProfile.deleteOne({ userId: req.params.userId, guildId: req.params.id });
     res.json({ success: true });
 });
 
