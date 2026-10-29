@@ -52,15 +52,21 @@ module.exports = {
         profile.characters.forEach((char, index) => {
             const charTitle = `👤 Персонаж ${index + 1}: ${char.gameNickname || 'Без ника'}`;
             
-            // Формируем красивый вывод массивов
-            const rolesStr = char.roles && char.roles.length > 0 ? char.roles.join(', ') : 'Не указаны';
+            // Красивое отображение ролей
+            const rolesStr = char.roles && char.roles.length > 0 
+                ? char.roles.map(r => {
+                    if (r === 'Танк') return '🛡️ Танк';
+                    if (r === 'ДД (Урон)') return '⚔️ ДД';
+                    if (r === 'Хил (Поддержка)') return '💚 Хил';
+                    return r;
+                }).join(' | ') 
+                : 'Не указаны';
+
             const artsStr = char.martialArts && char.martialArts.length > 0 ? char.martialArts.join(', ') : 'Не указаны';
-            const weaponsStr = char.weapons && char.weapons.length > 0 ? char.weapons.join(', ') : 'Не указано';
 
             let charValue = `🏰 **Гильдия:** ${char.guildName || 'Не указана'}\n`;
             charValue += `⚔️ **Роли:** ${rolesStr}\n`;
             charValue += `🥋 **Искусства:** ${artsStr}\n`;
-            charValue += `🗡️ **Оружие:** ${weaponsStr}\n`;
             if (char.bio) charValue += `*"${char.bio}"*`;
 
             embed.addFields({ name: charTitle, value: charValue, inline: false });
