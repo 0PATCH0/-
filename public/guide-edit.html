@@ -4,32 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Редактирование гайда</title>
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/style.css?v=3">
 </head>
 <body>
 
-    <a href="/dashboard" class="top-banner"><h1>Главная</h1></a>
+    <a href="#" id="top-banner-link" class="top-banner"><h1>Главная</h1></a>
 
     <div class="main-container">
         <div class="sidebar">
             <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><i class="ph ph-arrow-left"></i> К списку серверов</a>
+            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><div class="icon icon-arrow-left"></div> К списку серверов</a>
             <hr style="border-color: var(--border-color); margin-bottom: 20px;">
-            <a href="#" id="nav-home"><i class="ph ph-house"></i> Обзор</a>
-            <a href="#" id="nav-roster"><i class="ph ph-shield"></i> Состав гильдии</a>
-            <a href="#" id="nav-guild"><i class="ph ph-users"></i> Гильдия</a>
-            <a href="#" class="active"><i class="ph ph-book-open"></i> Гайды</a>
-            <a href="#" id="nav-rr"><i class="ph ph-masks"></i> Роли по кнопкам</a>
-            <a href="#" id="nav-rem"><i class="ph ph-alarm"></i> Напоминания</a>
-            <a href="#" id="nav-mod"><i class="ph ph-gear"></i> Модерация</a>
-            <a href="#" id="nav-logs"><i class="ph ph-scroll"></i> Логи действий</a>
-            <a href="#" id="nav-emb"><i class="ph ph-envelope"></i> Эмбеды</a>
+            <a href="#" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
+            <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
+            <a href="#" id="nav-guild"><div class="icon icon-users"></div> Гильдия</a>
+            <a href="#" class="active"><div class="icon icon-book"></div> Гайды</a>
+            <a href="#" id="nav-rr"><div class="icon icon-masks"></div> Роли по кнопкам</a>
+            <a href="#" id="nav-rem"><div class="icon icon-alarm"></div> Напоминания</a>
+            <a href="#" id="nav-mod"><div class="icon icon-gear"></div> Модерация</a>
+            <a href="#" id="nav-logs"><div class="icon icon-scroll"></div> Логи действий</a>
+            <a href="#" id="nav-emb"><div class="icon icon-envelope"></div> Эмбеды</a>
         </div>
 
         <div class="content">
             <div class="header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h1 id="page-title"><i class="ph ph-pencil"></i> Создание гайда</h1>
-                <a href="#" id="btn-back" class="btn btn-small" style="background: var(--bg-card); border: 1px solid var(--accent-jade); color: var(--accent-jade);"><i class="ph ph-arrow-left"></i> Назад</a>
+                <h1 id="page-title"><div class="icon icon-pencil"></div> Создание гайда</h1>
+                <a href="#" id="btn-back" class="btn btn-small"><div class="icon icon-arrow-left"></div> Назад</a>
             </div>
             
             <div class="form-card" style="margin-bottom: 20px;">
@@ -38,14 +38,14 @@
             </div>
 
             <div class="header" style="margin-top: 40px; display: flex; justify-content: space-between; align-items: center;">
-                <h2 style="color: var(--accent-gold); font-family: 'Cinzel', serif;">Главы гайда</h2>
-                <button class="btn btn-success btn-small" onclick="addChapter()"><i class="ph ph-plus"></i> Добавить главу</button>
+                <h2 style="color: var(--accent-gold); font-family: 'Georgia', serif;">Главы гайда</h2>
+                <button class="btn btn-success btn-small" onclick="addChapter()"><div class="icon icon-plus"></div> Добавить главу</button>
             </div>
             <div id="chapters-container"></div>
 
             <div style="margin-top: 30px; display: flex; gap: 15px;">
-                <button class="btn" onclick="saveGuide()" id="btn-save"><i class="ph ph-floppy-disk"></i> Сохранить гайд</button>
-                <button class="btn btn-danger" onclick="deleteGuide()" id="btn-delete" style="display: none;"><i class="ph ph-trash"></i> Удалить гайд</button>
+                <button class="btn" onclick="saveGuide()" id="btn-save"><div class="icon icon-floppy-disk"></div> Сохранить гайд</button>
+                <button class="btn btn-danger" onclick="deleteGuide()" id="btn-delete" style="display: none;"><div class="icon icon-trash"></div> Удалить гайд</button>
             </div>
         </div>
     </div>
@@ -54,6 +54,9 @@
         const guildId = window.location.pathname.split('/')[2];
         const guideId = window.location.pathname.split('/')[4]; 
         const isNew = guideId === 'new';
+
+        const banner = document.getElementById('top-banner-link');
+        if (banner) banner.href = `/manage/${guildId}`;
 
         const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-guild': '/profiles', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-logs': '/logs', 'nav-emb': '/custom'};
         for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
@@ -69,7 +72,7 @@
             block.style.position = 'relative';
 
             block.innerHTML = `
-                <button class="btn btn-danger btn-small" style="position: absolute; top: 15px; right: 15px;" onclick="this.parentElement.remove()"><i class="ph ph-x"></i></button>
+                <button class="btn btn-danger btn-small" style="position: absolute; top: 15px; right: 15px;" onclick="this.parentElement.remove()"><div class="icon icon-x"></div></button>
                 <div class="form-group"><label>Заголовок главы</label><input type="text" class="ch-title" value="${data.title}"></div>
                 <div class="form-group"><label>Текст (Поддерживает Markdown)</label><textarea class="ch-content" style="height: 120px;">${data.content}</textarea></div>
                 <div style="display: flex; gap: 15px; flex-wrap: wrap;">
@@ -85,7 +88,7 @@
         }
 
         if (!isNew) {
-            document.getElementById('page-title').innerHTML = '<i class="ph ph-pencil"></i> Редактирование гайда';
+            document.getElementById('page-title').innerHTML = '<div class="icon icon-pencil"></div> Редактирование гайда';
             document.getElementById('btn-delete').style.display = 'block';
             fetch(`/api/guild/${guildId}/guides/${guideId}`).then(res => res.json()).then(guide => {
                 document.getElementById('guide-name').value = guide.name;
