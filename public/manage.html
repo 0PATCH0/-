@@ -4,7 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Роли по кнопкам</title>
-    <link rel="stylesheet" href="/css/style.css?v=6">
+    <link rel="stylesheet" href="/css/style.css?v=8">
+    <script src="/js/ui.js"></script>
+    <style>
+        .rr-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+        @media (max-width: 900px) { .rr-layout { grid-template-columns: 1fr; } }
+        
+        .rr-card { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 10px; border-left: 4px solid var(--jade); }
+    </style>
 </head>
 <body>
 
@@ -29,25 +36,41 @@
 
         <div class="content">
             <div class="header"><h1><div class="icon icon-masks"></div> Роли по кнопкам</h1></div>
-            <div class="form-card">
-                <div class="form-group"><label>Заголовок</label><input type="text" id="rr-title" placeholder="Например: Выберите свои роли"></div>
-                <div class="form-group"><label>Описание</label><textarea id="rr-desc" placeholder="Выберите роли..." style="height: 80px;"></textarea></div>
-                <div class="form-group"><label>Цвет (HEX)</label><input type="color" id="rr-color" value="#2ecc71" style="height: 45px; padding: 5px;"></div>
-                <div class="form-group"><label>ID Канала</label><input type="text" id="rr-channel" placeholder="123456789012345678"></div>
-                <div class="form-group"><label>Режим выбора</label>
-                    <select id="rr-mode">
-                        <option value="multiple">Можно брать несколько ролей</option>
-                        <option value="single">Только одну роль</option>
-                    </select>
+            
+            <div class="rr-layout">
+                <!-- ЛЕВАЯ ЧАСТЬ: ФОРМА -->
+                <div class="form-card">
+                    <h3 id="form-title" style="color: var(--gold); margin-bottom: 20px; font-family: 'Georgia', serif;">Создать сообщение</h3>
+                    <input type="hidden" id="edit-message-id" value="">
+                    
+                    <div class="form-group"><label>Заголовок</label><input type="text" id="rr-title" placeholder="Например: Выберите свои роли"></div>
+                    <div class="form-group"><label>Описание</label><textarea id="rr-desc" placeholder="Выберите роли..." style="height: 80px;"></textarea></div>
+                    <div class="form-group"><label>Цвет (HEX)</label><input type="color" id="rr-color" value="#2ecc71" style="height: 45px; padding: 5px;"></div>
+                    <div class="form-group" id="channel-group"><label>ID Канала</label><input type="text" id="rr-channel" placeholder="123456789012345678"></div>
+                    <div class="form-group"><label>Режим выбора</label>
+                        <select id="rr-mode">
+                            <option value="multiple">Можно брать несколько ролей</option>
+                            <option value="single">Только одну роль</option>
+                        </select>
+                    </div>
+
+                    <hr style="border-color: var(--border); margin: 20px 0;">
+                    <h3 style="color: var(--gold); margin-bottom: 15px; font-family: 'Georgia', serif;">Кнопки ролей</h3>
+                    <div id="roles-container"></div>
+                    <button class="btn btn-success btn-small" onclick="addRoleRow()" style="margin-bottom: 20px;"><div class="icon icon-plus"></div> Добавить кнопку</button>
+                    
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button class="btn" onclick="saveReactionRoles()" id="btn-save" style="flex: 1;"><div class="icon icon-paper-plane"></div> Отправить</button>
+                        <button class="btn btn-danger" onclick="cancelEdit()" id="btn-cancel" style="display: none;"><div class="icon icon-x"></div> Отмена</button>
+                    </div>
                 </div>
 
-                <hr style="border-color: var(--border); margin: 20px 0;">
-                <h3 style="color: var(--gold); margin-bottom: 15px; font-family: 'Georgia', serif;">Кнопки ролей</h3>
-                <div id="roles-container"></div>
-                <button class="btn btn-success btn-small" onclick="addRoleRow()" style="margin-bottom: 20px;"><div class="icon icon-plus"></div> Добавить кнопку</button>
-                
-                <div style="border-top: 1px solid var(--border); padding-top: 20px;">
-                    <button class="btn" onclick="saveReactionRoles()" id="btn-save-rr"><div class="icon icon-paper-plane"></div> Отправить в Discord</button>
+                <!-- ПРАВАЯ ЧАСТЬ: СПИСОК СООБЩЕНИЙ -->
+                <div class="form-card">
+                    <h3 style="color: var(--gold); margin-bottom: 20px; font-family: 'Georgia', serif;">Активные сообщения</h3>
+                    <div id="rr-list">
+                        <p style="color: var(--text-muted);">Загрузка...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -60,28 +83,53 @@
 
         const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-guild': '/profiles', 'nav-guides': '/guides', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-logs': '/logs', 'nav-emb': '/custom'};
         for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
+        
         let serverRoles = [];
+        let currentEditId = null;
 
         fetch(`/api/guild/${guildId}`).then(res => res.json()).then(data => {
             document.getElementById('server-name').innerText = data.name;
             serverRoles = data.roles;
             addRoleRow();
+            loadExisting();
         });
 
-        function addRoleRow() {
+        function addRoleRow(data = { roleId: '', emoji: '', label: '' }) {
             const container = document.getElementById('roles-container');
             const row = document.createElement('div');
             row.className = 'role-row';
-            let options = serverRoles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+            let options = serverRoles.map(r => `<option value="${r.id}" ${r.id === data.roleId ? 'selected' : ''}>${r.name}</option>`).join('');
             
-            // ДОБАВЛЕНО ПОЛЕ ДЛЯ ЭМОДЗИ
             row.innerHTML = `
-                <select class="rr-role" style="flex: 2;">${options}</select>
-                <input type="text" class="rr-emoji" placeholder="Эмодзи (не обяз.)" style="flex: 1;">
-                <input type="text" class="rr-label" placeholder="Текст кнопки" style="flex: 2;">
+                <select class="rr-role">${options}</select>
+                <input type="text" class="rr-emoji" placeholder="Эмодзи" value="${data.emoji || ''}">
+                <input type="text" class="rr-label" placeholder="Текст кнопки" value="${data.label || ''}">
                 <button class="btn btn-danger btn-small" onclick="this.parentElement.remove()"><div class="icon icon-x"></div></button>
             `;
             container.appendChild(row);
+        }
+
+        function loadExisting() {
+            fetch(`/api/guild/${guildId}/reactionroles`).then(res => res.json()).then(data => {
+                const list = document.getElementById('rr-list');
+                if (data.length === 0) {
+                    list.innerHTML = '<p style="color: var(--text-muted);">Сообщений пока нет.</p>';
+                    return;
+                }
+                list.innerHTML = '';
+                data.forEach(rr => {
+                    list.innerHTML += `
+                        <div class="rr-card">
+                            <h4 style="color: var(--gold); margin-bottom: 5px;">${rr.title}</h4>
+                            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Канал: <#${rr.channelId}> • Ролей: ${rr.roles.length}</p>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn btn-small" onclick='editMessage(${JSON.stringify(rr).replace(/'/g, "&#39;")})' style="flex: 1;"><div class="icon icon-pencil"></div> Ред.</button>
+                                <button class="btn btn-danger btn-small" onclick="deleteMessage('${rr.messageId}')" style="flex: 1;"><div class="icon icon-trash"></div> Удалить</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
         }
 
         function saveReactionRoles() {
@@ -89,7 +137,7 @@
             document.querySelectorAll('#roles-container .role-row').forEach(row => {
                 roles.push({
                     roleId: row.querySelector('.rr-role').value,
-                    emoji: row.querySelector('.rr-emoji').value, // Передаем эмодзи
+                    emoji: row.querySelector('.rr-emoji').value,
                     label: row.querySelector('.rr-label').value || 'Получить роль'
                 });
             });
@@ -98,23 +146,73 @@
                 title: document.getElementById('rr-title').value,
                 desc: document.getElementById('rr-desc').value,
                 color: document.getElementById('rr-color').value,
-                channelId: document.getElementById('rr-channel').value,
                 mode: document.getElementById('rr-mode').value,
                 roles: roles
             };
 
-            if (!payload.channelId) return alert('Укажите ID канала!');
-            const btn = document.getElementById('btn-save-rr');
+            if (!currentEditId) {
+                payload.channelId = document.getElementById('rr-channel').value;
+                if (!payload.channelId) return alert('Укажите ID канала!');
+            }
+
+            const method = currentEditId ? 'PUT' : 'POST';
+            const url = currentEditId ? `/api/guild/${guildId}/reactionroles/${currentEditId}` : `/api/guild/${guildId}/reactionroles`;
+
+            const btn = document.getElementById('btn-save');
             btn.innerHTML = 'Отправка...'; btn.disabled = true;
 
-            fetch(`/api/guild/${guildId}/reactionroles`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-            }).then(res => res.json()).then(data => {
-                if (data.success) alert('✅ Сообщение отправлено в Discord!');
-                else alert('❌ Ошибка: ' + data.error);
+            fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+            .then(res => res.json()).then(data => {
+                if (data.success) {
+                    alert(currentEditId ? '✅ Обновлено!' : '✅ Отправлено!');
+                    cancelEdit();
+                    loadExisting();
+                } else alert('❌ Ошибка: ' + data.error);
             }).finally(() => {
-                btn.innerHTML = '<div class="icon icon-paper-plane"></div> Отправить в Discord'; btn.disabled = false;
+                btn.innerHTML = '<div class="icon icon-paper-plane"></div> Отправить'; btn.disabled = false;
             });
+        }
+
+        function editMessage(rr) {
+            currentEditId = rr.messageId;
+            document.getElementById('form-title').innerText = 'Редактировать сообщение';
+            document.getElementById('rr-title').value = rr.title;
+            document.getElementById('rr-desc').value = rr.desc || '';
+            document.getElementById('rr-color').value = rr.color || '#2ecc71';
+            document.getElementById('rr-mode').value = rr.mode;
+            document.getElementById('channel-group').style.display = 'none'; // Скрываем канал при редактировании
+            document.getElementById('btn-cancel').style.display = 'block';
+            
+            document.getElementById('roles-container').innerHTML = '';
+            rr.roles.forEach(r => addRoleRow(r));
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            currentEditId = null;
+            document.getElementById('form-title').innerText = 'Создать сообщение';
+            document.getElementById('edit-message-id').value = '';
+            document.getElementById('rr-title').value = '';
+            document.getElementById('rr-desc').value = '';
+            document.getElementById('rr-color').value = '#2ecc71';
+            document.getElementById('rr-channel').value = '';
+            document.getElementById('channel-group').style.display = 'block';
+            document.getElementById('btn-cancel').style.display = 'none';
+            
+            document.getElementById('roles-container').innerHTML = '';
+            addRoleRow();
+        }
+
+        function deleteMessage(id) {
+            if (!confirm('Удалить это сообщение из Discord и базы?')) return;
+            fetch(`/api/guild/${guildId}/reactionroles/${id}`, { method: 'DELETE' })
+                .then(res => res.json()).then(data => {
+                    if (data.success) {
+                        alert('Сообщение удалено!');
+                        loadExisting();
+                    }
+                });
         }
     </script>
 </body>
