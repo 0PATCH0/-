@@ -112,18 +112,16 @@ app.get('/api/profile/:guildId', async (req, res) => {
 
     let profile = await PlayerProfile.findOne({ userId: targetUserId, guildId: req.params.guildId });
     
-    // Если профиль не найден на этом сервере, ищем глобальный
     if (!profile) {
         profile = await PlayerProfile.findOne({ userId: targetUserId, isGlobal: true });
     }
 
-    // Если всё равно нет, создаем пустой шаблон
     if (!profile) {
         profile = { 
             userId: targetUserId, 
             guildId: req.params.guildId,
             isGlobal: false, 
-            characters: [ { gameNickname: '', guildName: '', classRole: '', weapon: '', bio: '' } ] 
+            characters: [ { gameNickname: '', guildName: '', roles: [], martialArts: [], weapons: [], bio: '' } ] 
         };
     }
     res.json(profile);
@@ -145,6 +143,7 @@ app.post('/api/profile/:guildId', async (req, res) => {
         }
     }
 
+    // Обновляем профиль, сохраняя массивы
     await PlayerProfile.findOneAndUpdate(
         { userId: finalUserId, guildId: req.params.guildId },
         { characters, isGlobal },
