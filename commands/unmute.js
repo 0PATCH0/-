@@ -8,21 +8,33 @@ module.exports = {
         .addUserOption(option => option.setName('пользователь').setDescription('С кого снять мут?').setRequired(true)),
 
     async execute(interaction) {
-        // 1. Проверка прав
+        // 1. Проверка стандартных прав Discord (Управление участниками)
         const hasDiscordPerm = interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers);
+        
+        // 2. Проверка кастомных прав из БД (Мастер гильдии, Старейшина и т.д.)
         let hasCustomPerm = false;
+        let customRolesIds = [];
         
         try {
             const guildSettings = await Settings.findOne({ guildId: interaction.guild.id });
             if (guildSettings && guildSettings.modRoles) {
-                hasCustomPerm = interaction.member.roles.cache.some(role => guildSettings.modRoles.includes(role.id));
+                customRolesIds = guildSettings.modRoles;
+                hasCustomPerm = interaction.member.roles.cache.some(role => customRolesIds.includes(role.id));
             }
-        } catch (e) { console.error(e); }
-
-        if (!hasDiscordPerm && !hasCustomPerm) {
-            return interaction.reply({ content: 'У вас нет прав!', ephemeral: true });
+        } catch (e) {
+            console.error("Ошибка при чтении БД:", e);
         }
 
+        // Отладка в консоль Fly.io (если что-то не работает, ты увидишь это в логах)
+        console.log(`[UNMUTE DEBUG] Пользователь: ${interaction.user.tag}`);
+        console.log(`[UNMUTE DEBUG] Есть права Discord: ${hasDiscordPerm}`);
+        console.log(`[UNMUTE DEBUG] Есть кастомные права: ${hasCustomPerm}`);
+
+        if (!hasDiscordPerm && !hasCustomPerm) {
+            return interaction.reply({ content: 'У вас нет прав для использования этой команды!', ephemeral: true });
+        }
+
+        // --- ЛОГИКА СНЯТИЯ МУТА ---
         const targetUser = interaction.options.getUser('пользователь');
         const targetMember = await interaction.guild.members.fetch(targetUser.id);
 
@@ -31,10 +43,9 @@ module.exports = {
         }
 
         try {
-            // Снимаем мут
             await targetMember.timeout(null);
 
-            // 2. Запись в логи
+            // Запись в логи для сайта
             await Log.create({
                 guildId: interaction.guild.id,
                 userId: interaction.user.id,
