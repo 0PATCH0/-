@@ -11,7 +11,14 @@ const ReminderSchema = new mongoose.Schema({
 });
 
 const ReactionRoleSchema = new mongoose.Schema({
-    guildId: String, channelId: String, messageId: String, mode: String, roles: [{ roleId: String, label: String }]
+    guildId: String, 
+    channelId: String, 
+    messageId: String, 
+    title: String, 
+    desc: String,
+    color: String,
+    mode: String, 
+    roles: [{ roleId: String, label: String, emoji: String }]
 });
 
 const SentMessageSchema = new mongoose.Schema({
