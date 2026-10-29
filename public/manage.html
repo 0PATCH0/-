@@ -4,17 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Роли по кнопкам</title>
-    <link rel="stylesheet" href="/css/style.css?v=3">
+    <link rel="stylesheet" href="/css/style.css?v=6">
 </head>
 <body>
 
     <a href="#" id="top-banner-link" class="top-banner"></a>
+    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
 
     <div class="main-container">
         <div class="sidebar">
             <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><div class="icon icon-arrow-left"></div> К списку серверов</a>
-            <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+            <a href="/dashboard"><div class="icon icon-home"></div> К списку серверов</a>
+            <hr style="border-color: var(--border); margin: 15px 0;">
             <a href="#" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
             <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
             <a href="#" id="nav-guild"><div class="icon icon-users"></div> Гильдия</a>
@@ -40,12 +41,12 @@
                     </select>
                 </div>
 
-                <hr style="border-color: var(--border-color); margin: 20px 0;">
-                <h3 style="color: var(--accent-gold); margin-bottom: 15px; font-family: 'Georgia', serif;">Кнопки ролей</h3>
+                <hr style="border-color: var(--border); margin: 20px 0;">
+                <h3 style="color: var(--gold); margin-bottom: 15px; font-family: 'Georgia', serif;">Кнопки ролей</h3>
                 <div id="roles-container"></div>
                 <button class="btn btn-success btn-small" onclick="addRoleRow()" style="margin-bottom: 20px;"><div class="icon icon-plus"></div> Добавить кнопку</button>
                 
-                <div style="border-top: 1px solid var(--border-color); padding-top: 20px;">
+                <div style="border-top: 1px solid var(--border); padding-top: 20px;">
                     <button class="btn" onclick="saveReactionRoles()" id="btn-save-rr"><div class="icon icon-paper-plane"></div> Отправить в Discord</button>
                 </div>
             </div>
@@ -73,9 +74,11 @@
             row.className = 'role-row';
             let options = serverRoles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
             
+            // ДОБАВЛЕНО ПОЛЕ ДЛЯ ЭМОДЗИ
             row.innerHTML = `
-                <select class="rr-role" style="flex: 1;">${options}</select>
-                <input type="text" class="rr-label" placeholder="Текст кнопки" style="flex: 1;">
+                <select class="rr-role" style="flex: 2;">${options}</select>
+                <input type="text" class="rr-emoji" placeholder="Эмодзи (не обяз.)" style="flex: 1;">
+                <input type="text" class="rr-label" placeholder="Текст кнопки" style="flex: 2;">
                 <button class="btn btn-danger btn-small" onclick="this.parentElement.remove()"><div class="icon icon-x"></div></button>
             `;
             container.appendChild(row);
@@ -86,6 +89,7 @@
             document.querySelectorAll('#roles-container .role-row').forEach(row => {
                 roles.push({
                     roleId: row.querySelector('.rr-role').value,
+                    emoji: row.querySelector('.rr-emoji').value, // Передаем эмодзи
                     label: row.querySelector('.rr-label').value || 'Получить роль'
                 });
             });
