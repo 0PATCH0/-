@@ -49,8 +49,8 @@ body::before {
     position: fixed;
     top: 15px;
     left: 20px;
-    width: 45px;
-    height: 45px;
+    width: 50px;
+    height: 50px;
     background: var(--bg-card);
     border: 2px solid var(--gold);
     border-radius: 50%;
@@ -62,13 +62,16 @@ body::before {
     box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
     transition: 0.3s;
     text-decoration: none;
+    line-height: 1; /* Чтобы текст не смещался */
 }
 .top-banner::after {
     content: "主";
     font-family: 'Cinzel', serif;
     color: var(--gold);
-    font-size: 22px;
+    font-size: 26px;
     font-weight: bold;
+    display: block;
+    margin-top: -2px; /* Микро-корректировка для идеального центра */
 }
 .top-banner:hover {
     box-shadow: 0 0 25px var(--jade-glow);
@@ -76,7 +79,6 @@ body::before {
     transform: scale(1.1);
 }
 .top-banner:hover::after { color: var(--jade); }
-
 /* --- БУРГЕР МЕНЮ --- */
 .mobile-menu-btn {
     display: none;
