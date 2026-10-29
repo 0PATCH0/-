@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Гильдия - Профили</title>
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/style.css?v=3">
     <script src="/js/ui.js"></script>
 </head>
 <body>
@@ -14,21 +14,21 @@
     <div class="main-container">
         <div class="sidebar">
             <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><i class="ph ph-arrow-left"></i> К списку серверов</a>
+            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><div class="icon icon-arrow-left"></div> К списку серверов</a>
             <hr style="border-color: var(--border-color); margin-bottom: 20px;">
-            <a href="#" id="nav-home"><i class="ph ph-house"></i> Обзор</a>
-            <a href="#" id="nav-roster"><i class="ph ph-shield"></i> Состав гильдии</a>
-            <a href="#" class="active"><i class="ph ph-users"></i> Гильдия</a>
-            <a href="#" id="nav-guides"><i class="ph ph-book-open"></i> Гайды</a>
-            <a href="#" id="nav-rr"><i class="ph ph-masks"></i> Роли по кнопкам</a>
-            <a href="#" id="nav-rem"><i class="ph ph-alarm"></i> Напоминания</a>
-            <a href="#" id="nav-mod"><i class="ph ph-gear"></i> Модерация</a>
-            <a href="#" id="nav-logs"><i class="ph ph-scroll"></i> Логи действий</a>
-            <a href="#" id="nav-emb"><i class="ph ph-envelope"></i> Эмбеды</a>
+            <a href="#" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
+            <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
+            <a href="#" class="active"><div class="icon icon-users"></div> Гильдия</a>
+            <a href="#" id="nav-guides"><div class="icon icon-book"></div> Гайды</a>
+            <a href="#" id="nav-rr"><div class="icon icon-masks"></div> Роли по кнопкам</a>
+            <a href="#" id="nav-rem"><div class="icon icon-alarm"></div> Напоминания</a>
+            <a href="#" id="nav-mod"><div class="icon icon-gear"></div> Модерация</a>
+            <a href="#" id="nav-logs"><div class="icon icon-scroll"></div> Логи действий</a>
+            <a href="#" id="nav-emb"><div class="icon icon-envelope"></div> Эмбеды</a>
         </div>
 
         <div class="content">
-            <div class="header"><h1><i class="ph ph-users"></i> Профили гильдии</h1></div>
+            <div class="header"><h1><div class="icon icon-users"></div> Профили гильдии</h1></div>
             <div class="grid" id="profiles-grid">
                 <p style="color: var(--text-muted);">Загрузка профилей...</p>
             </div>
@@ -37,7 +37,9 @@
 
     <script>
         const guildId = window.location.pathname.split('/')[2];
-        document.getElementById('top-banner-link').href = `/manage/${guildId}`;
+        const banner = document.getElementById('top-banner-link');
+        if (banner) banner.href = `/manage/${guildId}`;
+
         const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-guides': '/guides', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-logs': '/logs', 'nav-emb': '/custom'};
         for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
 
@@ -56,9 +58,9 @@
                     if (p.characters && p.characters.length > 0) {
                         charactersHtml = p.characters.map(char => `
                             <div style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--accent-jade);">
-                                <h4 style="color: var(--accent-gold); margin-bottom: 5px; font-family: 'Cinzel', serif; font-size: 16px;">${char.gameNickname || 'Без ника'}</h4>
-                                <p style="font-size: 13px; margin: 0; color: var(--text-main);"><i class="ph ph-masks"></i> ${char.classRole || 'Не указан'} | <i class="ph ph-sword"></i> ${char.weapon || 'Не указано'}</p>
-                                <p style="font-size: 13px; margin: 0; color: var(--text-muted);"><i class="ph ph-shield"></i> ${char.guildName || 'Не указана'}</p>
+                                <h4 style="color: var(--accent-gold); margin-bottom: 5px; font-family: 'Georgia', serif; font-size: 16px;">${char.gameNickname || 'Без ника'}</h4>
+                                <p style="font-size: 13px; margin: 0; color: var(--text-main);">${char.classRole || 'Не указан'} | ${char.weapon || 'Не указано'}</p>
+                                <p style="font-size: 13px; margin: 0; color: var(--text-muted);">${char.guildName || 'Не указана'}</p>
                                 ${char.bio ? `<p style="font-size: 12px; font-style: italic; color: var(--text-muted); margin-top: 5px;">"${char.bio}"</p>` : ''}
                             </div>
                         `).join('');
@@ -71,14 +73,14 @@
                             <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
                                 <img src="${p.avatar}" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--accent-jade);">
                                 <div>
-                                    <h3 style="margin: 0; color: var(--text-main); font-family: 'Cinzel', serif; font-size: 20px;">@${p.discordName}</h3>
-                                    ${p.isGlobal ? '<span style="font-size: 12px; color: var(--accent-jade);"><i class="ph ph-globe"></i> Глобальный</span>' : ''}
+                                    <h3 style="margin: 0; color: var(--text-main); font-family: 'Georgia', serif; font-size: 20px;">@${p.discordName}</h3>
+                                    ${p.isGlobal ? '<span style="font-size: 12px; color: var(--accent-jade);"><div class="icon icon-globe" style="display:inline-block; width:12px; height:12px;"></div> Глобальный</span>' : ''}
                                 </div>
                             </div>
                             <div>${charactersHtml}</div>
                             <div style="display: flex; gap: 10px; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
-                                <a href="/profile?guild=${guildId}&user=${p.userId}" class="btn btn-small" style="flex: 1; background: var(--bg-sidebar); border: 1px solid var(--accent-jade); color: var(--accent-jade);"><i class="ph ph-pencil"></i> Ред.</a>
-                                <button class="btn btn-danger btn-small" style="flex: 1;" onclick="deleteProfile('${p.userId}', '${p.discordName}')"><i class="ph ph-trash"></i> Удалить</button>
+                                <a href="/profile?guild=${guildId}&user=${p.userId}" class="btn btn-small" style="flex: 1;"><div class="icon icon-pencil"></div> Ред.</a>
+                                <button class="btn btn-danger btn-small" style="flex: 1;" onclick="deleteProfile('${p.userId}', '${p.discordName}')"><div class="icon icon-trash"></div> Удалить</button>
                             </div>
                         </div>
                     `;
@@ -88,16 +90,15 @@
         loadProfiles();
 
         function deleteProfile(userId, username) {
-            showConfirm('Удаление профиля', `Вы уверены, что хотите удалить профиль игрока @${username}?`, () => {
-                fetch(`/api/guild/${guildId}/profiles/${userId}`, { method: 'DELETE' })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            showToast('Профиль удален!', 'success');
-                            loadProfiles();
-                        } else showToast('Ошибка: ' + data.error, 'error');
-                    });
-            });
+            if (!confirm(`Удалить профиль игрока @${username}?`)) return;
+            fetch(`/api/guild/${guildId}/profiles/${userId}`, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Профиль удален!');
+                        loadProfiles();
+                    } else alert('Ошибка: ' + data.error);
+                });
         }
     </script>
 </body>
