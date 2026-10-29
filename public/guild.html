@@ -4,74 +4,72 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Обзор сервера</title>
-    <!-- ПРАВИЛЬНЫЙ ПУТЬ К CSS -->
-    <link rel="stylesheet" href="/css/style.css?v=2">
+    <link rel="stylesheet" href="/css/style.css?v=3">
 </head>
 <body>
 
-    <!-- БАННЕР С АНИМАЦИЕЙ -->
     <a href="#" id="top-banner-link" class="top-banner"><h1>Главная</h1></a>
 
     <div class="main-container">
         <div class="sidebar">
             <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><i class="ph ph-arrow-left"></i> К списку серверов</a>
+            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><div class="icon icon-arrow-left"></div> К списку серверов</a>
             <hr style="border-color: var(--border-color); margin-bottom: 20px;">
             
-            <a href="#" class="active" id="nav-home"><i class="ph ph-house"></i> Обзор</a>
-            <a href="#" id="nav-roster"><i class="ph ph-shield"></i> Состав гильдии</a>
-            <a href="#" id="nav-guild"><i class="ph ph-users"></i> Гильдия</a>
-            <a href="#" id="nav-guides"><i class="ph ph-book-open"></i> Гайды</a>
-            <a href="#" id="nav-rr"><i class="ph ph-masks"></i> Роли по кнопкам</a>
-            <a href="#" id="nav-rem"><i class="ph ph-alarm"></i> Напоминания</a>
-            <a href="#" id="nav-mod"><i class="ph ph-gear"></i> Модерация</a>
-            <a href="#" id="nav-logs"><i class="ph ph-scroll"></i> Логи действий</a>
-            <a href="#" id="nav-emb"><i class="ph ph-envelope"></i> Эмбеды</a>
+            <a href="#" class="active" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
+            <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
+            <a href="#" id="nav-guild"><div class="icon icon-users"></div> Гильдия</a>
+            <a href="#" id="nav-guides"><div class="icon icon-book"></div> Гайды</a>
+            <a href="#" id="nav-rr"><div class="icon icon-masks"></div> Роли по кнопкам</a>
+            <a href="#" id="nav-rem"><div class="icon icon-alarm"></div> Напоминания</a>
+            <a href="#" id="nav-mod"><div class="icon icon-gear"></div> Модерация</a>
+            <a href="#" id="nav-logs"><div class="icon icon-scroll"></div> Логи действий</a>
+            <a href="#" id="nav-emb"><div class="icon icon-envelope"></div> Эмбеды</a>
         </div>
 
         <div class="content">
             <div class="header"><h1>Обзор сервера</h1></div>
             
-            <h2 style="font-family: 'Cinzel', serif; color: var(--accent-jade); margin: 30px 0 15px;">Гильдия и Игроки</h2>
+            <h2 style="font-family: 'Georgia', serif; color: var(--accent-jade); margin: 30px 0 15px;">Гильдия и Игроки</h2>
             <div class="grid">
                 <a href="#" id="card-roster" class="card">
-                    <h3><i class="ph ph-shield"></i> Состав гильдии</h3>
+                    <h3><div class="icon icon-shield"></div> Состав гильдии</h3>
                     <p>Просмотр списка участников и настройка колонок.</p>
                 </a>
                 <a href="#" id="card-guild" class="card">
-                    <h3><i class="ph ph-users"></i> Профили игроков</h3>
+                    <h3><div class="icon icon-users"></div> Профили игроков</h3>
                     <p>Список всех участников с их классами и оружием.</p>
                 </a>
                 <a href="#" id="card-guides" class="card">
-                    <h3><i class="ph ph-book-open"></i> Гайды</h3>
+                    <h3><div class="icon icon-book"></div> Гайды</h3>
                     <p>Создание и редактирование руководств с вложениями.</p>
                 </a>
             </div>
 
-            <h2 style="font-family: 'Cinzel', serif; color: var(--accent-jade); margin: 40px 0 15px;">Управление и Модерация</h2>
+            <h2 style="font-family: 'Georgia', serif; color: var(--accent-jade); margin: 40px 0 15px;">Управление и Модерация</h2>
             <div class="grid">
                 <a href="#" id="card-mod" class="card">
-                    <h3><i class="ph ph-gear"></i> Модерация</h3>
+                    <h3><div class="icon icon-gear"></div> Модерация</h3>
                     <p>Выдача прав на использование мутов и других команд.</p>
                 </a>
                 <a href="#" id="card-logs" class="card">
-                    <h3><i class="ph ph-scroll"></i> Логи действий</h3>
+                    <h3><div class="icon icon-scroll"></div> Логи действий</h3>
                     <p>История мутов, закрытий каналов и других действий.</p>
                 </a>
             </div>
 
-            <h2 style="font-family: 'Cinzel', serif; color: var(--accent-jade); margin: 40px 0 15px;">Контент и Утилиты</h2>
+            <h2 style="font-family: 'Georgia', serif; color: var(--accent-jade); margin: 40px 0 15px;">Контент и Утилиты</h2>
             <div class="grid">
                 <a href="#" id="card-rr" class="card">
-                    <h3><i class="ph ph-masks"></i> Роли по кнопкам</h3>
+                    <h3><div class="icon icon-masks"></div> Роли по кнопкам</h3>
                     <p>Выдача ролей по клику на кнопку в Embed-сообщении.</p>
                 </a>
                 <a href="#" id="card-rem" class="card">
-                    <h3><i class="ph ph-alarm"></i> Напоминания</h3>
+                    <h3><div class="icon icon-alarm"></div> Напоминания</h3>
                     <p>Управление активными напоминаниями и событиями.</p>
                 </a>
                 <a href="#" id="card-emb" class="card">
-                    <h3><i class="ph ph-envelope"></i> Эмбед-сообщения</h3>
+                    <h3><div class="icon icon-envelope"></div> Эмбед-сообщения</h3>
                     <p>Создание и редактирование красивых сообщений.</p>
                 </a>
             </div>
@@ -80,8 +78,6 @@
 
     <script>
         const guildId = window.location.pathname.split('/').pop();
-        
-        // ВОТ ЭТА СТРОЧКА ДЕЛАЕТ БАННЕР КЛИКАБЕЛЬНЫМ
         const banner = document.getElementById('top-banner-link');
         if (banner) banner.href = `/manage/${guildId}`;
 
