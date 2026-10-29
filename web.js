@@ -313,9 +313,24 @@ app.post('/api/guild/:id/reactionroles', isModerator, async (req, res) => {
 
         roles.forEach((r, index) => {
             if (index > 0 && index % 5 === 0) { actionRows.push(currentRow); currentRow = new ActionRowBuilder(); }
-            const button = new ButtonBuilder().setCustomId(`rr_${r.roleId}`).setLabel(r.label).setStyle(ButtonStyle.Secondary);
+            
+            const button = new ButtonBuilder()
+                .setCustomId(`rr_${r.roleId}`)
+                .setLabel(r.label)
+                .setStyle(ButtonStyle.Secondary);
+            
+            // Если пользователь ввел эмодзи, добавляем его
+            if (r.emoji) {
+                try {
+                    button.setEmoji(r.emoji);
+                } catch (e) {
+                    console.log('Неверный формат эмодзи:', r.emoji);
+                }
+            }
+
             currentRow.addComponents(button);
         });
+        
         if (currentRow.components.length > 0) actionRows.push(currentRow);
 
         const msg = await channel.send({ embeds: [embed], components: actionRows });
