@@ -4,45 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Эмбед-сообщения</title>
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/style.css?v=3">
 </head>
 <body>
 
-    <a href="/dashboard" class="top-banner"><h1>Главная</h1></a><a href="#" id="top-banner-link" class="top-banner"><h1>Главная</h1></a>
+    <a href="#" id="top-banner-link" class="top-banner"><h1>Главная</h1></a>
+
     <div class="main-container">
         <div class="sidebar">
             <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><i class="ph ph-arrow-left"></i> К списку серверов</a>
+            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><div class="icon icon-arrow-left"></div> К списку серверов</a>
             <hr style="border-color: var(--border-color); margin-bottom: 20px;">
-            <a href="#" id="nav-home"><i class="ph ph-house"></i> Обзор</a>
-            <a href="#" id="nav-roster"><i class="ph ph-shield"></i> Состав гильдии</a>
-            <a href="#" id="nav-guild"><i class="ph ph-users"></i> Гильдия</a>
-            <a href="#" id="nav-guides"><i class="ph ph-book-open"></i> Гайды</a>
-            <a href="#" id="nav-rr"><i class="ph ph-masks"></i> Роли по кнопкам</a>
-            <a href="#" id="nav-rem"><i class="ph ph-alarm"></i> Напоминания</a>
-            <a href="#" id="nav-mod"><i class="ph ph-gear"></i> Модерация</a>
-            <a href="#" id="nav-logs"><i class="ph ph-scroll"></i> Логи действий</a>
-            <a href="#" class="active"><i class="ph ph-envelope"></i> Эмбеды</a>
+            <a href="#" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
+            <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
+            <a href="#" id="nav-guild"><div class="icon icon-users"></div> Гильдия</a>
+            <a href="#" id="nav-guides"><div class="icon icon-book"></div> Гайды</a>
+            <a href="#" id="nav-rr"><div class="icon icon-masks"></div> Роли по кнопкам</a>
+            <a href="#" id="nav-rem"><div class="icon icon-alarm"></div> Напоминания</a>
+            <a href="#" id="nav-mod"><div class="icon icon-gear"></div> Модерация</a>
+            <a href="#" id="nav-logs"><div class="icon icon-scroll"></div> Логи действий</a>
+            <a href="#" class="active"><div class="icon icon-envelope"></div> Эмбеды</a>
         </div>
 
         <div class="content">
-            <div class="header"><h1><i class="ph ph-envelope"></i> Управление сообщениями</h1></div>
+            <div class="header"><h1><div class="icon icon-envelope"></div> Управление сообщениями</h1></div>
             <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); align-items: start;">
                 <div class="form-card">
-                    <h3 id="form-title" style="color: var(--accent-gold); margin-bottom: 20px; font-family: 'Cinzel', serif;">Создать сообщение</h3>
+                    <h3 id="form-title" style="color: var(--accent-gold); margin-bottom: 20px; font-family: 'Georgia', serif;">Создать сообщение</h3>
                     <input type="hidden" id="edit-message-id" value="">
                     <div class="form-group"><label>ID Канала</label><input type="text" id="channel-id" placeholder="123456789..."></div>
                     <div class="form-group"><label>Заголовок</label><input type="text" id="cmd-title" placeholder="Заголовок"></div>
                     <div class="form-group"><label>Текст</label><textarea id="cmd-desc" placeholder="Описание..." style="height: 100px;"></textarea></div>
                     <div class="form-group"><label>Цвет полоски</label><input type="color" id="cmd-color" value="#2ecc71" style="height: 45px; padding: 5px;"></div>
                     <div style="display: flex; gap: 10px; margin-top: 20px;">
-                        <button class="btn" onclick="saveMessage()" id="btn-save" style="flex: 1;"><i class="ph ph-paper-plane-tilt"></i> Отправить</button>
-                        <button class="btn btn-danger" onclick="cancelEdit()" id="btn-cancel" style="display: none;"><i class="ph ph-x"></i></button>
+                        <button class="btn" onclick="saveMessage()" id="btn-save" style="flex: 1;"><div class="icon icon-paper-plane"></div> Отправить</button>
+                        <button class="btn btn-danger" onclick="cancelEdit()" id="btn-cancel" style="display: none;"><div class="icon icon-x"></div></button>
                     </div>
                 </div>
 
                 <div class="form-card">
-                    <h3 style="color: var(--accent-gold); margin-bottom: 20px; font-family: 'Cinzel', serif;">Отправленные</h3>
+                    <h3 style="color: var(--accent-gold); margin-bottom: 20px; font-family: 'Georgia', serif;">Отправленные</h3>
                     <div id="messages-list"><p style="color: var(--text-muted);">Загрузка...</p></div>
                 </div>
             </div>
@@ -51,7 +52,9 @@
 
     <script>
         const guildId = window.location.pathname.split('/')[2];
-        document.getElementById('top-banner-link').href = `/manage/${guildId}`;
+        const banner = document.getElementById('top-banner-link');
+        if (banner) banner.href = `/manage/${guildId}`;
+
         const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-guild': '/profiles', 'nav-guides': '/guides', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-logs': '/logs'};
         for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
         
@@ -69,8 +72,8 @@
                             <h4 style="color: var(--accent-gold); margin-bottom: 5px;">${msg.title || 'Без заголовка'}</h4>
                             <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">${msg.description ? msg.description.substring(0, 50) + '...' : ''}</p>
                             <div style="display: flex; gap: 10px;">
-                                <button class="btn btn-small" style="background: var(--bg-sidebar); border: 1px solid var(--accent-jade); color: var(--accent-jade);" onclick='editMessage(${JSON.stringify(msg)})'><i class="ph ph-pencil"></i> Ред.</button>
-                                <button class="btn btn-danger btn-small" onclick="deleteMessage('${msg.messageId}')"><i class="ph ph-trash"></i> Удалить</button>
+                                <button class="btn btn-small" onclick='editMessage(${JSON.stringify(msg)})'><div class="icon icon-pencil"></div> Ред.</button>
+                                <button class="btn btn-danger btn-small" onclick="deleteMessage('${msg.messageId}')"><div class="icon icon-trash"></div> Удалить</button>
                             </div>
                         </div>
                     `;
@@ -111,7 +114,7 @@
             document.getElementById('cmd-title').value = msg.title || '';
             document.getElementById('cmd-desc').value = msg.description || '';
             document.getElementById('cmd-color').value = msg.color || '#2ecc71';
-            document.getElementById('btn-save').innerHTML = '<i class="ph ph-floppy-disk"></i> Сохранить';
+            document.getElementById('btn-save').innerHTML = '<div class="icon icon-floppy-disk"></div> Сохранить';
             document.getElementById('btn-cancel').style.display = 'block';
         }
 
@@ -122,7 +125,7 @@
             document.getElementById('channel-id').value = '';
             document.getElementById('cmd-title').value = '';
             document.getElementById('cmd-desc').value = '';
-            document.getElementById('btn-save').innerHTML = '<i class="ph ph-paper-plane-tilt"></i> Отправить';
+            document.getElementById('btn-save').innerHTML = '<div class="icon icon-paper-plane"></div> Отправить';
             document.getElementById('btn-cancel').style.display = 'none';
         }
 
