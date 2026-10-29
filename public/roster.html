@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Состав гильдии</title>
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/style.css?v=3">
 </head>
 <body>
 
@@ -13,29 +13,29 @@
     <div class="main-container">
         <div class="sidebar">
             <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><i class="ph ph-arrow-left"></i> К списку серверов</a>
+            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><div class="icon icon-arrow-left"></div> К списку серверов</a>
             <hr style="border-color: var(--border-color); margin-bottom: 20px;">
-            <a href="#" id="nav-home"><i class="ph ph-house"></i> Обзор</a>
-            <a href="#" class="active"><i class="ph ph-shield"></i> Состав гильдии</a>
-            <a href="#" id="nav-guild"><i class="ph ph-users"></i> Гильдия</a>
-            <a href="#" id="nav-guides"><i class="ph ph-book-open"></i> Гайды</a>
-            <a href="#" id="nav-rr"><i class="ph ph-masks"></i> Роли по кнопкам</a>
-            <a href="#" id="nav-rem"><i class="ph ph-alarm"></i> Напоминания</a>
-            <a href="#" id="nav-mod"><i class="ph ph-gear"></i> Модерация</a>
-            <a href="#" id="nav-logs"><i class="ph ph-scroll"></i> Логи действий</a>
-            <a href="#" id="nav-emb"><i class="ph ph-envelope"></i> Эмбеды</a>
+            <a href="#" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
+            <a href="#" class="active"><div class="icon icon-shield"></div> Состав гильдии</a>
+            <a href="#" id="nav-guild"><div class="icon icon-users"></div> Гильдия</a>
+            <a href="#" id="nav-guides"><div class="icon icon-book"></div> Гайды</a>
+            <a href="#" id="nav-rr"><div class="icon icon-masks"></div> Роли по кнопкам</a>
+            <a href="#" id="nav-rem"><div class="icon icon-alarm"></div> Напоминания</a>
+            <a href="#" id="nav-mod"><div class="icon icon-gear"></div> Модерация</a>
+            <a href="#" id="nav-logs"><div class="icon icon-scroll"></div> Логи действий</a>
+            <a href="#" id="nav-emb"><div class="icon icon-envelope"></div> Эмбеды</a>
         </div>
 
         <div class="content">
             <div class="header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <div>
-                    <h1><i class="ph ph-shield"></i> Состав гильдии</h1>
+                    <h1><div class="icon icon-shield"></div> Состав гильдии</h1>
                     <p id="last-updated" style="color: var(--text-muted); margin-top: 5px;">Загрузка...</p>
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <a href="#" id="btn-config" class="btn btn-small" style="background: var(--bg-card); border: 1px solid var(--accent-jade); color: var(--accent-jade);"><i class="ph ph-gear"></i> Настроить</a>
-                    <button class="btn btn-danger btn-small" onclick="deleteMessage()"><i class="ph ph-trash"></i> Удалить</button>
-                    <button class="btn btn-small" onclick="forceUpdate()" id="btn-update"><i class="ph ph-arrows-clockwise"></i> Обновить</button>
+                    <a href="#" id="btn-config" class="btn btn-small"><div class="icon icon-gear"></div> Настроить</a>
+                    <button class="btn btn-danger btn-small" onclick="deleteMessage()"><div class="icon icon-trash"></div> Удалить</button>
+                    <button class="btn btn-small" onclick="forceUpdate()" id="btn-update"><div class="icon icon-arrow-right"></div> Обновить</button>
                 </div>
             </div>
             <div class="grid" id="roster-grid"></div>
@@ -44,7 +44,9 @@
 
     <script>
         const guildId = window.location.pathname.split('/')[2];
-        document.getElementById('top-banner-link').href = `/manage/${guildId}`;
+        const banner = document.getElementById('top-banner-link');
+        if (banner) banner.href = `/manage/${guildId}`;
+
         const navs = {'nav-home': '', 'nav-guild': '/profiles', 'nav-guides': '/guides', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-logs': '/logs', 'nav-emb': '/custom'};
         for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
         document.getElementById('btn-config').href = `/manage/${guildId}/roster-config`;
@@ -77,7 +79,7 @@
                 configData.columns.forEach(col => {
                     const members = rosterData.data[col.roleId] || [];
                     members.forEach(m => totalUnique.add(m.id));
-                    let membersHtml = members.length > 0 ? members.map(m => `<div style="margin-bottom: 6px; font-size: 14px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 4px;"><i class="ph ph-user" style="color: var(--accent-jade);"></i> ${m.name}</div>`).join('') : '<div style="color: var(--text-muted); font-style: italic;">Никого нет</div>';
+                    let membersHtml = members.length > 0 ? members.map(m => `<div style="margin-bottom: 6px; font-size: 14px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 4px;"><div class="icon icon-user" style="display:inline-block; vertical-align:middle; margin-right:5px;"></div> ${m.name}</div>`).join('') : '<div style="color: var(--text-muted); font-style: italic;">Никого нет</div>';
                     
                     grid.innerHTML += `
                         <div class="card" style="border-top: 3px solid ${col.color || 'var(--accent-jade)'};">
@@ -95,10 +97,10 @@
 
         function forceUpdate() {
             const btn = document.getElementById('btn-update');
-            btn.innerText = '...'; btn.disabled = true;
+            btn.innerHTML = '...'; btn.disabled = true;
             fetch(`/api/guild/${guildId}/roster/update`, { method: 'POST' })
                 .then(res => res.json()).then(data => { if (data.error) alert(data.error); loadRoster(); })
-                .finally(() => { btn.innerHTML = '<i class="ph ph-arrows-clockwise"></i> Обновить'; btn.disabled = false; });
+                .finally(() => { btn.innerHTML = '<div class="icon icon-arrow-right"></div> Обновить'; btn.disabled = false; });
         }
 
         function deleteMessage() {
