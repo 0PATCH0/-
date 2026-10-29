@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мой игровой профиль</title>
-    <link rel="stylesheet" href="/css/style.css?v=6">
+    <link rel="stylesheet" href="/css/style.css?v=10">
     <script src="/js/ui.js"></script>
     <style>
         .character-block { background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 20px; position: relative; }
@@ -69,8 +69,21 @@
         const banner = document.getElementById('top-banner-link');
         if (banner) banner.href = `/manage/${guildId}`;
 
-        const ARTS_LIST = ['Nameless Sword', 'Strategic Sword', 'Nameless Spear', 'Heavenquaker Spear', 'Stormbreaker Spear', 'Panacea Fan', 'Inkwell Fan', 'Soulshade Umbrella', 'Vernal Umbrella', 'Infernal Twinblades', 'Thundercry Blade', 'Mortal Rope Dart'];
-        const WEAPONS_LIST = ['Sword', 'Spear', 'Fan', 'Umbrella', 'Twinblades', 'Blade', 'Rope Dart'];
+        // АРТЫ С РУССКИМ ПЕРЕВОДОМ
+        const ARTS_LIST = [
+            'Nameless Sword (Безымянный меч)', 
+            'Strategic Sword (Стратегический меч)', 
+            'Nameless Spear (Безымянное копье)', 
+            'Heavenquaker Spear (Копье Небесного Грома)', 
+            'Stormbreaker Spear (Копье Разрушителя Шторма)', 
+            'Panacea Fan (Веер Панацея)', 
+            'Inkwell Fan (Веер Чернильница)', 
+            'Soulshade Umbrella (Зонт Тени Души)', 
+            'Vernal Umbrella (Весенний зонт)', 
+            'Infernal Twinblades (Адские парные клинки)', 
+            'Thundercry Blade (Клинок Громового Крика)', 
+            'Mortal Rope Dart (Дротик на веревке)'
+        ];
         const ROLES_LIST = ['Танк', 'ДД (Урон)', 'Хил (Поддержка)'];
 
         let charCount = 0;
@@ -86,7 +99,6 @@
             block.className = 'character-block';
             block.id = `char-block-${charCount}`;
             
-            // Генерация чекбоксов для ролей
             const rolesHtml = ROLES_LIST.map(r => `
                 <label class="checkbox-item">
                     <input type="checkbox" class="role-check" value="${r}" ${data.roles && data.roles.includes(r) ? 'checked' : ''}>
@@ -100,14 +112,6 @@
                     <input type="checkbox" class="art-check" value="${art}" ${data.martialArts && data.martialArts.includes(art) ? 'checked' : ''}>
                     <span class="custom-checkbox"></span>
                     <span style="font-size: 13px;">${art}</span>
-                </label>
-            `).join('');
-
-            const weaponsHtml = WEAPONS_LIST.map(w => `
-                <label class="checkbox-item">
-                    <input type="checkbox" class="weapon-check" value="${w}" ${data.weapons && data.weapons.includes(w) ? 'checked' : ''}>
-                    <span class="custom-checkbox"></span>
-                    <span style="font-size: 13px;">${w}</span>
                 </label>
             `).join('');
 
@@ -128,11 +132,6 @@
                 <div class="form-group">
                     <label>Боевые искусства (Можно выбрать несколько)</label>
                     <div class="checkbox-grid">${artsHtml}</div>
-                </div>
-
-                <div class="form-group">
-                    <label>Оружие (Можно выбрать несколько)</label>
-                    <div class="checkbox-grid">${weaponsHtml}</div>
                 </div>
                 
                 <div class="form-group"><label>О себе</label><textarea class="c-bio" style="height: 60px;">${data.bio || ''}</textarea></div>
@@ -180,14 +179,12 @@
             document.querySelectorAll('.character-block').forEach(block => {
                 const roles = Array.from(block.querySelectorAll('.role-check:checked')).map(cb => cb.value);
                 const arts = Array.from(block.querySelectorAll('.art-check:checked')).map(cb => cb.value);
-                const weapons = Array.from(block.querySelectorAll('.weapon-check:checked')).map(cb => cb.value);
 
                 characters.push({
                     gameNickname: block.querySelector('.c-nick').value,
                     guildName: block.querySelector('.c-guild').value,
                     roles: roles,
                     martialArts: arts,
-                    weapons: weapons,
                     bio: block.querySelector('.c-bio').value
                 });
             });
