@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мои серверы</title>
-    <link rel="stylesheet" href="/css/style.css?v=5">
+    <link rel="stylesheet" href="/css/style.css?v=6">
 </head>
-<body style="padding-top: 20px;"> <!-- Убираем отступ, так как тут нет кнопки Главная -->
+<body style="padding-top: 20px;">
 
     <div class="main-container">
         <div class="sidebar">
@@ -20,13 +20,7 @@
                 <h1 id="welcome-text">Привет, загрузка...</h1>
             </div>
 
-            <h2 style="font-family: 'Cinzel', serif; color: var(--jade); margin-bottom: 15px;">Управление серверами (Где вы Админ)</h2>
-            <div class="grid" id="admin-server-list" style="margin-bottom: 40px;">
-                <p style="color: var(--text-muted);">Поиск серверов...</p>
-            </div>
-
-            <h2 style="font-family: 'Cinzel', serif; color: var(--gold); margin-bottom: 15px;">Ваши игровые профили</h2>
-            <div class="grid" id="player-server-list">
+            <div class="grid" id="server-list">
                 <p style="color: var(--text-muted);">Поиск серверов...</p>
             </div>
         </div>
@@ -36,52 +30,48 @@
         fetch('/api/user').then(res => res.json()).then(data => {
             document.getElementById('welcome-text').innerText = `Привет, ${data.user.username}!`;
             
-            const adminGrid = document.getElementById('admin-server-list');
-            const playerGrid = document.getElementById('player-server-list');
+            const grid = document.getElementById('server-list');
             
             if (data.guilds.length === 0) {
-                adminGrid.innerHTML = '<p style="color: var(--text-muted);">Бот не найден ни на одном из ваших серверов.</p>';
-                playerGrid.style.display = 'none';
+                grid.innerHTML = '<p style="color: var(--text-muted);">Бот не найден ни на одном из ваших серверов.</p>';
                 return;
             }
 
-            adminGrid.innerHTML = '';
-            playerGrid.innerHTML = '';
+            grid.innerHTML = '';
             
-            let hasAdmin = false;
-            let hasPlayer = false;
-
             data.guilds.forEach(guild => {
                 const isAdmin = (BigInt(guild.permissions) & BigInt(0x8)) === BigInt(0x8);
-                const icon = guild.icon ? `<img src="https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--jade); margin-right: 20px;">` : `<div style="width: 60px; height: 60px; border-radius: 50%; background: var(--jade); color: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 28px; margin-right: 20px;">${guild.name.charAt(0)}</div>`;
+                const icon = guild.icon 
+                    ? `<img src="https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--jade);">` 
+                    : `<div style="width: 50px; height: 50px; border-radius: 50%; background: var(--jade); color: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px;">${guild.name.charAt(0)}</div>`;
                 
+                // Формируем кнопки: если админ - две кнопки, если нет - только профиль
+                let buttonsHtml = '';
                 if (isAdmin) {
-                    hasAdmin = true;
-                    adminGrid.innerHTML += `
-                        <a href="/manage/${guild.id}" class="card" style="flex-direction: row; align-items: center; padding: 20px; display: flex; border-color: var(--jade);">
-                            ${icon}
-                            <div>
-                                <h3 style="margin-bottom: 5px; font-size: 18px; color: var(--jade);">${guild.name}</h3>
-                                <p style="font-size: 13px; color: var(--text-muted);">Нажмите для управления</p>
-                            </div>
-                        </a>
+                    buttonsHtml = `
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <a href="/manage/${guild.id}" class="btn btn-small" style="flex: 1;">Управление</a>
+                            <a href="/profile?guild=${guild.id}" class="btn btn-small" style="flex: 1; background: rgba(212, 175, 55, 0.15); border-color: var(--gold); color: var(--gold);">Мой профиль</a>
+                        </div>
                     `;
                 } else {
-                    hasPlayer = true;
-                    playerGrid.innerHTML += `
-                        <a href="/profile?guild=${guild.id}" class="card" style="flex-direction: row; align-items: center; padding: 20px; display: flex; border-color: var(--gold);">
-                            ${icon}
-                            <div>
-                                <h3 style="margin-bottom: 5px; font-size: 18px; color: var(--gold);">${guild.name}</h3>
-                                <p style="font-size: 13px; color: var(--text-muted);">Заполнить профиль игрока</p>
-                            </div>
-                        </a>
+                    buttonsHtml = `
+                        <div style="margin-top: 15px;">
+                            <a href="/profile?guild=${guild.id}" class="btn btn-small" style="width: 100%;">Заполнить профиль</a>
+                        </div>
                     `;
                 }
-            });
 
-            if (!hasAdmin) adminGrid.innerHTML = '<p style="color: var(--text-muted);">Вы не являетесь администратором ни на одном сервере.</p>';
-            if (!hasPlayer) playerGrid.innerHTML = '<p style="color: var(--text-muted);">Вы являетесь админом на всех серверах (профиль можно заполнить в меню управления).</p>';
+                grid.innerHTML += `
+                    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                        <div style="display: flex; gap: 15px; align-items: center;">
+                            ${icon}
+                            <h3 style="margin: 0; font-size: 18px;">${guild.name}</h3>
+                        </div>
+                        ${buttonsHtml}
+                    </div>
+                `;
+            });
         });
     </script>
 </body>
