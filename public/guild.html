@@ -4,17 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Обзор сервера</title>
-    <link rel="stylesheet" href="/css/style.css?v=3">
+    <link rel="stylesheet" href="/css/style.css?v=4">
 </head>
 <body>
 
-    <a href="#" id="top-banner-link" class="top-banner"><h1>Главная</h1></a>
+    <!-- Стилизованная печать "Главная" -->
+    <a href="#" id="top-banner-link" class="top-banner"></a>
+    
+    <!-- Бургер меню для телефона -->
+    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
 
     <div class="main-container">
         <div class="sidebar">
             <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><div class="icon icon-arrow-left"></div> К списку серверов</a>
-            <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+            <a href="/dashboard"><div class="icon icon-home"></div> К списку серверов</a>
+            <hr style="border-color: var(--border); margin: 15px 0;">
             
             <a href="#" class="active" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
             <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
@@ -30,7 +34,7 @@
         <div class="content">
             <div class="header"><h1>Обзор сервера</h1></div>
             
-            <h2 style="font-family: 'Georgia', serif; color: var(--accent-jade); margin: 30px 0 15px;">Гильдия и Игроки</h2>
+            <h2 style="font-family: 'Cinzel', serif; color: var(--jade); margin: 30px 0 15px;">Гильдия и Игроки</h2>
             <div class="grid">
                 <a href="#" id="card-roster" class="card">
                     <h3><div class="icon icon-shield"></div> Состав гильдии</h3>
@@ -46,7 +50,7 @@
                 </a>
             </div>
 
-            <h2 style="font-family: 'Georgia', serif; color: var(--accent-jade); margin: 40px 0 15px;">Управление и Модерация</h2>
+            <h2 style="font-family: 'Cinzel', serif; color: var(--jade); margin: 40px 0 15px;">Управление и Модерация</h2>
             <div class="grid">
                 <a href="#" id="card-mod" class="card">
                     <h3><div class="icon icon-gear"></div> Модерация</h3>
@@ -58,7 +62,7 @@
                 </a>
             </div>
 
-            <h2 style="font-family: 'Georgia', serif; color: var(--accent-jade); margin: 40px 0 15px;">Контент и Утилиты</h2>
+            <h2 style="font-family: 'Cinzel', serif; color: var(--jade); margin: 40px 0 15px;">Контент и Утилиты</h2>
             <div class="grid">
                 <a href="#" id="card-rr" class="card">
                     <h3><div class="icon icon-masks"></div> Роли по кнопкам</h3>
@@ -95,7 +99,6 @@
             const el = document.getElementById(id);
             if (el) el.href = `/manage/${guildId}/${path}`;
         }
-        
         fetch(`/api/guild/${guildId}`).then(r=>r.json()).then(d => document.getElementById('server-name').innerText = d.name);
     </script>
 </body>
