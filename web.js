@@ -207,8 +207,15 @@ app.delete('/api/guild/:id/profiles/:userId', isModerator, async (req, res) => {
 
 app.get('/api/user', (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
-    const adminGuilds = req.user.guilds.filter(g => (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8));
-    res.json({ user: req.user, guilds: adminGuilds });
+    
+    const client = req.app.get('botClient');
+    // Получаем список серверов, где находится бот
+    const botGuildIds = client.guilds.cache.map(g => g.id);
+    
+    // Фильтруем серверы пользователя: оставляем только те, где есть бот
+    const userGuilds = req.user.guilds.filter(g => botGuildIds.includes(g.id));
+    
+    res.json({ user: req.user, guilds: userGuilds });
 });
 
 app.get('/api/guild/:id', isModerator, async (req, res) => {
