@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мой игровой профиль</title>
-    <link rel="stylesheet" href="/css/style.css?v=4">
+    <link rel="stylesheet" href="/css/style.css?v=5">
     <script src="/js/ui.js"></script>
     <style>
         .character-block { background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 20px; position: relative; }
@@ -58,14 +58,21 @@
     </div>
 
     <script>
+        // УЛУЧШЕННЫЙ ПАРСИНГ GUILDID
         const urlParams = new URLSearchParams(window.location.search);
-        const guildId = urlParams.get('guild') || window.location.pathname.split('/').pop();
+        let guildId = urlParams.get('guild');
+        
+        // Если guild нет в URL, берем из пути (если открыто из админки)
+        if (!guildId) {
+            const pathParts = window.location.pathname.split('/');
+            guildId = pathParts[pathParts.length - 1];
+        }
+        
         const targetUserId = urlParams.get('user'); 
         
         const banner = document.getElementById('top-banner-link');
         if (banner) banner.href = `/manage/${guildId}`;
 
-        // Списки искусств и оружия
         const ARTS_LIST = ['Nameless Sword', 'Strategic Sword', 'Nameless Spear', 'Heavenquaker Spear', 'Stormbreaker Spear', 'Panacea Fan', 'Inkwell Fan', 'Soulshade Umbrella', 'Vernal Umbrella', 'Infernal Twinblades', 'Thundercry Blade', 'Mortal Rope Dart'];
         const WEAPONS_LIST = ['Sword', 'Spear', 'Fan', 'Umbrella', 'Twinblades', 'Blade', 'Rope Dart'];
         const ROLES_LIST = ['Танк', 'ДД (Урон)', 'Хил (Поддержка)'];
