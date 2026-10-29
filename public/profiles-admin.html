@@ -4,18 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Гильдия - Профили</title>
-    <link rel="stylesheet" href="/css/style.css?v=3">
+    <link rel="stylesheet" href="/css/style.css?v=10">
     <script src="/js/ui.js"></script>
 </head>
 <body>
 
     <a href="#" id="top-banner-link" class="top-banner"></a>
+    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
 
     <div class="main-container">
         <div class="sidebar">
             <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><div class="icon icon-arrow-left"></div> К списку серверов</a>
-            <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+            <a href="/dashboard"><div class="icon icon-home"></div> К списку серверов</a>
+            <hr style="border-color: var(--border); margin: 15px 0;">
             <a href="#" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
             <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
             <a href="#" class="active"><div class="icon icon-users"></div> Гильдия</a>
@@ -59,7 +60,8 @@
                         charactersHtml = p.characters.map(char => `
                             <div style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--accent-jade);">
                                 <h4 style="color: var(--accent-gold); margin-bottom: 5px; font-family: 'Georgia', serif; font-size: 16px;">${char.gameNickname || 'Без ника'}</h4>
-                                <p style="font-size: 13px; margin: 0; color: var(--text-main);">${char.classRole || 'Не указан'} | ${char.weapon || 'Не указано'}</p>
+                                <p style="font-size: 13px; margin: 0; color: var(--text-main);">${char.roles && char.roles.length > 0 ? char.roles.join(', ') : 'Роль не указана'}</p>
+                                <p style="font-size: 12px; margin: 5px 0 0 0; color: var(--text-muted);">Искусства: ${char.martialArts && char.martialArts.length > 0 ? char.martialArts.join(', ') : 'Не указаны'}</p>
                                 <p style="font-size: 13px; margin: 0; color: var(--text-muted);">${char.guildName || 'Не указана'}</p>
                                 ${char.bio ? `<p style="font-size: 12px; font-style: italic; color: var(--text-muted); margin-top: 5px;">"${char.bio}"</p>` : ''}
                             </div>
@@ -90,19 +92,15 @@
         loadProfiles();
 
         function deleteProfile(userId, username) {
-    if (!confirm(`Вы уверены, что хотите удалить профиль игрока @${username}?`)) return;
-    
-    fetch(`/api/guild/${guildId}/profiles/${userId}`, { method: 'DELETE' })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                alert('Профиль удален!');
-                loadProfiles(); // Перезагружаем список
-            } else {
-                alert('Ошибка: ' + data.error);
-            }
-        })
-        .catch(err => alert('Ошибка сети'));
+            if (!confirm(`Удалить профиль игрока @${username}?`)) return;
+            fetch(`/api/guild/${guildId}/profiles/${userId}`, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Профиль удален!');
+                        loadProfiles();
+                    } else alert('Ошибка: ' + data.error);
+                });
         }
     </script>
 </body>
