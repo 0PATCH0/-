@@ -54,8 +54,7 @@ const PlayerProfileSchema = new mongoose.Schema({
         gameNickname: { type: String, default: '' },
         guildName: { type: String, default: '' },
         roles: { type: [String], default: [] }, // Теперь массив ролей
-        martialArts: { type: [String], default: [] }, 
-        weapons: { type: [String], default: [] },     
+        martialArts: { type: [String], default: [] },     
         bio: { type: String, default: '' }
     }]
 });
