@@ -4,17 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Редактирование гайда</title>
-    <link rel="stylesheet" href="/css/style.css?v=3">
+    <link rel="stylesheet" href="/css/style.css?v=9">
+    <script src="/js/ui.js"></script>
 </head>
 <body>
 
     <a href="#" id="top-banner-link" class="top-banner"></a>
+    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
 
     <div class="main-container">
         <div class="sidebar">
             <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><div class="icon icon-arrow-left"></div> К списку серверов</a>
-            <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+            <a href="/dashboard"><div class="icon icon-home"></div> К списку серверов</a>
+            <hr style="border-color: var(--border); margin: 15px 0;">
             <a href="#" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
             <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
             <a href="#" id="nav-guild"><div class="icon icon-users"></div> Гильдия</a>
@@ -38,7 +40,7 @@
             </div>
 
             <div class="header" style="margin-top: 40px; display: flex; justify-content: space-between; align-items: center;">
-                <h2 style="color: var(--accent-gold); font-family: 'Georgia', serif;">Главы гайда</h2>
+                <h2 style="color: var(--gold); font-family: 'Georgia', serif;">Главы гайда</h2>
                 <button class="btn btn-success btn-small" onclick="addChapter()"><div class="icon icon-plus"></div> Добавить главу</button>
             </div>
             <div id="chapters-container"></div>
@@ -60,7 +62,16 @@
 
         const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-guild': '/profiles', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-logs': '/logs', 'nav-emb': '/custom'};
         for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
+        
+        // Защита от случайного выхода
+        let isDirty = false;
         document.getElementById('btn-back').href = `/manage/${guildId}/guides`;
+        document.getElementById('btn-back').addEventListener('click', (e) => {
+            if (isDirty && !confirm('Вы не сохранили изменения. Выйти?')) e.preventDefault();
+        });
+
+        // Отслеживание изменений (для защиты)
+        document.addEventListener('input', () => { isDirty = true; });
 
         fetch(`/api/guild/${guildId}`).then(res => res.json()).then(data => document.getElementById('server-name').innerText = data.name);
 
@@ -79,7 +90,7 @@
                     <div class="form-group" style="flex: 1;"><label>Цвет</label><input type="color" class="ch-color" value="${data.color}" style="height: 45px; padding: 5px;"></div>
                     <div class="form-group" style="flex: 2;"><label>Картинка (URL)</label><input type="text" class="ch-image" value="${data.imageUrl}" placeholder="https://..."></div>
                 </div>
-                <div style="display: flex; gap: 15px; flex-wrap: wrap; border-top: 1px dashed var(--border-color); padding-top: 15px; margin-top: 10px;">
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; border-top: 1px dashed var(--border); padding-top: 15px; margin-top: 10px;">
                     <div class="form-group" style="flex: 2;"><label>Ссылка на файл (PDF, презентация)</label><input type="text" class="ch-attachment-url" value="${data.attachmentUrl}" placeholder="https://..."></div>
                     <div class="form-group" style="flex: 1;"><label>Текст кнопки</label><input type="text" class="ch-attachment-name" value="${data.attachmentName}" placeholder="Скачать PDF"></div>
                 </div>
@@ -94,6 +105,7 @@
                 document.getElementById('guide-name').value = guide.name;
                 document.getElementById('guide-desc').value = guide.description || '';
                 guide.chapters.forEach(ch => addChapter(ch));
+                isDirty = false; // Сбрасываем флаг после загрузки
             });
         } else {
             addChapter();
@@ -115,17 +127,27 @@
                 });
             });
 
-            if (!name || chapters.length === 0) return alert('Заполните название и добавьте хотя бы одну главу!');
+            if (!name || chapters.length === 0) return showToast('Заполните название и добавьте хотя бы одну главу!', 'error');
 
             const method = isNew ? 'POST' : 'PUT';
             const url = isNew ? `/api/guild/${guildId}/guides` : `/api/guild/${guildId}/guides/${guideId}`;
+            const btn = document.getElementById('btn-save');
+            
+            btn.innerHTML = 'Сохранение...'; btn.disabled = true;
 
             fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, description, chapters }) })
                 .then(res => res.json()).then(data => {
                     if (data.success) {
-                        alert('✅ Гайд сохранен!');
-                        window.location.href = `/manage/${guildId}/guides`;
-                    } else alert('❌ Ошибка: ' + data.error);
+                        showToast('Гайд сохранен!', 'success');
+                        isDirty = false; // Сбрасываем флаг, чтобы можно было выйти
+                        setTimeout(() => window.location.href = `/manage/${guildId}/guides`, 1000);
+                    } else {
+                        showToast('Ошибка: ' + data.error, 'error');
+                        btn.innerHTML = '<div class="icon icon-floppy-disk"></div> Сохранить гайд'; btn.disabled = false;
+                    }
+                }).catch(() => {
+                    showToast('Ошибка сети', 'error');
+                    btn.innerHTML = '<div class="icon icon-floppy-disk"></div> Сохранить гайд'; btn.disabled = false;
                 });
         }
 
