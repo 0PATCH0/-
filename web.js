@@ -300,44 +300,112 @@ app.delete('/api/guild/:id/roster/message', isModerator, async (req, res) => {
     res.json({ success: true });
 });
 
+// --- API РОЛЕЙ ПО КНОПКАМ ---
+
+// 1. Получить список активных сообщений
+app.get('/api/guild/:id/reactionroles', isModerator, async (req, res) => {
+    const roles = await ReactionRole.find({ guildId: req.params.id });
+    res.json(roles);
+});
+
+// 2. Создать новое сообщение
 app.post('/api/guild/:id/reactionroles', isModerator, async (req, res) => {
     const { title, desc, color, channelId, mode, roles } = req.body;
     const client = req.app.get('botClient');
     try {
         const channel = await client.channels.fetch(channelId).catch(() => null);
         if (!channel) return res.status(400).json({ error: 'Канал не найден' });
-        
+
         const embed = new EmbedBuilder().setTitle(title).setDescription(desc).setColor(color || '#5865F2');
         const actionRows = [];
         let currentRow = new ActionRowBuilder();
 
         roles.forEach((r, index) => {
             if (index > 0 && index % 5 === 0) { actionRows.push(currentRow); currentRow = new ActionRowBuilder(); }
-            
-            const button = new ButtonBuilder()
-                .setCustomId(`rr_${r.roleId}`)
-                .setLabel(r.label)
-                .setStyle(ButtonStyle.Secondary);
-            
-            // Если пользователь ввел эмодзи, добавляем его
-            if (r.emoji) {
-                try {
-                    button.setEmoji(r.emoji);
-                } catch (e) {
-                    console.log('Неверный формат эмодзи:', r.emoji);
-                }
-            }
-
+            const button = new ButtonBuilder().setCustomId(`rr_${r.roleId}`).setLabel(r.label).setStyle(ButtonStyle.Secondary);
+            if (r.emoji) button.setEmoji(r.emoji);
             currentRow.addComponents(button);
         });
-        
         if (currentRow.components.length > 0) actionRows.push(currentRow);
 
         const msg = await channel.send({ embeds: [embed], components: actionRows });
-        await ReactionRole.create({ guildId: req.params.id, channelId, messageId: msg.id, mode, roles: roles.map(r => ({ roleId: r.roleId, label: r.label })) });
+        
+        // Сохраняем всё в БД
+        await ReactionRole.create({ 
+            guildId: req.params.id, 
+            channelId, 
+            messageId: msg.id, 
+            title, 
+            desc, 
+            color, 
+            mode, 
+            roles: roles.map(r => ({ roleId: r.roleId, label: r.label, emoji: r.emoji })) 
+        });
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Ошибка отправки' });
+    }
+});
+
+// 3. Редактировать существующее сообщение
+app.put('/api/guild/:id/reactionroles/:messageId', isModerator, async (req, res) => {
+    const { title, desc, color, mode, roles } = req.body;
+    const client = req.app.get('botClient');
+
+    try {
+        const record = await ReactionRole.findOne({ messageId: req.params.messageId });
+        if (!record) return res.status(404).json({ error: 'Сообщение не найдено в базе' });
+
+        const channel = await client.channels.fetch(record.channelId).catch(() => null);
+        const message = await channel.messages.fetch(req.params.messageId).catch(() => null);
+        
+        if (!message) return res.status(404).json({ error: 'Сообщение было удалено из Discord' });
+
+        const embed = new EmbedBuilder().setTitle(title).setDescription(desc).setColor(color || '#5865F2');
+        const actionRows = [];
+        let currentRow = new ActionRowBuilder();
+
+        roles.forEach((r, index) => {
+            if (index > 0 && index % 5 === 0) { actionRows.push(currentRow); currentRow = new ActionRowBuilder(); }
+            const button = new ButtonBuilder().setCustomId(`rr_${r.roleId}`).setLabel(r.label).setStyle(ButtonStyle.Secondary);
+            if (r.emoji) button.setEmoji(r.emoji);
+            currentRow.addComponents(button);
+        });
+        if (currentRow.components.length > 0) actionRows.push(currentRow);
+
+        // Обновляем сообщение в Discord
+        await message.edit({ embeds: [embed], components: actionRows });
+        
+        // Обновляем в БД
+        record.title = title;
+        record.desc = desc;
+        record.color = color;
+        record.mode = mode;
+        record.roles = roles.map(r => ({ roleId: r.roleId, label: r.label, emoji: r.emoji }));
+        await record.save();
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Ошибка редактирования' });
+    }
+});
+
+// 4. Удалить сообщение
+app.delete('/api/guild/:id/reactionroles/:messageId', isModerator, async (req, res) => {
+    const client = req.app.get('botClient');
+    try {
+        const record = await ReactionRole.findOne({ messageId: req.params.messageId });
+        if (record) {
+            const channel = await client.channels.fetch(record.channelId).catch(() => null);
+            if (channel) {
+                const message = await channel.messages.fetch(req.params.messageId).catch(() => null);
+                if (message) await message.delete();
+            }
+            await ReactionRole.deleteOne({ messageId: req.params.messageId });
+        }
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Ошибка удаления' });
     }
 });
 
