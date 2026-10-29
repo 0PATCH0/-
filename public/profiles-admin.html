@@ -90,15 +90,19 @@
         loadProfiles();
 
         function deleteProfile(userId, username) {
-            if (!confirm(`Удалить профиль игрока @${username}?`)) return;
-            fetch(`/api/guild/${guildId}/profiles/${userId}`, { method: 'DELETE' })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Профиль удален!');
-                        loadProfiles();
-                    } else alert('Ошибка: ' + data.error);
-                });
+    if (!confirm(`Вы уверены, что хотите удалить профиль игрока @${username}?`)) return;
+    
+    fetch(`/api/guild/${guildId}/profiles/${userId}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert('Профиль удален!');
+                loadProfiles(); // Перезагружаем список
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        })
+        .catch(err => alert('Ошибка сети'));
         }
     </script>
 </body>
