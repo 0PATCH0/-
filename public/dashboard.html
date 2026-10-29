@@ -4,23 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мои серверы</title>
-    <link rel="stylesheet" href="/css/style.css?v=3">
+    <link rel="stylesheet" href="/css/style.css?v=5">
 </head>
-<body style="padding-top: 20px;"> <!-- Убираем отступ под баннер, так как его тут нет -->
+<body style="padding-top: 20px;"> <!-- Убираем отступ, так как тут нет кнопки Главная -->
 
     <div class="main-container">
         <div class="sidebar">
             <h2>Панель управления</h2>
             <a href="/dashboard" class="active"><div class="icon icon-home"></div> Мои серверы</a>
-            <a href="/profile"><div class="icon icon-users"></div> Мой профиль</a>
             <a href="/logout" style="margin-top: 50px; color: var(--danger);"><div class="icon icon-arrow-left"></div> Выйти</a>
         </div>
 
         <div class="content">
             <div class="header">
-                <h1 id="welcome-text">Загрузка...</h1>
+                <h1 id="welcome-text">Привет, загрузка...</h1>
             </div>
-            <div class="grid" id="server-list">
+
+            <h2 style="font-family: 'Cinzel', serif; color: var(--jade); margin-bottom: 15px;">Управление серверами (Где вы Админ)</h2>
+            <div class="grid" id="admin-server-list" style="margin-bottom: 40px;">
+                <p style="color: var(--text-muted);">Поиск серверов...</p>
+            </div>
+
+            <h2 style="font-family: 'Cinzel', serif; color: var(--gold); margin-bottom: 15px;">Ваши игровые профили</h2>
+            <div class="grid" id="player-server-list">
                 <p style="color: var(--text-muted);">Поиск серверов...</p>
             </div>
         </div>
@@ -29,27 +35,53 @@
     <script>
         fetch('/api/user').then(res => res.json()).then(data => {
             document.getElementById('welcome-text').innerText = `Привет, ${data.user.username}!`;
-            const grid = document.getElementById('server-list');
+            
+            const adminGrid = document.getElementById('admin-server-list');
+            const playerGrid = document.getElementById('player-server-list');
             
             if (data.guilds.length === 0) {
-                grid.innerHTML = '<p style="color: var(--text-muted);">У вас нет серверов, где вы администратор.</p>';
+                adminGrid.innerHTML = '<p style="color: var(--text-muted);">Бот не найден ни на одном из ваших серверов.</p>';
+                playerGrid.style.display = 'none';
                 return;
             }
 
-            grid.innerHTML = '';
+            adminGrid.innerHTML = '';
+            playerGrid.innerHTML = '';
+            
+            let hasAdmin = false;
+            let hasPlayer = false;
+
             data.guilds.forEach(guild => {
-                const icon = guild.icon ? `<img src="https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--accent-jade); margin-right: 20px;">` : `<div style="width: 60px; height: 60px; border-radius: 50%; background: var(--accent-jade); color: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 28px; margin-right: 20px;">${guild.name.charAt(0)}</div>`;
+                const isAdmin = (BigInt(guild.permissions) & BigInt(0x8)) === BigInt(0x8);
+                const icon = guild.icon ? `<img src="https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--jade); margin-right: 20px;">` : `<div style="width: 60px; height: 60px; border-radius: 50%; background: var(--jade); color: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 28px; margin-right: 20px;">${guild.name.charAt(0)}</div>`;
                 
-                grid.innerHTML += `
-                    <a href="/manage/${guild.id}" class="card" style="flex-direction: row; align-items: center; padding: 20px; display: flex;">
-                        ${icon}
-                        <div>
-                            <h3 style="margin-bottom: 5px; font-size: 18px;">${guild.name}</h3>
-                            <p style="font-size: 13px; color: var(--text-muted);">Нажмите для управления</p>
-                        </div>
-                    </a>
-                `;
+                if (isAdmin) {
+                    hasAdmin = true;
+                    adminGrid.innerHTML += `
+                        <a href="/manage/${guild.id}" class="card" style="flex-direction: row; align-items: center; padding: 20px; display: flex; border-color: var(--jade);">
+                            ${icon}
+                            <div>
+                                <h3 style="margin-bottom: 5px; font-size: 18px; color: var(--jade);">${guild.name}</h3>
+                                <p style="font-size: 13px; color: var(--text-muted);">Нажмите для управления</p>
+                            </div>
+                        </a>
+                    `;
+                } else {
+                    hasPlayer = true;
+                    playerGrid.innerHTML += `
+                        <a href="/profile?guild=${guild.id}" class="card" style="flex-direction: row; align-items: center; padding: 20px; display: flex; border-color: var(--gold);">
+                            ${icon}
+                            <div>
+                                <h3 style="margin-bottom: 5px; font-size: 18px; color: var(--gold);">${guild.name}</h3>
+                                <p style="font-size: 13px; color: var(--text-muted);">Заполнить профиль игрока</p>
+                            </div>
+                        </a>
+                    `;
+                }
             });
+
+            if (!hasAdmin) adminGrid.innerHTML = '<p style="color: var(--text-muted);">Вы не являетесь администратором ни на одном сервере.</p>';
+            if (!hasPlayer) playerGrid.innerHTML = '<p style="color: var(--text-muted);">Вы являетесь админом на всех серверах (профиль можно заполнить в меню управления).</p>';
         });
     </script>
 </body>
