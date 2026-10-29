@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мой игровой профиль</title>
-    <link rel="stylesheet" href="/css/style.css?v=5">
+    <link rel="stylesheet" href="/css/style.css?v=6">
     <script src="/js/ui.js"></script>
     <style>
         .character-block { background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 20px; position: relative; }
@@ -58,16 +58,12 @@
     </div>
 
     <script>
-        // УЛУЧШЕННЫЙ ПАРСИНГ GUILDID
         const urlParams = new URLSearchParams(window.location.search);
         let guildId = urlParams.get('guild');
-        
-        // Если guild нет в URL, берем из пути (если открыто из админки)
         if (!guildId) {
             const pathParts = window.location.pathname.split('/');
             guildId = pathParts[pathParts.length - 1];
         }
-        
         const targetUserId = urlParams.get('user'); 
         
         const banner = document.getElementById('top-banner-link');
@@ -90,6 +86,15 @@
             block.className = 'character-block';
             block.id = `char-block-${charCount}`;
             
+            // Генерация чекбоксов для ролей
+            const rolesHtml = ROLES_LIST.map(r => `
+                <label class="checkbox-item">
+                    <input type="checkbox" class="role-check" value="${r}" ${data.roles && data.roles.includes(r) ? 'checked' : ''}>
+                    <span class="custom-checkbox"></span>
+                    <span style="font-size: 13px;">${r}</span>
+                </label>
+            `).join('');
+
             const artsHtml = ARTS_LIST.map(art => `
                 <label class="checkbox-item">
                     <input type="checkbox" class="art-check" value="${art}" ${data.martialArts && data.martialArts.includes(art) ? 'checked' : ''}>
@@ -116,11 +121,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Боевая роль</label>
-                    <select class="c-role" style="width: 100%; padding: 14px; background: rgba(0,0,0,0.5); border: 1px solid var(--border); color: #fff; border-radius: 6px;">
-                        <option value="">Не выбрано</option>
-                        ${ROLES_LIST.map(r => `<option value="${r}" ${data.role === r ? 'selected' : ''}>${r}</option>`).join('')}
-                    </select>
+                    <label>Боевая роль (Можно выбрать несколько)</label>
+                    <div class="checkbox-grid">${rolesHtml}</div>
                 </div>
 
                 <div class="form-group">
@@ -176,13 +178,14 @@
         function saveProfile() {
             const characters = [];
             document.querySelectorAll('.character-block').forEach(block => {
+                const roles = Array.from(block.querySelectorAll('.role-check:checked')).map(cb => cb.value);
                 const arts = Array.from(block.querySelectorAll('.art-check:checked')).map(cb => cb.value);
                 const weapons = Array.from(block.querySelectorAll('.weapon-check:checked')).map(cb => cb.value);
 
                 characters.push({
                     gameNickname: block.querySelector('.c-nick').value,
                     guildName: block.querySelector('.c-guild').value,
-                    role: block.querySelector('.c-role').value,
+                    roles: roles,
                     martialArts: arts,
                     weapons: weapons,
                     bio: block.querySelector('.c-bio').value
