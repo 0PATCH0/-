@@ -4,17 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Гайды</title>
-    <link rel="stylesheet" href="/css/style.css?v=3">
+    <link rel="stylesheet" href="/css/style.css?v=9">
 </head>
 <body>
 
     <a href="#" id="top-banner-link" class="top-banner"></a>
+    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
 
     <div class="main-container">
         <div class="sidebar">
             <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><div class="icon icon-arrow-left"></div> К списку серверов</a>
-            <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+            <a href="/dashboard"><div class="icon icon-home"></div> К списку серверов</a>
+            <hr style="border-color: var(--border); margin: 15px 0;">
             <a href="#" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
             <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
             <a href="#" id="nav-guild"><div class="icon icon-users"></div> Гильдия</a>
@@ -55,11 +56,11 @@
             grid.innerHTML = '';
             data.forEach(guide => {
                 grid.innerHTML += `
-                    <div class="card" style="border-left: 4px solid var(--accent-gold); display: flex; flex-direction: column; justify-content: space-between;">
+                    <div class="card" style="border-left: 4px solid var(--gold); display: flex; flex-direction: column; justify-content: space-between;">
                         <div>
-                            <h3 style="color: var(--accent-gold);"><div class="icon icon-book"></div> ${guide.name}</h3>
+                            <h3 style="color: var(--gold);"><div class="icon icon-book"></div> ${guide.name}</h3>
                             <p style="margin-bottom: 15px;">${guide.description || 'Без описания'}</p>
-                            <p style="font-size: 12px; color: var(--accent-jade); margin-bottom: 15px;">Глав: ${guide.chapters.length}</p>
+                            <p style="font-size: 12px; color: var(--jade); margin-bottom: 15px;">Глав: ${guide.chapters.length}</p>
                         </div>
                         <div style="display: flex; gap: 10px;">
                             <a href="/manage/${guildId}/guides/edit/${guide._id}" class="btn btn-small" style="flex: 1;"><div class="icon icon-pencil"></div> Ред.</a>
