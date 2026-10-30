@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мой игровой профиль</title>
-    <link rel="stylesheet" href="/css/style.css?v=15">
+    <link rel="stylesheet" href="/css/style.css?v=16">
     <script src="/js/ui.js"></script>
     <script src="/js/gamedata.js"></script>
     <style>
@@ -130,6 +130,13 @@
         let currentFilter = 'All';
         let tempBuildData = {};
 
+        // Безопасное кодирование/декодирование JSON для HTML
+        function encodeData(obj) { return btoa(encodeURIComponent(JSON.stringify(obj))); }
+        function decodeData(str) { 
+            try { return JSON.parse(decodeURIComponent(atob(str))); } 
+            catch(e) { return null; } 
+        }
+
         function createCharacterBlock(data = {}, index = 0) {
             charCount++;
             const block = document.createElement('div');
@@ -141,7 +148,9 @@
                 builds = { PvE: { innerWays: [], mysticSkills: [] }, PvP: { innerWays: [], mysticSkills: [] } };
             }
             
-            const buildsJson = JSON.stringify(builds);
+            // КОДИРУЕМ ДАННЫЕ В BASE64
+            const buildsSafe = encodeData(builds);
+            
             const rolesHtml = ROLES_LIST.map(r => `
                 <label class="checkbox-item">
                     <input type="checkbox" class="role-check" value="${r}" ${(data.roles || []).includes(r) ? 'checked' : ''}>
@@ -185,7 +194,8 @@
                         <button type="button" class="build-tab-btn pve active" onclick="switchBuildTab(this, 'PvE')">🌿 PvE Билд</button>
                         <button type="button" class="build-tab-btn pvp" onclick="switchBuildTab(this, 'PvP')">⚔️ PvP Билд</button>
                     </div>
-                    <input type="hidden" class="c-builds-data" value='${buildsJson}'>
+                    <!-- ИСПОЛЬЗУЕМ БЕЗОПАСНЫЙ BASE64 -->
+                    <input type="hidden" class="c-builds-data" value="${buildsSafe}">
                     <input type="hidden" class="c-current-build-type" value="PvE">
                     
                     <button class="build-btn" onclick="openModal('${block.id}')">
@@ -233,7 +243,8 @@
             const block = document.getElementById(blockId);
             activeBuildType = block.querySelector('.c-current-build-type').value;
             
-            let allBuilds = JSON.parse(block.querySelector('.c-builds-data').value);
+            // БЕЗОПАСНО ДЕКОДИРУЕМ
+            let allBuilds = decodeData(block.querySelector('.c-builds-data').value);
             if (!allBuilds) allBuilds = { PvE: { innerWays: [], mysticSkills: [] }, PvP: { innerWays: [], mysticSkills: [] } };
             
             tempBuildData = { 
@@ -277,8 +288,6 @@
 
         function renderGrid() {
             const grid = document.getElementById('modalGrid');
-            
-            // Защита, если GAME_DATA не загрузился
             if (typeof GAME_DATA === 'undefined') {
                 grid.innerHTML = '<p style="color:red;">Ошибка: Файл gamedata.js не загружен!</p>';
                 return;
@@ -309,11 +318,13 @@
 
         function applySelection() {
             const block = document.getElementById(currentBlockId);
-            let allBuilds = JSON.parse(block.querySelector('.c-builds-data').value);
+            let allBuilds = decodeData(block.querySelector('.c-builds-data').value);
             if (!allBuilds) allBuilds = { PvE: { innerWays: [], mysticSkills: [] }, PvP: { innerWays: [], mysticSkills: [] } };
             
             allBuilds[activeBuildType] = { innerWays: tempBuildData.innerWays, mysticSkills: tempBuildData.mysticSkills };
-            block.querySelector('.c-builds-data').value = JSON.stringify(allBuilds);
+            
+            // СОХРАНЯЕМ В BASE64
+            block.querySelector('.c-builds-data').value = encodeData(allBuilds);
             
             closeModal();
             showToast(`Билд ${activeBuildType} обновлен!`, 'success');
@@ -325,13 +336,4 @@
             if (data.characters && data.characters.length > 0) {
                 if (!targetUserId) document.getElementById('btn-delete-profile').style.display = 'block';
                 if (data.isGlobal) document.getElementById('is-global').checked = true;
-                data.characters.forEach((char, idx) => createCharacterBlock(char, idx));
-            } else {
-                createCharacterBlock();
-            }
-        }).catch(() => createCharacterBlock());
-
-        function saveProfile() {
-            const characters = [];
-            document.querySelectorAll('.character-block').forEach(block => {
-                const roles = Array.from(block.querySelectorAll('.role-check:check
+         
