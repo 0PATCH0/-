@@ -67,7 +67,6 @@
 
         <div class="content" style="max-width: 900px;">
             
-            <!-- БЛОК ДЛЯ ВЫВОДА ОШИБОК -->
             <div id="error-box"></div>
 
             <div class="header" style="text-align: center; border: none;">
@@ -113,11 +112,12 @@
     </div>
 
     <script>
-        // ЛОВИМ ВСЕ ОШИБКИ НА ЭКРАН
         window.onerror = function(msg, url, line, col, error) {
             const box = document.getElementById('error-box');
-            box.style.display = 'block';
-            box.innerText += `Ошибка: ${msg}\nСтрока: ${line}\n\n`;
+            if(box) {
+                box.style.display = 'block';
+                box.innerText += `Ошибка: ${msg}\nСтрока: ${line}\n\n`;
+            }
             return false;
         };
 
@@ -138,18 +138,16 @@
         let currentFilter = 'All';
         let tempBuildData = {};
 
-        // Создаем блок персонажа
         function createCharacterBlock(data = {}, index = 0) {
             charCount++;
             const block = document.createElement('div');
             block.className = 'character-block';
             block.id = `char-block-${charCount}`;
             
-            // Инициализируем билды прямо в памяти элемента (без скрытых полей!)
             let builds = data.builds || { PvE: { innerWays: [], mysticSkills: [] }, PvP: { innerWays: [], mysticSkills: [] } };
             if (!builds.PvE) builds.PvE = { innerWays: [], mysticSkills: [] };
             if (!builds.PvP) builds.PvP = { innerWays: [], mysticSkills: [] };
-            block._builds = builds; // Сохраняем в свойство DOM-элемента
+            block._builds = builds; 
 
             const rolesHtml = ROLES_LIST.map(r => `
                 <label class="checkbox-item">
@@ -195,7 +193,6 @@
                         <button type="button" class="build-tab-btn pvp" onclick="switchBuildTab(this, 'PvP')">⚔️ PvP Билд</button>
                     </div>
                     
-                    <!-- Убрали скрытые инпуты, используем свойство block._builds -->
                     <button class="build-btn" onclick="openModal('${block.id}')">
                         <div class="icon icon-shield"></div> Настроить Билд
                     </button>
@@ -212,7 +209,6 @@
             const block = btn.closest('.character-block');
             block.querySelectorAll('.build-tab-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            // Сохраняем выбранную вкладку в элемент
             block._currentBuildType = type;
         }
 
@@ -240,7 +236,6 @@
         function openModal(blockId) {
             currentBlockId = blockId;
             const block = document.getElementById(blockId);
-            // Берем тип из памяти элемента (по умолчанию PvE)
             activeBuildType = block._currentBuildType || 'PvE';
             
             let allBuilds = block._builds;
@@ -326,11 +321,8 @@
             alert(`Билд ${activeBuildType} обновлен!`);
         }
 
-        // ИНИЦИАЛИЗАЦИЯ СТРАНИЦЫ
-        // Принудительно создаем одну форму, чтобы она точно была
         createCharacterBlock({}, 0);
 
-        // Пытаемся загрузить данные и заменить форму, если они есть
         fetch(targetUserId ? `/api/profile/${guildId}?user=${targetUserId}` : `/api/profile/${guildId}`)
             .then(res => res.json())
             .then(data => {
@@ -339,4 +331,15 @@
                     charCount = 0;
                     if (!targetUserId) document.getElementById('btn-delete-profile').style.display = 'block';
                     if (data.isGlobal) document.getElementById('is-global').checked = true;
-                    data.characters.forEac
+                    data.characters.forEach((char, idx) => createCharacterBlock(char, idx));
+                }
+            })
+            .catch(err => console.log('Данные не загружены, используется пустая форма', err));
+
+        function saveProfile() {
+            const characters = [];
+            document.querySelectorAll('.character-block').forEach(block => {
+                const roles = Array.from(block.querySelectorAll('.role-check:checked')).map(cb => cb.value);
+                const arts = Array.from(block.querySelectorAll('.art-check:checked')).map(cb => cb.value);
+                
+ 
