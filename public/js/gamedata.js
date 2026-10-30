@@ -1,0 +1,107 @@
+const GAME_DATA = {
+    mysticSkills: [
+        // --- OFFENSIVE ---
+        { id: "Tai Chi", nameEN: "Tai Chi", nameRU: "Тай-цзи", category: "Offensive", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/d/d8/Tai-chi-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Meridian Touch", nameEN: "Meridian Touch", nameRU: "Касание Меридиана", category: "Offensive", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/f/fc/Meridian-touch-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Celestial Seize", nameEN: "Celestial Seize", nameRU: "Небесный Хват", category: "Offensive", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/2/26/Heavenly-snatch-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Cloud Steps", nameEN: "Cloud Steps", nameRU: "Облачные Шаги", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Cloud-steps-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Leaping Toad", nameEN: "Leaping Toad", nameRU: "Прыжок Жабы", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Leaping-toad-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Lion's Roar", nameEN: "Lion's Roar", nameRU: "Львиный Рык", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Lion%27s-roar-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Guardian Palm", nameEN: "Guardian Palm", nameRU: "Ладонь Стража", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Guardian-palm-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Ghost Bind", nameEN: "Ghost Bind", nameRU: "Призрачные Путы", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Ghost-bind-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Flaming Meteor", nameEN: "Flaming Meteor", nameRU: "Пылающий Метеор", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Flaming-meteor-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Wolflike Frenzy", nameEN: "Wolflike Frenzy", nameRU: "Волчье Бешенство", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Wolflike-frenzy-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Talon Strike", nameEN: "Talon Strike", nameRU: "Удар Когтя", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Talon-strike-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Yaksha Rush", nameEN: "Yaksha Rush", nameRU: "Натиск Якши", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Yaksha-rush-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Free Morph", nameEN: "Free Morph", nameRU: "Свободная Трансформация", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Free-morph-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Soaring Spin", nameEN: "Soaring Spin", nameRU: "Взлетающее Вращение", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Soaring-spin-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Dragon's Breath", nameEN: "Dragon's Breath", nameRU: "Дыхание Дракона", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Dragon%27s-breath-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Drunken Poet", nameEN: "Drunken Poet", nameRU: "Пьяный Поэт", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Drunken-poet-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Blinding Mist", nameEN: "Blinding Mist", nameRU: "Слепящий Туман", category: "Offensive", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/9/95/Blinding-mist-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Dragon Head", nameEN: "Dragon Head", nameRU: "Голова Дракона", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Dragon-head-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Serene Breeze", nameEN: "Serene Breeze", nameRU: "Безмятежный Бриз", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Serene-breeze-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Ghostly Steps", nameEN: "Ghostly Steps", nameRU: "Призрачные Шаги", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Ghostly-steps-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Honking Havoc", nameEN: "Honking Havoc", nameRU: "Гусиный Хаос", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Honking-havoc-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Glow of Fireflies", nameEN: "Glow of Fireflies", nameRU: "Свечение Светлячков", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Glow-of-fireflies-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Veil of Stillness", nameEN: "Veil of Stillness", nameRU: "Покров Неподвижности", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Veil-of-stillness-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Golden Body", nameEN: "Golden Body", nameRU: "Золотое Тело", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Golden-body-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "Contortion", nameEN: "Contortion", nameRU: "Искривление", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Contortion-mystic-skill-where-winds-meet-wiki-guide.webp" },
+        { id: "Flute of the Tides", nameEN: "Flute of the Tides", nameRU: "Флейта Приливов", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Flute-of-the-tides-mystic-skill-where-winds-meet-wiki-guide.webp" },
+        { id: "Goosy Slide", nameEN: "Goosy Slide", nameRU: "Гусиное Скольжение", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Goosy-slide-mystic-skill-where-winds-meet-wiki-guide.webp" },
+        
+        // --- GENERAL ---
+        { id: "Still Waters", nameEN: "Still Waters", nameRU: "Тихие Воды", category: "General", img: "https://via.placeholder.com/100x100/232428/2ecc71?text=Still+Waters" },
+        { id: "Touch of Death", nameEN: "Touch of Death", nameRU: "Касание Смерти", category: "General", img: "https://via.placeholder.com/100x100/232428/2ecc71?text=Touch+of+Death" },
+        { id: "Wind Sense", nameEN: "Wind Sense", nameRU: "Чувство Ветра", category: "General", img: "https://via.placeholder.com/100x100/232428/2ecc71?text=Wind+Sense" },
+
+        // --- MOVEMENT ---
+        { id: "Thousand-Mile Flight", nameEN: "Thousand-Mile Flight", nameRU: "Полет на Тысячу Ли", category: "Movement", img: "https://via.placeholder.com/100x100/232428/2ecc71?text=Thousand-Mile" },
+        { id: "Meteor Flight", nameEN: "Meteor Flight", nameRU: "Полет Метеора", category: "Movement", img: "https://via.placeholder.com/100x100/232428/2ecc71?text=Meteor+Flight" },
+        { id: "Fan Glider", nameEN: "Fan Glider", nameRU: "Веер-Планер", category: "Movement", img: "https://via.placeholder.com/100x100/232428/2ecc71?text=Fan+Glider" },
+        { id: "Wind Rider", nameEN: "Wind Rider", nameRU: "Всадник Ветра", category: "Movement", img: "https://via.placeholder.com/100x100/232428/2ecc71?text=Wind+Rider" },
+        { id: "Wallstride - Swiftstride", nameEN: "Wallstride - Swiftstride", nameRU: "Бег по Стенам: Быстрый Шаг", category: "Movement", img: "https://via.placeholder.com/100x100/232428/2ecc71?text=Swiftstride" },
+        { id: "Wallstride - Shadowdash", nameEN: "Wallstride - Shadowdash", nameRU: "Бег по Стенам: Теневой Рывок", category: "Movement", img: "https://via.placeholder.com/100x100/232428/2ecc71?text=Shadowdash" },
+        { id: "Threefold Skywalk", nameEN: "Threefold Skywalk", nameRU: "Тройная Небесная Поступь", category: "Movement", img: "https://via.placeholder.com/100x100/232428/2ecc71?text=Threefold" },
+        { id: "Skywalk Dash", nameEN: "Skywalk Dash", nameRU: "Небесный Рывок", category: "Movement", img: "https://via.placeholder.com/100x100/232428/2ecc71?text=Skywalk" },
+        { id: "Mighty Drop", nameEN: "Mighty Drop", nameRU: "Мощное Падение", category: "Movement", img: "https://via.placeholder.com/100x100/232428/2ecc71?text=Mighty+Drop" },
+        { id: "Safe Mighty Drop", nameEN: "Safe Mighty Drop", nameRU: "Безопасное Падение", category: "Movement", img: "https://via.placeholder.com/100x100/232428/2ecc71?text=Safe+Drop" },
+        { id: "Abyss Dive", nameEN: "Abyss Dive", nameRU: "Прыжок в Бездну", category: "Movement", img: "https://via.placeholder.com/100x100/232428/2ecc71?text=Abyss+Dive" },
+        { id: "Moonleap Morph", nameEN: "Moonleap Morph", nameRU: "Лунный Прыжок", category: "Movement", img: "https://via.placeholder.com/100x100/232428/2ecc71?text=Moonleap" }
+    ],
+
+    innerWays: [
+        // --- BAMBOOCUT ---
+        { id: "Echoes of Oblivion", nameEN: "Echoes of Oblivion", nameRU: "Эхо Забвения", category: "Bamboocut", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/b/b5/Echoes-of-oblivion-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Breaking Point", nameEN: "Breaking Point", nameRU: "Точка Перелома", category: "Bamboocut", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/a/a4/Breaking-point-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Riptide Reflex", nameEN: "Riptide Reflex", nameRU: "Рефлекс Приливной Волны", category: "Bamboocut", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/a/a9/Riptide-reflex-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Song of Tang", nameEN: "Song of Tang", nameRU: "Песнь Тан", category: "Bamboocut", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/3/3c/Song-of-tang-inner-way-where-winds-meet-wiki-guide.webp" },
+        { id: "Towline Sweep", nameEN: "Towline Sweep", nameRU: "Затягивающий Удар", category: "Bamboocut", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/f/fc/Towline-sweep-inner-way-where-winds-meet-wiki-guide.webp" },
+        { id: "Phantom Rally", nameEN: "Phantom Rally", nameRU: "Призрачный Сбор", category: "Bamboocut", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/9/97/Phantom-rally-inner-way-where-winds-meet-wiki-guide.webp" },
+        { id: "Light Anew", nameEN: "Light Anew", nameRU: "Новый Свет", category: "Bamboocut", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/f/ff/Light-anew-inner-way-where-winds-meet-wiki-guide.webp" },
+        { id: "Trapped Beast", nameEN: "Trapped Beast", nameRU: "Загнанный Зверь", category: "Bamboocut", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/a/a1/Trapped-beast-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Wildfire Spark", nameEN: "Wildfire Spark", nameRU: "Искра Дикого Огня", category: "Bamboocut", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/3/33/Wildfire-spark-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Wildfire Surge", nameEN: "Wildfire Surge", nameRU: "Всплеск Дикого Огня", category: "Bamboocut", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/6/65/Wildfire-surge-inner-way-where-winds-meet-wiki-guide2.webp" },
+
+        // --- BELLSTRIKE ---
+        { id: "Sword Morph", nameEN: "Sword Morph", nameRU: "Превращение Меча", category: "Bellstrike", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/3/38/Sword-morph-icon-where-winds-meet-wiki-guide.png" },
+        { id: "Sword Horizon", nameEN: "Sword Horizon", nameRU: "Горизонт Меча", category: "Bellstrike", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/a/af/Sword-horizon-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Adaptive Steel", nameEN: "Adaptive Steel", nameRU: "Адаптивная Сталь", category: "Bellstrike", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/d/d3/Adaptive-steel-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Insightful Strike", nameEN: "Insightful Strike", nameRU: "Проницательный Удар", category: "Bellstrike", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/1/1c/Insightful-strike-internal-arts-wherewindsmeet-wiki-guide.webp" },
+
+        // --- STONESPLIT ---
+        { id: "Mountain's Might", nameEN: "Mountain's Might", nameRU: "Мощь Горы", category: "Stonesplit", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/0/0d/Mountains-might-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Rock Solid", nameEN: "Rock Solid", nameRU: "Твердыня", category: "Stonesplit", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/b/b1/Rock-solid-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Steadfast Stance", nameEN: "Steadfast Stance", nameRU: "Непоколебимая Стойка", category: "Stonesplit", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/5/55/Steadfast-stance-internal-arts-wherewindsmeet-wiki-guide.webp" },
+
+        // --- SILKBIND ---
+        { id: "Art of Resistance", nameEN: "Art of Resistance", nameRU: "Искусство Сопротивления", category: "Silkbind", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/1/18/Art-of-resistance-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Evasive Charge", nameEN: "Evasive Charge", nameRU: "Уклончивый Рывок", category: "Silkbind", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/c/c7/Evasive-charge-internal-arts-wherewindsmeet-wiki-guide.webp" },
+
+        // --- GENERAL ---
+        { id: "Battle Anthem", nameEN: "Battle Anthem", nameRU: "Боевой Гимн", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/1/10/Battle-anthem-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Bitter Seasons", nameEN: "Bitter Seasons", nameRU: "Горькие Времена", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/a/ab/Bitter-seasons-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Blossom Barrage", nameEN: "Blossom Barrage", nameRU: "Цветочный Шквал", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/3/3d/Blossom-barrage-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Divine Roulette", nameEN: "Divine Roulette", nameRU: "Божественная Рулетка", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/6/69/Divine-roulette-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Invigorated Warrior", nameEN: "Invigorated Warrior", nameRU: "Вдохновленный Воин", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/2/2e/Envigorated-warrior-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Esoteric Revival", nameEN: "Esoteric Revival", nameRU: "Эзотерическое Возрождение", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/9/91/Esoteric-revival-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Evening Snow", nameEN: "Evening Snow", nameRU: "Вечерний Снег", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/4/44/Evening-snow-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Exquisite Scenery", nameEN: "Exquisite Scenery", nameRU: "Изысканный Пейзаж", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/1/11/Exquisite-scenery-icon-where-winds-meet-wiki-guide.png" },
+        { id: "Fivefold Bleed", nameEN: "Fivefold Bleed", nameRU: "Пятикратное Кровотечение", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/6/60/Fivefold-bleed-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Flying Gourds", nameEN: "Flying Gourds", nameRU: "Летящие Тыквы-Горлянки", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/6/68/Flying-gourd-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Frost-Clad Night", nameEN: "Frost-Clad Night", nameRU: "Ночи в Морозной Броне", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/d/d1/Frost-clad-night-inner-way-where-winds-meet-wiki-guide2.webp" },
+        { id: "Fury Harvest", nameEN: "Fury Harvest", nameRU: "Жатва Ярости", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/8/85/Fury-harvest-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Heart of Fire", nameEN: "Heart of Fire", nameRU: "Сердце Пламени", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/e/ef/Heart-of-fire-inner-way-where-winds-meet-wiki-guide.webp" },
+        { id: "Light and Shadow Alike", nameEN: "Light and Shadow Alike", nameRU: "Свет и Тень Едины", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/3/34/Light-and-shadow_alike-inner-way-where-winds-meet-wiki-guide.webp" },
+        { id: "Mending Loom", nameEN: "Mending Loom", nameRU: "Исцеляющий Станок", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/7/75/Mending-loom-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Morale Chant", nameEN: "Morale Chant", nameRU: "Песнь Морали", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/1/14/Morale-chant-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Restoring Blossom", nameEN: "Restoring Blossom", nameRU: "Восстанавливающий Цвет", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/5/5e/Restoring-blossom-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Royal Remedy", nameEN: "Royal Remedy", nameRU: "Королевское Средство", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/5/59/Royal-remedy-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Sandswirl Tail", nameEN: "Sandswirl Tail", nameRU: "Хвост Песчаного Вихря", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/f/fb/Sandswirl-tail-inner-way-where-winds-meet-wiki-guide.webp" },
+        { id: "Seasonal Edge", nameEN: "Seasonal Edge", nameRU: "Сезонное Преимущество", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/4/4d/Seasonal-edge-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Shadow Assault", nameEN: "Shadow Assault", nameRU: "Теневой Штурм", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/f/fd/Shadow-assault-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Star Reacher", nameEN: "Star Reacher", nameRU: "Дотянувшийся до Звезд", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/a/a5/Star-reacher-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Steadfast Devotion", nameEN: "Steadfast Devotion", nameRU: "Непоколебимая Преданность", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/d/d6/Steadfast-devotion-inner-way-where-winds-meet-wiki-guide2.webp" },
+        { id: "Throat-Piercing Art", nameEN: "Throat-Piercing Art", nameRU: "Искусство Пронзания Горла", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/7/78/Throat-piercing-art-inner-way-where-winds-meet-wiki-guide2.webp" },
+        { id: "Thunderous Bloom", nameEN: "Thunderous Bloom", nameRU: "Громовой Цвет", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/7/7c/Thunderous-bloom-internal-arts-wherewindsmeet-wiki-guide.webp" },
+        { id: "Vendetta", nameEN: "Vendetta", nameRU: "Вендетта", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/7/77/Vendetta-internal-arts-wherewindsmeet-wiki-guide.webp" },
+   
