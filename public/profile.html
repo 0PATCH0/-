@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мой игровой профиль</title>
-    <link rel="stylesheet" href="/css/style.css?v=10">
+    <link rel="stylesheet" href="/css/style.css?v=12">
     <script src="/js/ui.js"></script>
     <style>
         .character-block { background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 20px; position: relative; }
@@ -20,20 +20,6 @@
     </style>
 </head>
 <body>
-
-    <video class="bg-video" autoplay loop muted playsinline poster="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2070&auto=format&fit=crop">
-        <source src="https://assets.mixkit.co/videos/preview/mixkit-clouds-and-blue-sky-2408-large.mp4" type="video/mp4">
-    </video>
-    <div class="bg-overlay"></div>
-    <div class="bg-particles"></div>
-    <!-- КОНЕЦ БЛОКА С ФОНОМ -->
-
-    <!-- Кнопка-печать "Главная" -->
-    <a href="#" id="top-banner-link" class="top-banner"></a>
-    
-    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
-    
-    <div class="main-container">
 
     <a href="#" id="top-banner-link" class="top-banner"></a>
     <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
@@ -83,20 +69,13 @@
         const banner = document.getElementById('top-banner-link');
         if (banner) banner.href = `/manage/${guildId}`;
 
-        // АРТЫ С РУССКИМ ПЕРЕВОДОМ
         const ARTS_LIST = [
-            'Nameless Sword (Безымянный меч)', 
-            'Strategic Sword (Стратегический меч)', 
-            'Nameless Spear (Безымянное копье)', 
-            'Heavenquaker Spear (Копье Небесного Грома)', 
-            'Stormbreaker Spear (Копье Разрушителя Шторма)', 
-            'Panacea Fan (Веер Панацея)', 
-            'Inkwell Fan (Веер Чернильница)', 
-            'Soulshade Umbrella (Зонт Тени Души)', 
-            'Vernal Umbrella (Весенний зонт)', 
-            'Infernal Twinblades (Адские парные клинки)', 
-            'Thundercry Blade (Клинок Громового Крика)', 
-            'Mortal Rope Dart (Дротик на веревке)'
+            'Nameless Sword (Безымянный меч)', 'Strategic Sword (Стратегический меч)', 
+            'Nameless Spear (Безымянное копье)', 'Heavenquaker Spear (Копье Небесного Грома)', 
+            'Stormbreaker Spear (Копье Разрушителя Шторма)', 'Panacea Fan (Веер Панацея)', 
+            'Inkwell Fan (Веер Чернильница)', 'Soulshade Umbrella (Зонт Тени Души)', 
+            'Vernal Umbrella (Весенний зонт)', 'Infernal Twinblades (Адские парные клинки)', 
+            'Thundercry Blade (Клинок Громового Крика)', 'Mortal Rope Dart (Дротик на веревке)'
         ];
         const ROLES_LIST = ['Танк', 'ДД (Урон)', 'Хил (Поддержка)'];
 
@@ -147,7 +126,8 @@
                     <label>Боевые искусства (Можно выбрать несколько)</label>
                     <div class="checkbox-grid">${artsHtml}</div>
                 </div>
-                
+
+                <div class="form-group"><label>Ссылка на билд (сборку)</label><input type="text" class="c-build" value="${data.buildUrl || ''}" placeholder="https://mobalytics.gg/..."></div>
                 <div class="form-group"><label>О себе</label><textarea class="c-bio" style="height: 60px;">${data.bio || ''}</textarea></div>
             `;
             document.getElementById('characters-container').appendChild(block);
@@ -199,6 +179,7 @@
                     guildName: block.querySelector('.c-guild').value,
                     roles: roles,
                     martialArts: arts,
+                    buildUrl: block.querySelector('.c-build').value,
                     bio: block.querySelector('.c-bio').value
                 });
             });
