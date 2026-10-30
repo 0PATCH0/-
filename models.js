@@ -45,7 +45,8 @@ const GuideSchema = new mongoose.Schema({
     guildId: String, name: String, description: String, chapters: [{ title: String, content: String, color: String, imageUrl: String, attachmentUrl: String, attachmentName: String }], date: { type: Date, default: Date.now }
 });
 
-// ОБНОВЛЕННАЯ МОДЕЛЬ ПРОФИЛЯ (до 3 персонажей, массивы искусств и оружия)
+
+// ОБНОВЛЕННАЯ МОДЕЛЬ ПРОФИЛЯ (+ buildUrl)
 const PlayerProfileSchema = new mongoose.Schema({
     userId: { type: String, required: true },
     guildId: { type: String, required: true },
@@ -53,10 +54,21 @@ const PlayerProfileSchema = new mongoose.Schema({
     characters: [{
         gameNickname: { type: String, default: '' },
         guildName: { type: String, default: '' },
-        roles: { type: [String], default: [] }, // Теперь массив ролей
-        martialArts: { type: [String], default: [] },     
-        bio: { type: String, default: '' }
+        roles: { type: [String], default: [] }, 
+        martialArts: { type: [String], default: [] }, 
+        bio: { type: String, default: '' },
+        buildUrl: { type: String, default: '' } // НОВОЕ ПОЛЕ
     }]
+});
+
+// НОВАЯ МОДЕЛЬ ДЛЯ СОБЫТИЙ (Рейды/ГВГ)
+const EventSchema = new mongoose.Schema({
+    guildId: String,
+    title: String,
+    description: String,
+    date: Number, // Unix timestamp (когда начало)
+    creatorId: String,
+    attendees: [{ type: String }] // Массив Discord ID записавшихся
 });
 
 module.exports = {
@@ -69,5 +81,6 @@ module.exports = {
     RosterMessage: mongoose.model('RosterMessage', RosterMessageSchema),
     Log: mongoose.model('Log', LogSchema),
     Guide: mongoose.model('Guide', GuideSchema),
-    PlayerProfile: mongoose.model('PlayerProfile', PlayerProfileSchema)
+    PlayerProfile: mongoose.model('PlayerProfile', PlayerProfileSchema),
+    Event: mongoose.model('Event', EventSchema) // Экспорт событий
 };
