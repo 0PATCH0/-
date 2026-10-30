@@ -1,23 +1,18 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ComponentType } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const { PlayerProfile } = require('../models');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('профиль')
         .setDescription('Посмотреть игровой профиль')
-        .addUserOption(option => 
-            option.setName('пользователь')
-                .setDescription('Чей профиль посмотреть?')
-                .setRequired(false))
+        .addUserOption(option => option.setName('пользователь').setDescription('Чей профиль посмотреть?').setRequired(false))
         .addStringOption(option =>
-            option.setName('класс')
-                .setDescription('Посмотреть список всех игроков этого класса')
-                .setRequired(false)
-                .addChoices(
-                    { name: 'Танк', value: 'Танк' },
-                    { name: 'ДД (Урон)', value: 'ДД (Урон)' },
-                    { name: 'Хил (Поддержка)', value: 'Хил (Поддержка)' }
-                )),
+            option.setName('класс').setDescription('Посмотреть список всех игроков этого класса').setRequired(false)
+            .addChoices(
+                { name: 'Танк', value: 'Танк' },
+                { name: 'ДД (Урон)', value: 'ДД (Урон)' },
+                { name: 'Хил (Поддержка)', value: 'Хил (Поддержка)' }
+            )),
 
     async execute(interaction) {
         const targetClass = interaction.options.getString('класс');
@@ -56,9 +51,18 @@ module.exports = {
                 ? char.roles.map(r => r === 'Танк' ? '🛡️ Танк' : (r === 'ДД (Урон)' ? '⚔️ ДД' : '💚 Хил')).join(' | ') 
                 : 'Не указаны';
 
+            // Проверяем, есть ли сохраненные билды
+            const hasPvE = char.builds?.PvE?.mysticSkills?.length > 0 || char.builds?.PvE?.innerWays?.length > 0;
+            const hasPvP = char.builds?.PvP?.mysticSkills?.length > 0 || char.builds?.PvP?.innerWays?.length > 0;
+            
+            let buildsText = [];
+            if (hasPvE) buildsText.push('🌿 PvE');
+            if (hasPvP) buildsText.push('⚔️ PvP');
+            const buildsStr = buildsText.length > 0 ? buildsText.join(' | ') : 'Билды не настроены';
+
             let charValue = `🏰 **Гильдия:** ${char.guildName || 'Не указана'}\n`;
             charValue += `⚔️ **Роли:** ${rolesStr}\n`;
-            charValue += `🎯 **Тип сборки:** ${char.buildType || 'PvE'}\n`;
+            charValue += `🎯 **Доступные билды:** ${buildsStr}\n`;
             if (char.bio) charValue += `*"${char.bio}"*`;
 
             embed.addFields({ name: charTitle, value: charValue, inline: false });
@@ -67,78 +71,74 @@ module.exports = {
         if (profile.isGlobal) embed.setFooter({ text: '🌐 Глобальный профиль' });
 
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId(`view_builds_${targetUser.id}`).setLabel('Посмотреть Билд').setStyle(ButtonStyle.Success).setEmoji('🎯')
+            new ButtonBuilder().setCustomId(`view_builds_${targetUser.id}`).setLabel('Посмотреть Билды').setStyle(ButtonStyle.Success).setEmoji('🎯')
         );
 
         const response = await interaction.reply({ embeds: [embed], components: [row] });
 
-        // Сборщик кнопок для просмотра билда
         const collector = response.createMessageComponentCollector({ time: 120000 });
 
         collector.on('collect', async i => {
             if (i.user.id !== interaction.user.id) return i.reply({ content: 'Это меню не для вас.', ephemeral: true });
 
             if (i.customId.startsWith('view_builds_')) {
-                // Создаем меню выбора PvP / PvE
+                // Если у персонажа только один билд, показываем его сразу, иначе даем выбор
+                const hasPvE = profile.characters.some(c => c.builds?.PvE?.mysticSkills?.length > 0 || c.builds?.PvE?.innerWays?.length > 0);
+                const hasPvP = profile.characters.some(c => c.builds?.PvP?.mysticSkills?.length > 0 || c.builds?.PvP?.innerWays?.length > 0);
+
+                if (!hasPvE && !hasPvP) {
+                    return i.reply({ content: '❌ У вас пока не настроены билды на сайте.', ephemeral: true });
+                }
+
                 const selectMenu = new StringSelectMenuBuilder()
                     .setCustomId('select_build_type')
-                    .setPlaceholder('Выберите тип сборки для просмотра')
+                    .setPlaceholder('Выберите, какой билд показать')
                     .addOptions([
-                        { label: 'PvE', description: 'Сборка для PvE контента', value: 'PvE', emoji: '🌿' },
-                        { label: 'PvP', description: 'Сборка для PvP сражений', value: 'PvP', emoji: '⚔️' }
+                        { label: 'PvE Билд', description: 'Сборка для PvE контента', value: 'PvE', emoji: '🌿' },
+                        { label: 'PvP Билд', description: 'Сборка для PvP сражений', value: 'PvP', emoji: '⚔️' }
                     ]);
 
                 const menuRow = new ActionRowBuilder().addComponents(selectMenu);
 
-                await i.reply({ 
-                    content: 'Выберите, какой билд вы хотите посмотреть:', 
-                    components: [menuRow], 
-                    ephemeral: true 
-                });
+                await i.reply({ content: 'Выберите тип билда:', components: [menuRow], ephemeral: true });
 
-                // Ждем выбор из меню
                 const menuFilter = m => m.user.id === interaction.user.id && m.customId === 'select_build_type';
                 const menuInteraction = await i.channel.awaitMessageComponent({ filter: menuFilter, time: 60000 }).catch(() => null);
-
                 if (!menuInteraction) return;
 
                 const selectedType = menuInteraction.values[0];
                 
-                // Ищем персонажа с нужным типом билда
-                const charWithBuild = profile.characters.find(c => c.buildType === selectedType) || profile.characters[0];
+                // Берем первого персонажа, у которого есть этот билд
+                const charWithBuild = profile.characters.find(c => 
+                    c.builds && c.builds[selectedType] && 
+                    (c.builds[selectedType].mysticSkills?.length > 0 || c.builds[selectedType].innerWays?.length > 0)
+                );
 
-                if (!charWithBuild) return menuInteraction.update({ content: 'Билд не найден.', components: [] });
+                if (!charWithBuild) {
+                    return menuInteraction.update({ content: `У вас нет сохраненного ${selectedType} билда.`, embeds: [], components: [] });
+                }
 
+                const buildData = charWithBuild.builds[selectedType];
+                
                 const buildEmbed = new EmbedBuilder()
-                    .setTitle(`🎯 Билд: ${charWithBuild.gameNickname || 'Персонаж'} (${selectedType})`)
+                    .setTitle(`🎯 ${charWithBuild.gameNickname || 'Персонаж'} — ${selectedType} Билд`)
                     .setColor(selectedType === 'PvP' ? '#e74c3c' : '#2ecc71')
-                    .setDescription(`Ниже представлены ваши выбранные навыки и пути.`);
+                    .setDescription(`Сборка для режима **${selectedType}**`);
 
-                // Добавляем Мистические Навыки
-                if (charWithBuild.mysticSkills && charWithBuild.mysticSkills.length > 0) {
-                    buildEmbed.addFields({ 
-                        name: '✨ Мистические Навыки', 
-                        value: charWithBuild.mysticSkills.map(s => `• ${s}`).join('\n'), 
-                        inline: true 
-                    });
+                // Мистические навыки
+                if (buildData.mysticSkills && buildData.mysticSkills.length > 0) {
+                    const skillList = buildData.mysticSkills.map(s => `• ${s}`).join('\n');
+                    buildEmbed.addFields({ name: '✨ Мистические Навыки', value: skillList, inline: true });
                 } else {
                     buildEmbed.addFields({ name: '✨ Мистические Навыки', value: '*Не выбраны*', inline: true });
                 }
 
-                // Добавляем Внутренние Пути
-                if (charWithBuild.innerWays && charWithBuild.innerWays.length > 0) {
-                    buildEmbed.addFields({ 
-                        name: '🧘 Внутренние Пути', 
-                        value: charWithBuild.innerWays.map(s => `• ${s}`).join('\n'), 
-                        inline: true 
-                    });
+                // Внутренние пути
+                if (buildData.innerWays && buildData.innerWays.length > 0) {
+                    const wayList = buildData.innerWays.map(s => `• ${s}`).join('\n');
+                    buildEmbed.addFields({ name: '🧘 Внутренние Пути', value: wayList, inline: true });
                 } else {
                     buildEmbed.addFields({ name: '🧘 Внутренние Пути', value: '*Не выбраны*', inline: true });
-                }
-
-                // Если есть внешний билд
-                if (charWithBuild.buildUrl) {
-                    buildEmbed.addFields({ name: '🔗 Внешняя ссылка', value: `[Кликните здесь](${charWithBuild.buildUrl})` });
                 }
 
                 await menuInteraction.update({ content: null, embeds: [buildEmbed], components: [] });
