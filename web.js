@@ -8,7 +8,7 @@ const {
     ReactionRole, Settings, Reminder, SentMessage, Roster, RosterConfig, RosterMessage, Log, Guide, PlayerProfile, Event 
 } = require('./models');
 
-const OWNER_ID = '439798786059927552';
+const OWNER_ID = '439798786059927552'; // Твой ID
 
 const app = express();
 app.use(express.json());
@@ -44,6 +44,7 @@ app.get('/auth/discord', passport.authenticate('discord'));
 app.get('/auth/discord/callback', passport.authenticate('discord', { failureRedirect: '/' }), (req, res) => res.redirect('/dashboard'));
 app.get('/logout', (req, res) => req.logout(() => res.redirect('/')));
 
+// СТРАНИЦЫ
 app.get('/dashboard', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.get('/manage/:id', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'guild.html')); });
 app.get('/manage/:id/events', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'events.html')); });
@@ -59,6 +60,7 @@ app.get('/manage/:id/logs', (req, res) => { if (!req.user) return res.redirect('
 app.get('/manage/:id/profiles', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'profiles-admin.html')); });
 app.get('/profile', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'profile.html')); });
 
+// API ПОЛЬЗОВАТЕЛЯ
 app.get('/api/user', (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     const client = req.app.get('botClient');
@@ -74,21 +76,21 @@ app.get('/api/guild/:id', isModerator, async (req, res) => {
     res.json({ name: guild.name, roles });
 });
 
+// === ПРИЕМ И ОТПРАВКА ПРОФИЛЯ В БАЗУ ===
 app.get('/api/profile/:guildId', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     const targetUserId = req.query.user || req.user.id;
-    if (targetUserId !== req.user.id) {
-        const guild = req.user.guilds.find(g => g.id === req.params.guildId);
-        if (!guild || (BigInt(guild.permissions) & BigInt(0x8)) !== BigInt(0x8)) {
-             if (req.user.id !== OWNER_ID) return res.status(403).json({ error: 'Нет прав' });
-        }
-    }
+    
+    // Ищем профиль в базе
     let profile = await PlayerProfile.findOne({ userId: targetUserId, guildId: req.params.guildId });
     if (!profile) profile = await PlayerProfile.findOne({ userId: targetUserId, isGlobal: true });
     
-    // ЖЕЛЕЗОБЕТОННАЯ ПРОВЕРКА: Если профиль старый или пустой, отдаем чистый шаблон
-    if (!profile || !profile.characters || profile.characters.length === 0) {
-        profile = { userId: targetUserId, guildId: req.params.guildId, isGlobal: false, characters: [ { gameNickname: '', guildName: '', roles: [], martialArts: [], bio: '', buildUrl: '', builds: { PvE: { innerWays: [], mysticSkills: [] }, PvP: { innerWays: [], mysticSkills: [] } } } ] };
+    // Если профиля нет, отдаем пустой шаблон (чтобы форма не падала)
+    if (!profile) {
+        profile = { 
+            userId: targetUserId, guildId: req.params.guildId, isGlobal: false, 
+            characters: [ { gameNickname: '', guildName: '', roles: [], martialArts: [], bio: '', buildUrl: '', builds: { PvE: { innerWays: [], mysticSkills: [] }, PvP: { innerWays: [], mysticSkills: [] } } } ] 
+        };
     }
     res.json(profile);
 });
@@ -97,20 +99,26 @@ app.post('/api/profile/:guildId', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     const { characters, isGlobal, targetUser } = req.body;
     const finalUserId = targetUser || req.user.id;
-    if (finalUserId !== req.user.id) {
-        const guild = req.user.guilds.find(g => g.id === req.params.guildId);
-        if (!guild || (BigInt(guild.permissions) & BigInt(0x8)) !== BigInt(0x8)) {
-             if (req.user.id !== OWNER_ID) return res.status(403).json({ error: 'Нет прав' });
-        }
+
+    try {
+        // СОХРАНЯЕМ В БАЗУ (upsert: true создает запись, если ее нет, или обновляет)
+        await PlayerProfile.findOneAndUpdate(
+            { userId: finalUserId, guildId: req.params.guildId }, 
+            { characters, isGlobal }, 
+            { upsert: true, new: true }
+        );
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Ошибка сохранения профиля:', e);
+        res.status(500).json({ error: 'Ошибка базы данных' });
     }
-    await PlayerProfile.findOneAndUpdate({ userId: finalUserId, guildId: req.params.guildId }, { characters, isGlobal }, { upsert: true });
-    res.json({ success: true });
 });
 
 app.delete('/api/profile/:guildId', async (req, res) => { if (!req.user) return res.status(401).json({ error: 'Не авторизован' }); await PlayerProfile.findOneAndDelete({ userId: req.user.id, guildId: req.params.guildId }); res.json({ success: true }); });
 app.get('/api/guild/:id/profiles', isModerator, async (req, res) => { const client = req.app.get('botClient'); const discordGuild = client.guilds.cache.get(req.params.id); const profiles = await PlayerProfile.find({ $or: [ { guildId: req.params.id }, { isGlobal: true } ] }); const enriched = await Promise.all(profiles.map(async (p) => { const member = await discordGuild.members.fetch(p.userId).catch(() => null); return { ...p._doc, discordName: member ? member.user.username : 'Неизвестный', avatar: member && member.user.avatar ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png' }; })); res.json(enriched); });
 app.delete('/api/guild/:id/profiles/:userId', isModerator, async (req, res) => { await PlayerProfile.findOneAndDelete({ userId: req.params.userId, guildId: req.params.id }); res.json({ success: true }); });
 
+// ... (ОСТАЛЬНЫЕ API БЕЗ ИЗМЕНЕНИЙ) ...
 app.get('/api/guild/:id/events', isModerator, async (req, res) => { const events = await Event.find({ guildId: req.params.id }).sort({ date: 1 }); res.json(events); });
 app.post('/api/guild/:id/events', isModerator, async (req, res) => { try { const newEvent = await Event.create({ guildId: req.params.id, ...req.body, creatorId: req.user.id, attendees: [] }); res.json({ success: true, event: newEvent }); } catch (e) { res.status(500).json({ error: 'Ошибка' }); } });
 app.post('/api/guild/:id/events/:eventId/join', async (req, res) => { if (!req.user) return res.status(401).json({ error: 'Не авторизован' }); try { const event = await Event.findById(req.params.eventId); if (!event) return res.status(404).json({ error: 'Не найдено' }); const userId = req.user.id; if (event.attendees.includes(userId)) { event.attendees = event.attendees.filter(id => id !== userId); } else { event.attendees.push(userId); } await event.save(); res.json({ success: true }); } catch (e) { res.status(500).json({ error: 'Ошибка' }); } });
