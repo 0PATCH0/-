@@ -4,28 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Обзор сервера</title>
-    <link rel="stylesheet" href="/css/style.css?v=4">
+    <link rel="stylesheet" href="/css/style.css?v=12">
 </head>
 <body>
 
-    <video class="bg-video" autoplay loop muted playsinline poster="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2070&auto=format&fit=crop">
-        <source src="https://assets.mixkit.co/videos/preview/mixkit-clouds-and-blue-sky-2408-large.mp4" type="video/mp4">
-    </video>
-    <div class="bg-overlay"></div>
-    <div class="bg-particles"></div>
-    <!-- КОНЕЦ БЛОКА С ФОНОМ -->
-
-    <!-- Кнопка-печать "Главная" -->
     <a href="#" id="top-banner-link" class="top-banner"></a>
-    
-    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
-    
-    <div class="main-container">
-
-    <!-- Стилизованная печать "Главная" -->
-    <a href="#" id="top-banner-link" class="top-banner"></a>
-    
-    <!-- Бургер меню для телефона -->
     <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
 
     <div class="main-container">
@@ -38,6 +21,7 @@
             <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
             <a href="#" id="nav-guild"><div class="icon icon-users"></div> Гильдия</a>
             <a href="#" id="nav-guides"><div class="icon icon-book"></div> Гайды</a>
+            <a href="#" id="nav-events"><div class="icon icon-alarm"></div> События</a>
             <a href="#" id="nav-rr"><div class="icon icon-masks"></div> Роли по кнопкам</a>
             <a href="#" id="nav-rem"><div class="icon icon-alarm"></div> Напоминания</a>
             <a href="#" id="nav-mod"><div class="icon icon-gear"></div> Модерация</a>
@@ -61,6 +45,10 @@
                 <a href="#" id="card-guides" class="card">
                     <h3><div class="icon icon-book"></div> Гайды</h3>
                     <p>Создание и редактирование руководств с вложениями.</p>
+                </a>
+                <a href="#" id="card-events" class="card">
+                    <h3><div class="icon icon-alarm"></div> События</h3>
+                    <p>Рейды, ГВГ и другие сборы с записью участников.</p>
                 </a>
             </div>
 
@@ -103,6 +91,7 @@
             'nav-roster': 'roster', 'card-roster': 'roster',
             'nav-guild': 'profiles', 'card-guild': 'profiles',
             'nav-guides': 'guides', 'card-guides': 'guides',
+            'nav-events': 'events', 'card-events': 'events',
             'nav-mod': 'moderation', 'card-mod': 'moderation',
             'nav-logs': 'logs', 'card-logs': 'logs',
             'nav-rr': 'reactionroles', 'card-rr': 'reactionroles',
