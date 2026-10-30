@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мой игровой профиль</title>
-    <link rel="stylesheet" href="/css/style.css?v=14">
+    <link rel="stylesheet" href="/css/style.css?v=15">
     <script src="/js/ui.js"></script>
     <script src="/js/gamedata.js"></script>
     <style>
@@ -128,7 +128,7 @@
 
         let charCount = 0;
         let currentBlockId = null;
-        let activeBuildType = 'PvE'; // По умолчанию PvE для открытого модального окна
+        let activeBuildType = 'PvE';
         let currentTab = 'mystic';
         let currentFilter = 'All';
         let tempBuildData = {};
@@ -139,10 +139,13 @@
             block.className = 'character-block';
             block.id = `char-block-${charCount}`;
             
-            // Инициализация дефолтных билдов
-            const builds = data.builds || { PvE: { innerWays: [], mysticSkills: [] }, PvP: { innerWays: [], mysticSkills: [] } };
+            // ЗАЩИТА ОТ СТАРЫХ ДАННЫХ
+            let builds = data.builds;
+            if (!builds || !builds.PvE || !builds.PvP) {
+                builds = { PvE: { innerWays: [], mysticSkills: [] }, PvP: { innerWays: [], mysticSkills: [] } };
+            }
+            
             const buildsJson = JSON.stringify(builds);
-
             const rolesHtml = ROLES_LIST.map(r => `
                 <label class="checkbox-item">
                     <input type="checkbox" class="role-check" value="${r}" ${data.roles && data.roles.includes(r) ? 'checked' : ''}>
@@ -180,7 +183,6 @@
                     <div class="checkbox-grid">${artsHtml}</div>
                 </div>
 
-                <!-- НОВЫЙ БЛОК: ВКЛАДКИ БИЛДОВ -->
                 <div class="form-group">
                     <label>Билды (Навыки и Пути)</label>
                     <div class="build-tabs-container">
@@ -230,16 +232,14 @@
             document.getElementById('btn-add').style.display = blocks.length >= 3 ? 'none' : 'flex';
         }
 
-        // === МОДАЛЬНОЕ ОКНО ===
         function openModal(blockId) {
             currentBlockId = blockId;
             const block = document.getElementById(blockId);
-            
-            // Получаем текущий активный тип (PvE или PvP) из скрытого поля
             activeBuildType = block.querySelector('.c-current-build-type').value;
-            const allBuilds = JSON.parse(block.querySelector('.c-builds-data').value);
             
-            // Загружаем данные для активного билда
+            let allBuilds = JSON.parse(block.querySelector('.c-builds-data').value);
+            if (!allBuilds) allBuilds = { PvE: { innerWays: [], mysticSkills: [] }, PvP: { innerWays: [], mysticSkills: [] } };
+            
             tempBuildData = { 
                 innerWays: allBuilds[activeBuildType]?.innerWays || [], 
                 mysticSkills: allBuilds[activeBuildType]?.mysticSkills || [] 
@@ -247,7 +247,6 @@
             
             document.getElementById('modalTitle').innerText = `Настройка билда: ${activeBuildType}`;
             document.getElementById('modalTitle').style.color = activeBuildType === 'PvP' ? '#e74c3c' : '#2ecc71';
-            
             document.getElementById('skillModal').style.display = 'flex';
             switchModalTab('mystic');
         }
@@ -307,20 +306,16 @@
 
         function applySelection() {
             const block = document.getElementById(currentBlockId);
-            const allBuilds = JSON.parse(block.querySelector('.c-builds-data').value);
+            let allBuilds = JSON.parse(block.querySelector('.c-builds-data').value);
+            if (!allBuilds) allBuilds = { PvE: { innerWays: [], mysticSkills: [] }, PvP: { innerWays: [], mysticSkills: [] } };
             
-            // Сохраняем обновленные данные в нужный билд
-            allBuilds[activeBuildType] = { 
-                innerWays: tempBuildData.innerWays, 
-                mysticSkills: tempBuildData.mysticSkills 
-            };
-            
+            allBuilds[activeBuildType] = { innerWays: tempBuildData.innerWays, mysticSkills: tempBuildData.mysticSkills };
             block.querySelector('.c-builds-data').value = JSON.stringify(allBuilds);
+            
             closeModal();
             showToast(`Билд ${activeBuildType} обновлен!`, 'success');
         }
 
-        // === ЗАГРУЗКА И СОХРАНЕНИЕ ===
         const fetchUrl = targetUserId ? `/api/profile/${guildId}?user=${targetUserId}` : `/api/profile/${guildId}`;
 
         fetch(fetchUrl).then(res => res.json()).then(data => {
@@ -337,3 +332,4 @@
             const characters = [];
             document.querySelectorAll('.character-block').forEach(block => {
                 const roles = Array.from(block.querySelectorAll('.role-check:checked')).map(cb => cb.value);
+                const arts = Array.from(block.querySelectorAll('.art-check
