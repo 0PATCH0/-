@@ -52,7 +52,6 @@ module.exports = {
         profile.characters.forEach((char, index) => {
             const charTitle = `👤 Персонаж ${index + 1}: ${char.gameNickname || 'Без ника'}`;
             
-            // Красивое отображение ролей
             const rolesStr = char.roles && char.roles.length > 0 
                 ? char.roles.map(r => {
                     if (r === 'Танк') return '🛡️ Танк';
@@ -68,6 +67,7 @@ module.exports = {
             charValue += `⚔️ **Роли:** ${rolesStr}\n`;
             charValue += `🥋 **Искусства:** ${artsStr}\n`;
             if (char.bio) charValue += `*"${char.bio}"*`;
+            if (char.buildUrl) charValue += `\n[🔗 Посмотреть билд](${char.buildUrl})`;
 
             embed.addFields({ name: charTitle, value: charValue, inline: false });
         });
