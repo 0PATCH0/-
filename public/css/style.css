@@ -1,17 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Noto+Sans:wght@400;600&display=swap');
 
 :root {
-    --bg-base: #07080b;
-    --bg-card: rgba(18, 22, 28, 0.85);
-    --bg-sidebar: rgba(10, 12, 16, 0.95);
+    --bg-base: #050608;
+    --bg-card: rgba(15, 18, 24, 0.82);
+    --bg-sidebar: rgba(8, 10, 14, 0.95);
     --jade: #2ecc71;
-    --jade-glow: rgba(46, 204, 113, 0.4);
+    --jade-glow: rgba(46, 204, 113, 0.5);
     --gold: #d4af37;
+    --gold-dim: rgba(212, 175, 55, 0.3);
     --text-main: #e8eaed;
     --text-muted: #9aa0a6;
     --danger: #e74c3c;
-    --border: rgba(212, 175, 55, 0.2);
-    --glass: blur(12px);
+    --border: rgba(212, 175, 55, 0.25);
+    --glass: blur(14px);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -19,38 +20,61 @@
 body {
     font-family: 'Noto Sans', sans-serif;
     background-color: var(--bg-base);
-    /* Легкий фон с горами и туманом (без нагрузки на процессор) */
-    background-image: 
-        linear-gradient(rgba(7, 8, 11, 0.7), rgba(7, 8, 11, 0.9)),
-        url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2070&auto=format&fit=crop');
-    background-size: cover;
-    background-attachment: fixed;
-    background-position: center;
     color: var(--text-main);
     min-height: 100vh;
-    padding-top: 80px;
     overflow-x: hidden;
+    position: relative;
+}
+
+/* --- ВИДЕО-ФОН (если загрузишь на Imgur, замени ссылку) --- */
+.bg-video {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: cover;
+    z-index: -2;
+    opacity: 0.6;
+    /* Fallback, если видео не загрузится */
+    background: radial-gradient(circle at 50% 30%, #1a2a3a 0%, #050608 100%);
+}
+
+/* Затемняющий слой поверх видео */
+.bg-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(5, 6, 8, 0.75);
+    z-index: -1;
+    pointer-events: none;
+}
+
+/* Анимация парящих частиц (CSS, без нагрузки) */
+.bg-particles {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(circle, rgba(212, 175, 55, 0.15) 1px, transparent 1px);
+    background-size: 50px 50px;
+    animation: floatParticles 20s linear infinite;
+}
+@keyframes floatParticles {
+    0% { background-position: 0 0; }
+    100% { background-position: 100px 100px; }
 }
 
 /* --- КНОПКА-ПЕЧАТЬ "ГЛАВНАЯ" --- */
 .top-banner {
     position: fixed;
-    top: 15px;
-    left: 20px;
-    width: 50px;
-    height: 50px;
+    top: 15px; left: 20px;
+    width: 50px; height: 50px;
     background: var(--bg-card);
     border: 2px solid var(--gold);
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     z-index: 1000;
     cursor: pointer;
-    box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+    box-shadow: 0 0 15px var(--gold-dim);
     transition: 0.3s;
     text-decoration: none;
-    line-height: 1;
 }
 .top-banner::after {
     content: "主";
@@ -58,8 +82,6 @@ body {
     color: var(--gold);
     font-size: 26px;
     font-weight: bold;
-    display: block;
-    margin-top: -2px;
 }
 .top-banner:hover {
     box-shadow: 0 0 25px var(--jade-glow);
@@ -68,7 +90,7 @@ body {
 }
 .top-banner:hover::after { color: var(--jade); }
 
-/* --- БУРГЕР МЕНЮ --- */
+/* Бургер-меню */
 .mobile-menu-btn {
     display: none;
     position: fixed;
@@ -78,7 +100,7 @@ body {
 }
 
 /* --- МАКЕТ --- */
-.main-container { display: flex; width: 100%; max-width: 1600px; margin: 0 auto; }
+.main-container { display: flex; width: 100%; max-width: 1600px; margin: 0 auto; padding-top: 80px; }
 
 .sidebar {
     width: 260px; flex-shrink: 0;
@@ -87,7 +109,6 @@ body {
     height: calc(100vh - 80px); position: sticky; top: 80px;
     padding: 20px; overflow-y: auto;
 }
-
 .sidebar h2 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 18px; text-align: center; margin-bottom: 20px; }
 .sidebar a {
     display: flex; align-items: center; gap: 12px;
@@ -110,12 +131,19 @@ body {
     padding: 25px; border-radius: 12px; border: 1px solid var(--border);
     transition: 0.4s; text-decoration: none; color: var(--text-main);
     display: block; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    position: relative; overflow: hidden;
 }
+.card::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0; transition: 0.4s;
+}
+.card:hover::before { opacity: 1; }
 .card:hover { transform: translateY(-5px); border-color: var(--jade); box-shadow: 0 15px 40px var(--jade-glow); }
 .card h3 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 20px; display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .card p { color: var(--text-muted); font-size: 14px; line-height: 1.5; }
 
-/* Иконки (SVG Base64 для надежности) */
+/* Иконки (SVG) */
 .icon { display: inline-block; width: 20px; height: 20px; background-size: contain; background-repeat: no-repeat; vertical-align: middle; }
 .icon-home { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="%232ecc71" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>'); }
 .icon-shield { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="%232ecc71" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>'); }
@@ -127,7 +155,7 @@ body {
 .icon-scroll { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="%232ecc71" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>'); }
 .icon-envelope { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="%232ecc71" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>'); }
 
-/* --- КРАСИВЫЕ ФОРМЫ И СЕТКИ --- */
+/* Формы */
 .form-card { background: var(--bg-card); backdrop-filter: var(--glass); padding: 30px; border-radius: 12px; border: 1px solid var(--border); width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
 .form-group { margin-bottom: 20px; }
 .form-group label { display: block; margin-bottom: 8px; color: var(--gold); font-weight: 600; font-size: 14px; }
@@ -137,30 +165,17 @@ body {
 }
 .form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--jade); box-shadow: 0 0 10px var(--jade-glow); }
 
-/* Сетка выбора (в профиле) */
+/* Чекбоксы (для профиля) */
 .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-.checkbox-item {
-    background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 8px;
-    padding: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s;
-}
+.checkbox-item { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; }
 .checkbox-item:hover { border-color: var(--jade); background: rgba(46,204,113,0.1); }
 .checkbox-item input[type="checkbox"] { display: none; }
 .checkbox-item input:checked + .custom-checkbox { background: var(--jade); border-color: var(--jade); }
 .checkbox-item input:checked + .custom-checkbox::after { content: "✓"; color: #000; font-weight: bold; display: flex; justify-content: center; align-items: center; font-size: 14px; }
 .custom-checkbox { width: 20px; height: 20px; border: 2px solid var(--gold); border-radius: 4px; flex-shrink: 0; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
 
-/* Ряды ролей для кнопок (исправлена верстка!) */
-.role-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr 2fr auto; /* Роль, эмодзи, текст, кнопка удаления */
-    gap: 10px;
-    margin-bottom: 10px;
-    align-items: center;
-    background: rgba(0,0,0,0.3);
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-}
+/* Ряды ролей для кнопок */
+.role-row { display: grid; grid-template-columns: 2fr 1fr 2fr auto; gap: 10px; margin-bottom: 10px; align-items: center; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; border: 1px solid var(--border); }
 .role-row select, .role-row input { width: 100%; }
 
 /* Кнопки */
@@ -170,13 +185,12 @@ body {
 .btn-danger:hover { background: var(--danger); color: white; }
 .btn-small { padding: 8px 14px; font-size: 13px; }
 
+/* Адаптивность */
 @media (max-width: 900px) {
     .mobile-menu-btn { display: block; }
     .sidebar { position: fixed; left: -100%; top: 0; height: 100vh; z-index: 999; transition: 0.3s; width: 260px; }
     .sidebar.active { left: 0; }
     .content { padding: 20px; padding-top: 80px; }
     .header { flex-direction: column; align-items: flex-start; }
-    
-    /* На телефоне ряды ролей встают друг под друга */
     .role-row { grid-template-columns: 1fr; gap: 5px; padding: 15px; }
 }
