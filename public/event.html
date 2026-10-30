@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>События гильдии</title>
+    <link rel="stylesheet" href="/css/style.css?v=11">
+    <script src="/js/ui.js"></script>
+</head>
+<body>
+
+    <a href="#" id="top-banner-link" class="top-banner"></a>
+    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <h2 id="server-name">Загрузка...</h2>
+            <a href="/dashboard"><div class="icon icon-home"></div> К списку серверов</a>
+            <hr style="border-color: var(--border); margin: 15px 0;">
+            <a href="#" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
+            <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
+            <a href="#" id="nav-guild"><div class="icon icon-users"></div> Гильдия</a>
+            <a href="#" id="nav-guides"><div class="icon icon-book"></div> Гайды</a>
+            <a href="#" class="active"><div class="icon icon-alarm"></div> События</a>
+            <a href="#" id="nav-rr"><div class="icon icon-masks"></div> Роли по кнопкам</a>
+            <a href="#" id="nav-rem"><div class="icon icon-alarm"></div> Напоминания</a>
+            <a href="#" id="nav-mod"><div class="icon icon-gear"></div> Модерация</a>
+            <a href="#" id="nav-logs"><div class="icon icon-scroll"></div> Логи действий</a>
+            <a href="#" id="nav-emb"><div class="icon icon-envelope"></div> Эмбеды</a>
+        </div>
+
+        <div class="content">
+            <div class="header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <h1><div class="icon icon-alarm"></div> События гильдии</h1>
+            </div>
+            
+            <div class="grid" style="grid-template-columns: 1fr 2fr; align-items: start;">
+                <!-- Форма создания (только для админа) -->
+                <div class="form-card" id="create-event-panel">
+                    <h3 style="color: var(--gold); margin-bottom: 20px; font-family: 'Cinzel', serif;">Создать событие</h3>
+                    <div class="form-group"><label>Название</label><input type="text" id="ev-title" placeholder="Например: ГВГ"></div>
+                    <div class="form-group"><label>Описание</label><textarea id="ev-desc" style="height: 80px;"></textarea></div>
+                    <div class="form-group"><label>Дата и время</label><input type="datetime-local" id="ev-date"></div>
+                    <button class="btn" onclick="createEvent()"><div class="icon icon-paper-plane"></div> Создать</button>
+                </div>
+
+                <!-- Список событий -->
+                <div id="events-list">
+                    <p style="color: var(--text-muted);">Загрузка...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const guildId = window.location.pathname.split('/')[2];
+        const banner = document.getElementById('top-banner-link');
+        if (banner) banner.href = `/manage/${guildId}`;
+
+        const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-guild': '/profiles', 'nav-guides': '/guides', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-logs': '/logs', 'nav-emb': '/custom'};
+        for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
+
+        fetch(`/api/guild/${guildId}`).then(res => res.json()).then(data => document.getElementById('server-name').innerText = data.name);
+
+        function loadEvents() {
+            fetch(`/api/guild/${guildId}/events`).then(res => res.json()).then(data => {
+                const list = document.getElementById('events-list');
+                if (data.length === 0) return list.innerHTML = '<p style="color: var(--text-muted);">Событий пока нет.</p>';
+                
+                list.innerHTML = '';
+                data.forEach(ev => {
+                    const dateObj = new Date(ev.date);
+                    const dateStr = dateObj.toLocaleString('ru-RU');
+                    const isPast = ev.date < Date.now();
+                    const attendeesStr = ev.attendees.length > 0 ? ev.attendees.map(id => `<@${id}>`).join(', ') : 'Никто не записался';
+
+                    list.innerHTML += `
+                        <div class="card" style="margin-bottom: 15px; border-left: 4px solid ${isPast ? '#555' : 'var(--gold)'}; opacity: ${isPast ? '0.6' : '1'};">
+                            <div style="display: flex; justify-content: space-between;">
+                                <h3 style="color: var(--gold);">${ev.title}</h3>
+                                <span style="color: var(--jade); font-weight: bold;">${dateStr}</span>
+                            </div>
+                            <p style="margin: 10px 0; color: var(--text-muted);">${ev.description || 'Без описания'}</p>
+                            
+                            <div style="background: rgba(0,0,0,0.4); padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+                                <span style="font-size: 13px; color: var(--text-main);">Записались (${ev.attendees.length}):</span>
+                                <div style="font-size: 13px; color: var(--jade); margin-top: 5px;">${attendeesStr}</div>
+                            </div>
+
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn btn-small" style="flex: 1;" onclick="toggleJoin('${ev._id}')" ${isPast ? 'disabled' : ''}>${isPast ? 'Завершено' : 'Я пойду / Отменить'}</button>
+                                <button class="btn btn-danger btn-small" onclick="deleteEvent('${ev._id}')"><div class="icon icon-trash"></div></button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
+        loadEvents();
+
+        function createEvent() {
+            const title = document.getElementById('ev-title').value;
+            const desc = document.getElementById('ev-desc').value;
+            const dateStr = document.getElementById('ev-date').value;
+            
+            if (!title || !dateStr) return alert('Заполните название и дату!');
+            const date = new Date(dateStr).getTime();
+
+            fetch(`/api/guild/${guildId}/events`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, description: desc, date })
+            }).then(res => res.json()).then(data => {
+                if (data.success) {
+                    document.getElementById('ev-title').value = '';
+                    document.getElementById('ev-desc').value = '';
+                    loadEvents();
+                }
+            });
+        }
+
+        function toggleJoin(eventId) {
+            fetch(`/api/guild/${guildId}/events/${eventId}/join`, { method: 'POST' })
+                .then(res => res.json()).then(() => loadEvents());
+        }
+
+        function deleteEvent(id) {
+            if (!confirm('Удалить событие?')) return;
+            fetch(`/api/guild/${guildId}/events/${id}`, { method: 'DELETE' }).then(() => loadEvents());
+        }
+    </script>
+</body>
+</html>
