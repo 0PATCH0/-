@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мой игровой профиль</title>
-    <link rel="stylesheet" href="/css/style.css?v=16">
+    <link rel="stylesheet" href="/css/style.css?v=17">
     <script src="/js/ui.js"></script>
     <script src="/js/gamedata.js"></script>
     <style>
+        #error-box { display: none; background: #e74c3c; color: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; font-family: monospace; white-space: pre-wrap; }
         .character-block { background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 20px; position: relative; }
         .char-title { font-family: 'Cinzel', serif; color: var(--jade); margin-bottom: 15px; font-size: 20px; display: flex; justify-content: space-between; align-items: center; }
         .remove-char-btn { background: var(--danger); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; display: none; font-size: 12px; }
@@ -48,7 +49,6 @@
         .skill-icon span { font-size: 11px; margin-top: 5px; color: var(--text-muted); line-height: 1.2; }
         .skill-icon.selected img { border-color: var(--gold); box-shadow: 0 0 15px var(--gold); }
         .skill-icon.selected span { color: var(--gold); font-weight: bold; }
-        .skill-icon:hover img { transform: scale(1.05); }
         .modal-footer { padding: 15px; border-top: 1px solid var(--border); text-align: right; }
     </style>
 </head>
@@ -66,6 +66,10 @@
         </div>
 
         <div class="content" style="max-width: 900px;">
+            
+            <!-- БЛОК ДЛЯ ВЫВОДА ОШИБОК -->
+            <div id="error-box"></div>
+
             <div class="header" style="text-align: center; border: none;">
                 <h1 style="font-size: 36px;" id="page-title">Мои персонажи</h1>
                 <p style="color: var(--text-muted); margin-top: 10px;">Эта информация будет видна другим игрокам</p>
@@ -109,12 +113,16 @@
     </div>
 
     <script>
+        // ЛОВИМ ВСЕ ОШИБКИ НА ЭКРАН
+        window.onerror = function(msg, url, line, col, error) {
+            const box = document.getElementById('error-box');
+            box.style.display = 'block';
+            box.innerText += `Ошибка: ${msg}\nСтрока: ${line}\n\n`;
+            return false;
+        };
+
         const urlParams = new URLSearchParams(window.location.search);
-        let guildId = urlParams.get('guild');
-        if (!guildId) {
-            const pathParts = window.location.pathname.split('/');
-            guildId = pathParts[pathParts.length - 1];
-        }
+        let guildId = urlParams.get('guild') || window.location.pathname.split('/').pop();
         const targetUserId = urlParams.get('user'); 
         
         const banner = document.getElementById('top-banner-link');
@@ -130,27 +138,19 @@
         let currentFilter = 'All';
         let tempBuildData = {};
 
-        // Безопасное кодирование/декодирование JSON для HTML
-        function encodeData(obj) { return btoa(encodeURIComponent(JSON.stringify(obj))); }
-        function decodeData(str) { 
-            try { return JSON.parse(decodeURIComponent(atob(str))); } 
-            catch(e) { return null; } 
-        }
-
+        // Создаем блок персонажа
         function createCharacterBlock(data = {}, index = 0) {
             charCount++;
             const block = document.createElement('div');
             block.className = 'character-block';
             block.id = `char-block-${charCount}`;
             
-            let builds = data.builds;
-            if (!builds || !builds.PvE || !builds.PvP) {
-                builds = { PvE: { innerWays: [], mysticSkills: [] }, PvP: { innerWays: [], mysticSkills: [] } };
-            }
-            
-            // КОДИРУЕМ ДАННЫЕ В BASE64
-            const buildsSafe = encodeData(builds);
-            
+            // Инициализируем билды прямо в памяти элемента (без скрытых полей!)
+            let builds = data.builds || { PvE: { innerWays: [], mysticSkills: [] }, PvP: { innerWays: [], mysticSkills: [] } };
+            if (!builds.PvE) builds.PvE = { innerWays: [], mysticSkills: [] };
+            if (!builds.PvP) builds.PvP = { innerWays: [], mysticSkills: [] };
+            block._builds = builds; // Сохраняем в свойство DOM-элемента
+
             const rolesHtml = ROLES_LIST.map(r => `
                 <label class="checkbox-item">
                     <input type="checkbox" class="role-check" value="${r}" ${(data.roles || []).includes(r) ? 'checked' : ''}>
@@ -194,10 +194,8 @@
                         <button type="button" class="build-tab-btn pve active" onclick="switchBuildTab(this, 'PvE')">🌿 PvE Билд</button>
                         <button type="button" class="build-tab-btn pvp" onclick="switchBuildTab(this, 'PvP')">⚔️ PvP Билд</button>
                     </div>
-                    <!-- ИСПОЛЬЗУЕМ БЕЗОПАСНЫЙ BASE64 -->
-                    <input type="hidden" class="c-builds-data" value="${buildsSafe}">
-                    <input type="hidden" class="c-current-build-type" value="PvE">
                     
+                    <!-- Убрали скрытые инпуты, используем свойство block._builds -->
                     <button class="build-btn" onclick="openModal('${block.id}')">
                         <div class="icon icon-shield"></div> Настроить Билд
                     </button>
@@ -214,11 +212,12 @@
             const block = btn.closest('.character-block');
             block.querySelectorAll('.build-tab-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            block.querySelector('.c-current-build-type').value = type;
+            // Сохраняем выбранную вкладку в элемент
+            block._currentBuildType = type;
         }
 
         function addCharacter() {
-            if (charCount >= 3) return showToast('Максимум 3 персонажа.', 'error');
+            if (charCount >= 3) return alert('Максимум 3 персонажа.');
             createCharacterBlock({}, charCount);
         }
 
@@ -235,17 +234,16 @@
                 const removeBtn = block.querySelector('.remove-char-btn');
                 removeBtn.style.display = blocks.length > 1 ? 'block' : 'none';
             });
-            document.getElementById('btn-add').style.display = blocks.length >= 3 ? 'none' : 'flex';
+            document.getElementById('btn-add').style.display = blocks.length >= 3 ? 'none' : 'block';
         }
 
         function openModal(blockId) {
             currentBlockId = blockId;
             const block = document.getElementById(blockId);
-            activeBuildType = block.querySelector('.c-current-build-type').value;
+            // Берем тип из памяти элемента (по умолчанию PvE)
+            activeBuildType = block._currentBuildType || 'PvE';
             
-            // БЕЗОПАСНО ДЕКОДИРУЕМ
-            let allBuilds = decodeData(block.querySelector('.c-builds-data').value);
-            if (!allBuilds) allBuilds = { PvE: { innerWays: [], mysticSkills: [] }, PvP: { innerWays: [], mysticSkills: [] } };
+            let allBuilds = block._builds;
             
             tempBuildData = { 
                 innerWays: allBuilds[activeBuildType]?.innerWays || [], 
@@ -289,7 +287,7 @@
         function renderGrid() {
             const grid = document.getElementById('modalGrid');
             if (typeof GAME_DATA === 'undefined') {
-                grid.innerHTML = '<p style="color:red;">Ошибка: Файл gamedata.js не загружен!</p>';
+                grid.innerHTML = '<p style="color:red;">Файл gamedata.js не загружен!</p>';
                 return;
             }
 
@@ -318,22 +316,27 @@
 
         function applySelection() {
             const block = document.getElementById(currentBlockId);
-            let allBuilds = decodeData(block.querySelector('.c-builds-data').value);
-            if (!allBuilds) allBuilds = { PvE: { innerWays: [], mysticSkills: [] }, PvP: { innerWays: [], mysticSkills: [] } };
             
-            allBuilds[activeBuildType] = { innerWays: tempBuildData.innerWays, mysticSkills: tempBuildData.mysticSkills };
-            
-            // СОХРАНЯЕМ В BASE64
-            block.querySelector('.c-builds-data').value = encodeData(allBuilds);
+            block._builds[activeBuildType] = { 
+                innerWays: tempBuildData.innerWays, 
+                mysticSkills: tempBuildData.mysticSkills 
+            };
             
             closeModal();
-            showToast(`Билд ${activeBuildType} обновлен!`, 'success');
+            alert(`Билд ${activeBuildType} обновлен!`);
         }
 
-        const fetchUrl = targetUserId ? `/api/profile/${guildId}?user=${targetUserId}` : `/api/profile/${guildId}`;
+        // ИНИЦИАЛИЗАЦИЯ СТРАНИЦЫ
+        // Принудительно создаем одну форму, чтобы она точно была
+        createCharacterBlock({}, 0);
 
-        fetch(fetchUrl).then(res => res.json()).then(data => {
-            if (data.characters && data.characters.length > 0) {
-                if (!targetUserId) document.getElementById('btn-delete-profile').style.display = 'block';
-                if (data.isGlobal) document.getElementById('is-global').checked = true;
-         
+        // Пытаемся загрузить данные и заменить форму, если они есть
+        fetch(targetUserId ? `/api/profile/${guildId}?user=${targetUserId}` : `/api/profile/${guildId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.characters && data.characters.length > 0) {
+                    document.getElementById('characters-container').innerHTML = '';
+                    charCount = 0;
+                    if (!targetUserId) document.getElementById('btn-delete-profile').style.display = 'block';
+                    if (data.isGlobal) document.getElementById('is-global').checked = true;
+                    data.characters.forEac
