@@ -1,11 +1,26 @@
 const mongoose = require('mongoose');
 
-const SettingsSchema = new mongoose.Schema({ guildId: { type: String, required: true, unique: true }, modRoles: { type: [String], default: [] } });
+const SettingsSchema = new mongoose.Schema({
+    guildId: { type: String, required: true, unique: true },
+    modRoles: { type: [String], default: [] },
+    rosterRoleIds: { type: [String], default: [] }
+});
 const ReminderSchema = new mongoose.Schema({ id: { type: String, required: true, unique: true }, userId: String, channelId: String, text: String, targetId: String, targetType: String, repeat: String, nextTime: Number, hour: Number, minute: Number, timezone: Number, warned: { type: Boolean, default: false } });
 const ReactionRoleSchema = new mongoose.Schema({ guildId: String, channelId: String, messageId: String, title: String, desc: String, color: String, mode: String, roles: [{ roleId: String, label: String, emoji: String }] });
 const SentMessageSchema = new mongoose.Schema({ guildId: String, channelId: String, messageId: String, title: String, description: String, color: String, image: String, footer: String, author: String });
 const RosterSchema = new mongoose.Schema({ guildId: String, lastUpdated: { type: Date, default: Date.now }, data: { type: Object, default: {} } });
-const RosterConfigSchema = new mongoose.Schema({ guildId: String, columns: [{ roleId: String, name: String, color: { type: String, default: '#5865F2' } }] });
+const RosterConfigSchema = new mongoose.Schema({
+    guildId: String,
+    columns: [{
+        key: { type: String, required: true },       // 'tank' | 'dps' | 'healer' | 'custom_xxx'
+        name: String,
+        icon: { type: String, default: 'custom' },   // 'tank' | 'dps' | 'healer' | 'custom'
+        color: { type: String, default: '#d4af37' },
+        order: { type: Number, default: 0 },         // для сортировки
+        isClass: { type: Boolean, default: false }   // true для базовых классов
+    }],
+    manualAssignments: { type: Object, default: {} } // { userId: columnKey }
+});
 const RosterMessageSchema = new mongoose.Schema({ guildId: String, channelId: String, messageId: String });
 const LogSchema = new mongoose.Schema({ guildId: String, userId: String, username: String, action: String, details: String, date: { type: Date, default: Date.now } });
 const GuideSchema = new mongoose.Schema({ guildId: String, name: String, description: String, chapters: [{ title: String, content: String, color: String, imageUrl: String, attachmentUrl: String, attachmentName: String }], date: { type: Date, default: Date.now } });
