@@ -23,8 +23,8 @@ const PlayerProfileSchema = new mongoose.Schema({
         bio: { type: String, default: '' },
         buildUrl: { type: String, default: '' },
         builds: {
-            PvE: { innerWays: { type: [String], default: [] }, mysticSkills: { type: [String], default: [] } },
-            PvP: { innerWays: { type: [String], default: [] }, mysticSkills: { type: [String], default: [] } }
+    PvE: { innerWays: { type: [String], default: [] }, mysticSkills: { type: [String], default: [] }, martialArts: { type: [String], default: [] } },
+    PvP: { innerWays: { type: [String], default: [] }, mysticSkills: { type: [String], default: [] }, martialArts: { type: [String], default: [] } }
         }
     }]
 });
