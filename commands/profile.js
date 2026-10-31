@@ -58,17 +58,40 @@ function formatSkill(type, id) {
     return `${emoji} **${name}**\n> *${desc}*`;
 }
 
-function formatMartialArts(ids) {
+// Короткая строка для списка искусств в основном профиле (без описания — чтобы влезло)
+function formatMartialArtsShort(ids) {
     if (!ids || ids.length === 0) return '*Не выбраны*';
     return ids.map(id => {
         const art = (GAME_DATA.martialArts || []).find(a => a.id === id);
         if (!art) return `\`${id}\``;
-        return `${art.emoji || '🥋'} **${art.nameRU}** *(${art.path})*`;
+        return `${art.emoji || '🥋'} **${art.nameRU}**`;
     }).join('\n');
 }
 
+// Полная строка для эмбеда билда (с описанием)
+function formatMartialFull(ids) {
+    if (!ids || ids.length === 0) return '*Не выбраны*';
+    return ids.map(id => {
+        const art = (GAME_DATA.martialArts || []).find(a => a.id === id);
+        if (!art) return `\`${id}\``;
+        let desc = art.desc || '';
+        if (desc.length > 100) desc = desc.substring(0, 97) + '...';
+        return `${art.emoji || '🥋'} **${art.nameRU}** *(${art.path})*\n> *${desc}*`;
+    }).join('\n\n');
+}
+
+// Собираем все искусства персонажа: из char.martialArts + из обоих билдов, без дублей
+function collectCharacterMartialArts(char) {
+    const fromTop = Array.isArray(char.martialArts) ? char.martialArts : [];
+    const fromPvE = (char.builds && char.builds.PvE && Array.isArray(char.builds.PvE.martialArts))
+        ? char.builds.PvE.martialArts : [];
+    const fromPvP = (char.builds && char.builds.PvP && Array.isArray(char.builds.PvP.martialArts))
+        ? char.builds.PvP.martialArts : [];
+    return [...new Set([...fromTop, ...fromPvE, ...fromPvP])].filter(Boolean);
+}
+
 function buildBuildEmbed(char, buildType) {
-    const build = (char.builds && char.builds[buildType]) || { mysticSkills: [], innerWays: [] };
+    const build = (char.builds && char.builds[buildType]) || { mysticSkills: [], innerWays: [], martialArts: [] };
     const embed = new EmbedBuilder()
         .setTitle(`🎯 ${char.gameNickname || 'Персонаж'} — ${buildType} Билд`)
         .setColor(buildType === 'PvP' ? '#e74c3c' : '#2ecc71')
@@ -76,19 +99,25 @@ function buildBuildEmbed(char, buildType) {
 
     const mysticList = (build.mysticSkills || []).slice(0, 8);
     const innerList = (build.innerWays || []).slice(0, 4);
+    const artsList = (build.martialArts || []).slice(0, 2);
 
     embed.addFields(
         { name: '✨ Мистические Навыки', value: mysticList.length ? mysticList.map(id => formatSkill('mystic', id)).join('\n\n') : '*Не выбраны*', inline: false },
-        { name: '🧘 Внутренние Пути', value: innerList.length ? innerList.map(id => formatSkill('inner', id)).join('\n\n') : '*Не выбраны*', inline: false }
+        { name: '🧘 Внутренние Пути', value: innerList.length ? innerList.map(id => formatSkill('inner', id)).join('\n\n') : '*Не выбраны*', inline: false },
+        { name: '🥋 Боевые искусства', value: formatMartialFull(artsList), inline: false }
     );
     return embed;
 }
 
 function buildBuildButtons(char, charIndex) {
     const hasPvE = char.builds && char.builds.PvE &&
-        ((char.builds.PvE.mysticSkills || []).length > 0 || (char.builds.PvE.innerWays || []).length > 0);
+        ((char.builds.PvE.mysticSkills || []).length > 0 ||
+         (char.builds.PvE.innerWays || []).length > 0 ||
+         (char.builds.PvE.martialArts || []).length > 0);
     const hasPvP = char.builds && char.builds.PvP &&
-        ((char.builds.PvP.mysticSkills || []).length > 0 || (char.builds.PvP.innerWays || []).length > 0);
+        ((char.builds.PvP.mysticSkills || []).length > 0 ||
+         (char.builds.PvP.innerWays || []).length > 0 ||
+         (char.builds.PvP.martialArts || []).length > 0);
 
     const pveBtn = new ButtonBuilder()
         .setCustomId(`build_PvE_${charIndex}`)
@@ -143,16 +172,22 @@ module.exports = {
             const charTitle = `👤 Персонаж ${index + 1}: ${char.gameNickname || 'Без ника'}`;
 
             const hasPvE = char.builds && char.builds.PvE &&
-                ((char.builds.PvE.mysticSkills || []).length > 0 || (char.builds.PvE.innerWays || []).length > 0);
+                ((char.builds.PvE.mysticSkills || []).length > 0 ||
+                 (char.builds.PvE.innerWays || []).length > 0 ||
+                 (char.builds.PvE.martialArts || []).length > 0);
             const hasPvP = char.builds && char.builds.PvP &&
-                ((char.builds.PvP.mysticSkills || []).length > 0 || (char.builds.PvP.innerWays || []).length > 0);
+                ((char.builds.PvP.mysticSkills || []).length > 0 ||
+                 (char.builds.PvP.innerWays || []).length > 0 ||
+                 (char.builds.PvP.martialArts || []).length > 0);
             let buildsText = [];
             if (hasPvE) buildsText.push('🌿 PvE');
             if (hasPvP) buildsText.push('⚔️ PvP');
             const buildsStr = buildsText.length ? buildsText.join(' | ') : 'Билды не настроены';
 
+            const charArts = collectCharacterMartialArts(char);
+
             let charValue = `🏰 **Гильдия:** ${char.guildName || 'Не указана'}\n`;
-            charValue += `🥋 **Боевые искусства:**\n${formatMartialArts(char.martialArts)}\n`;
+            charValue += `🥋 **Боевые искусства:**\n${formatMartialArtsShort(charArts)}\n`;
             charValue += `🎯 **Доступные билды:** ${buildsStr}\n`;
             if (char.bio) charValue += `*"${char.bio}"*`;
 
@@ -193,7 +228,9 @@ module.exports = {
             if (!char) return i.deferUpdate();
 
             const hasBuild = char.builds && char.builds[buildType] &&
-                ((char.builds[buildType].mysticSkills || []).length > 0 || (char.builds[buildType].innerWays || []).length > 0);
+                ((char.builds[buildType].mysticSkills || []).length > 0 ||
+                 (char.builds[buildType].innerWays || []).length > 0 ||
+                 (char.builds[buildType].martialArts || []).length > 0);
             if (!hasBuild) {
                 return i.reply({ content: `У этого персонажа нет сохранённого ${buildType} билда.`, ephemeral: true });
             }
