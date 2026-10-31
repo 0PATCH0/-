@@ -1,8 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const { PlayerProfile, RosterConfig, RosterMessage, Settings } = require('./models');
 
-// ⚠️ ЕСЛИ ЭМОДЗИ НЕ ОТОБРАЖАЮТСЯ В DISCORD — замени <:dd:...>, <:tank:...>, <:heal:...>
-// на стандартные "⚔️", "🛡️", "💚" (тогда emoji будет работать везде).
 const BASE_CLASSES = [
     { key: 'dps',    name: 'ДД',   icon: 'dps',    color: '#e74c3c', order: 0, isClass: true, emoji: '<:dd:1564320122708037692>' },
     { key: 'tank',   name: 'Танк', icon: 'tank',   color: '#2ecc71', order: 1, isClass: true, emoji: '<:tank:1564320623507935334>' },
@@ -30,7 +28,10 @@ function getDefaultRosterColumns() {
 
 async function buildClassifiedRoster(botClient, guildId) {
     const discordGuild = botClient.guilds.cache.get(guildId);
-    if (!discordGuild) return { columns: [], members: [], guildName: null };
+    if (!discordGuild) {
+        console.warn('[ROSTER] Guild not found in cache:', guildId);
+        return { columns: [], members: [], guildName: null };
+    }
 
     let config = await RosterConfig.findOne({ guildId });
     let columns;
@@ -44,6 +45,8 @@ async function buildClassifiedRoster(botClient, guildId) {
     const profiles = await PlayerProfile.find({
         $or: [ { guildId }, { isGlobal: true } ]
     });
+    console.log('[ROSTER] buildClassifiedRoster', guildId, 'profiles found:', profiles.length);
+
     const profileMap = {};
     profiles.forEach(p => {
         if (!profileMap[p.userId] || p.guildId === guildId) {
@@ -53,7 +56,14 @@ async function buildClassifiedRoster(botClient, guildId) {
 
     const memberIds = Object.keys(profileMap);
     const fetched = await Promise.all(
-        memberIds.map(id => discordGuild.members.fetch(id).catch(() => null))
+        memberIds.map(async (id) => {
+            const m = await discordGuild.members.fetch(id).catch((e) => {
+                console.error('[ROSTER] fetch failed for', id, '-', e.message);
+                return null;
+            });
+            if (!m) console.warn('[ROSTER] member not found:', id);
+            return m;
+        })
     );
 
     const members = [];
@@ -81,6 +91,8 @@ async function buildClassifiedRoster(botClient, guildId) {
         });
     });
 
+    console.log('[ROSTER] buildClassifiedRoster', guildId, 'members after fetch:', members.length);
+
     members.sort((a, b) => a.displayName.localeCompare(b.displayName));
 
     return { columns, members, guildName: discordGuild.name };
@@ -89,7 +101,6 @@ async function buildClassifiedRoster(botClient, guildId) {
 function buildRosterEmbeds(roster, guildId) {
     const { columns, members, guildName } = roster;
 
-    // Группировка
     const byColumn = {};
     columns.forEach(c => { byColumn[c.key] = []; });
 
@@ -109,6 +120,8 @@ function buildRosterEmbeds(roster, guildId) {
         }
     });
 
+    console.log('[ROSTER] byColumn:', Object.keys(byColumn).map(k => k + ':' + byColumn[k].length).join(', '));
+
     const profileUrl = (userId) => `https://patchitos1234.fly.dev/view-profile/${userId}?guild=${guildId}`;
 
     const embeds = [];
@@ -121,7 +134,6 @@ function buildRosterEmbeds(roster, guildId) {
     let currentFieldCount = 0;
     const MAX_FIELDS = 25;
 
-    // Порядок: кастомные сверху, потом базовые классы
     const orderedColumns = columns
         .map((c, i) => ({ ...c, __idx: i }))
         .sort((a, b) => {
@@ -160,7 +172,7 @@ function buildRosterEmbeds(roster, guildId) {
         currentFieldCount++;
     }
 
-    // Участники, не попавшие ни в одну колонку (нет класса / нет должности)
+    // Участники, не попавшие ни в одну колонку
     const orphans = members.filter(m => {
         if (m.manualColumnKey && byColumn[m.manualColumnKey] && byColumn[m.manualColumnKey].includes(m)) return false;
         if (m.detectedClass === 'hybrid' && (
@@ -195,6 +207,8 @@ function buildRosterEmbeds(roster, guildId) {
         embeds.push(currentEmbed);
     }
 
+    console.log('[ROSTER] buildRosterEmbeds: embeds=' + embeds.length + ', fields total=' + embeds.reduce((s, e) => s + (e.data.fields || []).length, 0));
+
     return embeds.slice(0, 10);
 }
 
@@ -217,22 +231,30 @@ function refreshRosterMessage(botClient, guildId) {
 }
 
 async function _doRefresh(botClient, guildId) {
+    console.log('[ROSTER REFRESH] start for', guildId);
     const roster = await buildClassifiedRoster(botClient, guildId);
     const embeds = buildRosterEmbeds(roster, guildId);
 
     const records = await RosterMessage.find({ guildId });
+    console.log('[ROSTER REFRESH] RosterMessage records:', records.length);
+
     if (records.length === 0) return;
 
     for (const rec of records) {
         try {
             const channel = await botClient.channels.fetch(rec.channelId).catch(() => null);
-            if (!channel) continue;
+            if (!channel) {
+                console.warn('[ROSTER REFRESH] channel not found:', rec.channelId);
+                continue;
+            }
             const message = await channel.messages.fetch(rec.messageId).catch(() => null);
             if (!message) {
+                console.warn('[ROSTER REFRESH] message not found:', rec.messageId);
                 await RosterMessage.deleteOne({ _id: rec._id });
                 continue;
             }
             await message.edit({ embeds });
+            console.log('[ROSTER REFRESH] message edited:', rec.messageId);
         } catch (e) {
             console.error('[ROSTER REFRESH MSG]', e.message);
         }
