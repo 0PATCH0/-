@@ -77,7 +77,7 @@ async function updateRosterForGuild(guild) {
             { upsert: true }
         );
         
-        await refreshRosterMessage(guild.id, client);
+        try { refreshRosterMessage(client, guild.id); } catch (e) {}
     } catch (e) {
         console.error(`[ROSTER] Ошибка при обновлении ${guild.name}: ${e.message}`);
     }
