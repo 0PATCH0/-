@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Гильдия — Where Winds Meet</title>
+    <link rel="stylesheet" href="/css/style.css?v=25">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Marcellus', serif;
+            color: #e8e3d4;
+            background: #06080a;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        .bg-ink {
+            position: fixed; inset: 0; z-index: 0;
+            background:
+                radial-gradient(ellipse at 20% 10%, rgba(212, 175, 55, 0.06) 0%, transparent 40%),
+                radial-gradient(ellipse at 80% 90%, rgba(46, 204, 113, 0.04) 0%, transparent 40%),
+                linear-gradient(180deg, #06080a 0%, #0b0e13 100%);
+            pointer-events: none;
+        }
+        .fog {
+            position: fixed; inset: 0; z-index: 1; pointer-events: none;
+            background: radial-gradient(ellipse at 50% 100%, rgba(212,175,55,0.05) 0%, transparent 50%);
+        }
+        .container {
+            position: relative; z-index: 2;
+            max-width: 960px; margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+        .top-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 50px;
+            animation: fadeDown 0.8s ease-out;
+        }
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .logo {
+            font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700;
+            letter-spacing: 3px; color: #d4af37;
+            text-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+        }
+        .back-link {
+            color: #8a8578; text-decoration: none; font-size: 13px;
+            transition: color 0.3s;
+        }
+        .back-link:hover { color: #d4af37; }
+        .hero {
+            text-align: center; margin-bottom: 60px;
+            animation: fadeUp 1s ease-out 0.2s both;
+        }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .hero-icon {
+            width: 96px; height: 96px; border-radius: 50%;
+            border: 2px solid rgba(212,175,55,0.4);
+            margin: 0 auto 20px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Cinzel', serif; font-size: 40px; color: #d4af37;
+            background: #1a1e26;
+            box-shadow: 0 0 30px rgba(212,175,55,0.15);
+            overflow: hidden;
+        }
+        .hero-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .hero h1 {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(30px, 6vw, 44px);
+            background: linear-gradient(135deg, #d4af37, #f4e4a0, #aa8624, #d4af37);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 3px; margin-bottom: 8px;
+            filter: drop-shadow(0 0 20px rgba(212,175,55,0.3));
+        }
+        .hero p {
+            color: #8a8578; letter-spacing: 4px;
+            text-transform: uppercase; font-size: 12px;
+        }
+        .section-title {
+            font-family: 'Cinzel', serif; font-size: 18px; color: #2ecc71;
+            letter-spacing: 3px; margin: 40px 0 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(46, 204, 113, 0.15);
+            text-transform: uppercase;
+        }
+        .section-title::before { content: '◆'; color: #2ecc71; margin-right: 10px; font-size: 12px; }
+        .tiles {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+        }
+        .tile {
+            background: linear-gradient(160deg, rgba(18, 22, 28, 0.9), rgba(10, 12, 16, 0.95));
+            border: 1px solid rgba(212,175,55,0.12);
+            border-radius: 14px; padding: 24px 20px;
+            text-decoration: none; color: inherit;
+            display: flex; flex-direction: column; gap: 10px;
+            transition: all 0.3s ease;
+            position: relative; overflow: hidden;
+            animation: fadeUp 0.8s ease-out both;
+        }
+        .tile:hover {
+            transform: translateY(-4px);
+            border-color: rgba(212,175,55,0.4);
+            box-shadow: 0 12px 35px rgba(212,175,55,0.12);
+        }
+        .tile-icon { font-size: 32px; filter: drop-shadow(0 0 10px rgba(212,175,55,0.2)); }
+        .tile-title {
+            font-family: 'Cinzel', serif; font-size: 17px; color: #d4af37;
+            letter-spacing: 1px;
+        }
+        .tile-desc { font-size: 13px; color: #8a8578; line-height: 1.5; flex: 1; }
+        .admin-tiles .tile { border-color: rgba(46, 204, 113, 0.15); }
+        .admin-tiles .tile:hover {
+            border-color: rgba(46, 204, 113, 0.4);
+            box-shadow: 0 12px 35px rgba(46, 204, 113, 0.1);
+        }
+        .admin-tiles .tile-title { color: #2ecc71; }
+        @media (max-width: 600px) {
+            .top-nav { margin-bottom: 30px; }
+            .logo { font-size: 16px; letter-spacing: 2px; }
+            .tiles { grid-template-columns: 1fr; }
+            .section-title { font-size: 15px; margin: 30px 0 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-ink"></div>
+    <div class="fog"></div>
+
+    <div class="container">
+        <nav class="top-nav">
+            <div class="logo">WHERE WINDS MEET</div>
+            <a href="/dashboard" class="back-link">← Сменить гильдию</a>
+        </nav>
+
+        <section class="hero">
+            <div class="hero-icon" id="guild-icon">?</div>
+            <h1 id="guild-name">Гильдия</h1>
+            <p>Добро пожаловать, странник</p>
+        </section>
+
+        <div class="section-title">Личное</div>
+        <div class="tiles">
+            <a href="#" class="tile" id="tile-profile">
+                <span class="tile-icon">👤</span>
+                <span class="tile-title">Мой профиль</span>
+                <span class="tile-desc">Создать или отредактировать персонажей, настроить PvE и PvP билды.</span>
+            </a>
+            <a href="#" class="tile" id="tile-events">
+                <span class="tile-icon">📅</span>
+                <span class="tile-title">События</span>
+                <span class="tile-desc">Записаться на рейды и турниры. Следить за составом.</span>
+            </a>
+            <a href="#" class="tile" id="tile-guides">
+                <span class="tile-icon">📖</span>
+                <span class="tile-title">Гайды</span>
+                <span class="tile-desc">Читать тактики и руководства гильдии.</span>
+            </a>
+        </div>
+
+        <div id="admin-section" style="display:none;">
+            <div class="section-title">Управление</div>
+            <div class="tiles admin-tiles">
+                <a href="#" class="tile" id="tile-manage">
+                    <span class="tile-icon">⚙️</span>
+                    <span class="tile-title">Управление сервером</span>
+                    <span class="tile-desc">Роли, напоминания, модерация, кастомные сообщения, логи.</span>
+                </a>
+                <a href="#" class="tile" id="tile-roster">
+                    <span class="tile-icon">🛡️</span>
+                    <span class="tile-title">Состав гильдии</span>
+                    <span class="tile-desc">Список участников и настройка колонок.</span>
+                </a>
+                <a href="#" class="tile" id="tile-profiles-admin">
+                    <span class="tile-icon">👥</span>
+                    <span class="tile-title">Все профили</span>
+                    <span class="tile-desc">Профили всех игроков гильдии.</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const pathParts = window.location.pathname.split('/');
+        const guildId = pathParts[2];
+
+        document.getElementById('tile-profile').href = '/profile?guild=' + guildId;
+        document.getElementById('tile-events').href = '/manage/' + guildId + '/events';
+        document.getElementById('tile-guides').href = '/manage/' + guildId + '/guides';
+        document.getElementById('tile-manage').href = '/manage/' + guildId;
+        document.getElementById('tile-roster').href = '/manage/' + guildId + '/roster';
+        document.getElementById('tile-profiles-admin').href = '/manage/' + guildId + '/profiles';
+
+        fetch('/api/user', { credentials: 'include' })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return;
+                const guild = (data.guilds || []).find(g => g.id === guildId);
+                if (guild) {
+                    document.getElementById('guild-name').textContent = guild.name;
+                    const iconUrl = guild.icon
+                        ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`
+                        : null;
+                    const iconEl = document.getElementById('guild-icon');
+                    if (iconUrl) {
+                        iconEl.innerHTML = `<img src="${iconUrl}" alt="">`;
+                    } else {
+                        iconEl.textContent = guild.name.charAt(0).toUpperCase();
+                    }
+                }
+            });
+
+        fetch('/api/guild/' + guildId, { credentials: 'include' })
+            .then(r => {
+                if (r.ok) document.getElementById('admin-section').style.display = 'block';
+            })
+            .catch(() => {});
+    </script>
+</body>
+</html>
