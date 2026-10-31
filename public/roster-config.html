@@ -520,43 +520,49 @@ if (draggingClass && !targetClass) return;
         }
 
         function addColumn() {
-            const input = document.getElementById('new-column-name');
-            const name = input.value.trim();
-            if (!name) return;
-            const key = 'custom_' + Date.now();
-            columns.push({
-                key,
-                name,
-                icon: 'custom',
-                color: '#d4af37',
-                isClass: false,
-                order: columns.length
-            });
-            input.value = '';
-            renderColumns();
+    const input = document.getElementById('new-column-name');
+    const name = input.value.trim();
+    if (!name) return;
+    const key = 'custom_' + Date.now();
+    columns.push({ key, name, icon: 'custom', color: '#d4af37', isClass: false, order: columns.length });
+    input.value = '';
+    renderColumns();
+    renderManual();     // ← чтобы селект в «Ручных назначениях» увидел новую должность
+    saveColumns();      // ← автосохранение
         }
 
         async function saveColumns() {
-            // Пересчитываем порядок: классы всегда первые
-            const classes = columns.filter(c => c.isClass);
-            const custom = columns.filter(c => !c.isClass);
-            const finalColumns = [...custom, ...classes];
-            finalColumns.forEach((c, i) => { c.order = i; });
+    // Считываем порядок из DOM (после drag)
+    const domOrder = [...document.querySelectorAll('.column-item')].map(el => el.dataset.key);
+    const ordered = [];
+    domOrder.forEach(key => {
+        const col = columns.find(c => c.key === key);
+        if (col) ordered.push(col);
+    });
+    // Добавляем недостающие (на всякий)
+    columns.forEach(c => { if (!ordered.find(o => o.key === c.key)) ordered.push(c); });
 
-            try {
-                const res = await fetch('/api/guild/' + guildId + '/roster-config', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ columns: finalColumns })
-                });
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                columns = finalColumns;
-                renderColumns();
-                setStatus('columns-status', '✅ Колонки сохранены', 'ok');
-            } catch (e) {
-                setStatus('columns-status', '❌ Ошибка: ' + e.message, 'err');
-            }
+    // Кастомные сверху, классы снизу
+    const custom = ordered.filter(c => !c.isClass);
+    const classes = ordered.filter(c => c.isClass);
+    const finalColumns = [...custom, ...classes];
+    finalColumns.forEach((c, i) => { c.order = i; });
+
+    try {
+        const res = await fetch('/api/guild/' + guildId + '/roster-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ columns: finalColumns })
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        columns = finalColumns;
+        renderColumns();
+        renderManual();
+        setStatus('columns-status', '✅ Колонки сохранены', 'ok');
+    } catch (e) {
+        setStatus('columns-status', '❌ Ошибка: ' + e.message, 'err');
+    }
         }
 
         // ─── РУЧНЫЕ НАЗНАЧЕНИЯ ───
