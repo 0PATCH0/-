@@ -24,6 +24,19 @@
 
         <div class="panel">
             <div class="panel-title">
+                <span>Фильтры</span>
+                <span id="counter" style="font-size:13px; color:var(--text-muted); font-family:'Marcellus',serif;"></span>
+            </div>
+            <div class="form-group">
+                <input type="text" id="search-moderator" placeholder="🔍 Поиск по модератору..." style="width:100%;">
+            </div>
+            <div class="chips" id="chips" style="display:flex; flex-wrap:wrap; gap:8px;">
+                <button class="chip active" data-action="all" onclick="filterLogs('all', this)">Все</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">
                 <span>История</span>
             </div>
             <div id="logs-list">
@@ -33,6 +46,23 @@
     </div>
 
     <style>
+        .chip {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Marcellus', serif;
+        }
+        .chip:hover { background: rgba(255,255,255,0.1); color: var(--text-main); }
+        .chip.active {
+            background: rgba(212,175,55,0.15);
+            border-color: rgba(212,175,55,0.5);
+            color: var(--gold);
+        }
         .log-item {
             display: flex;
             align-items: flex-start;
@@ -45,16 +75,11 @@
             font-size: 12px;
             color: var(--text-muted);
             white-space: nowrap;
-            min-width: 130px;
+            min-width: 150px;
             padding-top: 3px;
         }
         .log-content { flex: 1; min-width: 0; }
-        .log-user {
-            color: var(--jade);
-            font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 4px;
-        }
+        .log-user { color: var(--jade); font-weight: bold; font-size: 14px; margin-bottom: 4px; }
         .log-action {
             display: inline-block;
             background: rgba(46,204,113,0.15);
@@ -66,11 +91,7 @@
             font-weight: bold;
             margin-bottom: 6px;
         }
-        .log-details {
-            font-size: 13px;
-            color: #c4bfae;
-            line-height: 1.5;
-        }
+        .log-details { font-size: 13px; color: #c4bfae; line-height: 1.5; }
         @media (max-width: 600px) {
             .log-item { flex-direction: column; gap: 6px; }
             .log-time { min-width: 0; }
@@ -82,35 +103,81 @@
         const backLink = document.getElementById('back-link');
         if (backLink) backLink.href = '/manage/' + guildId;
 
+        let allLogs = [];
+        let currentAction = 'all';
+        let currentSearch = '';
+
         function escapeHtml(s) {
             return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
         }
 
         fetch('/api/guild/' + guildId + '/logs', { credentials: 'include' })
-            .then(res => res.json())
-            .then(data => {
-                const list = document.getElementById('logs-list');
-                if (!data || data.length === 0) {
-                    list.innerHTML = '<div class="empty-state">Логов пока нет.</div>';
-                    return;
-                }
-                list.innerHTML = data.map(log => {
-                    const date = new Date(log.date).toLocaleString('ru-RU');
-                    return `
-                        <div class="log-item">
-                            <div class="log-time">${date}</div>
-                            <div class="log-content">
-                                <div class="log-user">${escapeHtml(log.username || 'Неизвестный')}</div>
-                                <div class="log-action">${escapeHtml(log.action || '—')}</div>
-                                <div class="log-details">${escapeHtml(log.details || '')}</div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+            .then(res => {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
             })
-            .catch(() => {
-                document.getElementById('logs-list').innerHTML = '<div class="empty-state">Ошибка загрузки.</div>';
+            .then(data => {
+                allLogs = data || [];
+                buildChips();
+                renderLogs();
+            })
+            .catch(err => {
+                document.getElementById('logs-list').innerHTML =
+                    '<div class="empty-state">Ошибка загрузки логов: ' + escapeHtml(err.message) + '</div>';
             });
+
+        function buildChips() {
+            const actions = ['all', ...new Set(allLogs.map(l => l.action).filter(Boolean))];
+            const chips = document.getElementById('chips');
+            const labels = { 'all': 'Все', 'Мут': '🔇 Мут', 'Анмут': '🔊 Анмут', 'Очистка чата': '🧹 Очистка', 'Объявление': '📢 Объявление' };
+            chips.innerHTML = actions.map(a =>
+                `<button class="chip ${a === 'all' ? 'active' : ''}" data-action="${escapeHtml(a)}" onclick="filterLogs('${escapeHtml(a)}', this)">${labels[a] || escapeHtml(a)}</button>`
+            ).join('');
+        }
+
+        function filterLogs(action, btn) {
+            currentAction = action;
+            document.querySelectorAll('#chips .chip').forEach(c => c.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            renderLogs();
+        }
+
+        document.getElementById('search-moderator').addEventListener('input', (e) => {
+            currentSearch = e.target.value.toLowerCase().trim();
+            renderLogs();
+        });
+
+        function renderLogs() {
+            const list = document.getElementById('logs-list');
+            const filtered = allLogs.filter(log => {
+                if (currentAction !== 'all' && log.action !== currentAction) return false;
+                if (currentSearch && !String(log.username || '').toLowerCase().includes(currentSearch)) return false;
+                return true;
+            });
+            document.getElementById('counter').textContent = `Показано: ${filtered.length} из ${allLogs.length}`;
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<div class="empty-state">Логов по фильтру не найдено.</div>';
+                return;
+            }
+
+            list.innerHTML = filtered.map(log => {
+                const date = new Date(log.date).toLocaleString('ru-RU', {
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+                return `
+                    <div class="log-item">
+                        <div class="log-time">${date}</div>
+                        <div class="log-content">
+                            <div class="log-user">${escapeHtml(log.username || 'Неизвестный')}</div>
+                            <div class="log-action">${escapeHtml(log.action || '—')}</div>
+                            <div class="log-details">${escapeHtml(log.details || '')}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
     </script>
 </body>
 </html>
