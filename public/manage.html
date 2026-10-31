@@ -3,147 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Роли по кнопкам</title>
-    <link rel="stylesheet" href="/css/style.css?v=8">
-    <script src="/js/ui.js"></script>
-    <style>
-        .rr-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-        @media (max-width: 900px) { .rr-layout { grid-template-columns: 1fr; } }
-        
-        .rr-card { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 10px; border-left: 4px solid var(--jade); }
-    </style>
+    <title>Роли по кнопкам — Where Winds Meet</title>
+    <link rel="stylesheet" href="/css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="admin-page">
+    <div class="bg-ink"></div>
+    <div class="fog"></div>
 
-    <video class="bg-video" autoplay loop muted playsinline poster="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2070&auto=format&fit=crop">
-        <source src="https://assets.mixkit.co/videos/preview/mixkit-clouds-and-blue-sky-2408-large.mp4" type="video/mp4">
-    </video>
-    <div class="bg-overlay"></div>
-    <div class="bg-particles"></div>
-    <!-- КОНЕЦ БЛОКА С ФОНОМ -->
+    <div class="container">
+        <nav class="top-nav">
+            <div class="logo">WHERE WINDS MEET</div>
+            <a href="#" class="back-link" id="back-link">← Назад в управление</a>
+        </nav>
 
-    <!-- Кнопка-печать "Главная" -->
-    <a href="#" id="top-banner-link" class="top-banner"></a>
-    
-    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
-    
-    <div class="main-container">
-
-    <a href="#" id="top-banner-link" class="top-banner"></a>
-    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
-
-    <div class="main-container">
-        <div class="sidebar">
-            <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard"><div class="icon icon-home"></div> К списку серверов</a>
-            <hr style="border-color: var(--border); margin: 15px 0;">
-            <a href="#" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
-            <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
-            <a href="#" id="nav-guild"><div class="icon icon-users"></div> Гильдия</a>
-            <a href="#" id="nav-guides"><div class="icon icon-book"></div> Гайды</a>
-            <a href="#" class="active"><div class="icon icon-masks"></div> Роли по кнопкам</a>
-            <a href="#" id="nav-rem"><div class="icon icon-alarm"></div> Напоминания</a>
-            <a href="#" id="nav-mod"><div class="icon icon-gear"></div> Модерация</a>
-            <a href="#" id="nav-logs"><div class="icon icon-scroll"></div> Логи действий</a>
-            <a href="#" id="nav-emb"><div class="icon icon-envelope"></div> Эмбеды</a>
+        <div class="page-title">
+            <h1>🎭 Роли по кнопкам</h1>
+            <p>☯ Выберите роль — получите доступ</p>
         </div>
 
-        <div class="content">
-            <div class="header"><h1><div class="icon icon-masks"></div> Роли по кнопкам</h1></div>
-            
-            <div class="rr-layout">
-                <!-- ЛЕВАЯ ЧАСТЬ: ФОРМА -->
-                <div class="form-card">
-                    <h3 id="form-title" style="color: var(--gold); margin-bottom: 20px; font-family: 'Georgia', serif;">Создать сообщение</h3>
-                    <input type="hidden" id="edit-message-id" value="">
-                    
-                    <div class="form-group"><label>Заголовок</label><input type="text" id="rr-title" placeholder="Например: Выберите свои роли"></div>
-                    <div class="form-group"><label>Описание</label><textarea id="rr-desc" placeholder="Выберите роли..." style="height: 80px;"></textarea></div>
-                    <div class="form-group"><label>Цвет (HEX)</label><input type="color" id="rr-color" value="#2ecc71" style="height: 45px; padding: 5px;"></div>
-                    <div class="form-group" id="channel-group"><label>ID Канала</label><input type="text" id="rr-channel" placeholder="123456789012345678"></div>
-                    <div class="form-group"><label>Режим выбора</label>
-                        <select id="rr-mode">
-                            <option value="multiple">Можно брать несколько ролей</option>
-                            <option value="single">Только одну роль</option>
-                        </select>
-                    </div>
-
-                    <hr style="border-color: var(--border); margin: 20px 0;">
-                    <h3 style="color: var(--gold); margin-bottom: 15px; font-family: 'Georgia', serif;">Кнопки ролей</h3>
-                    <div id="roles-container"></div>
-                    <button class="btn btn-success btn-small" onclick="addRoleRow()" style="margin-bottom: 20px;"><div class="icon icon-plus"></div> Добавить кнопку</button>
-                    
-                    <div style="display: flex; gap: 10px; margin-top: 20px;">
-                        <button class="btn" onclick="saveReactionRoles()" id="btn-save" style="flex: 1;"><div class="icon icon-paper-plane"></div> Отправить</button>
-                        <button class="btn btn-danger" onclick="cancelEdit()" id="btn-cancel" style="display: none;"><div class="icon icon-x"></div> Отмена</button>
-                    </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;" id="rr-layout">
+            <div class="panel">
+                <div class="panel-title">
+                    <span id="form-title">Создать сообщение</span>
                 </div>
 
-                <!-- ПРАВАЯ ЧАСТЬ: СПИСОК СООБЩЕНИЙ -->
-                <div class="form-card">
-                    <h3 style="color: var(--gold); margin-bottom: 20px; font-family: 'Georgia', serif;">Активные сообщения</h3>
-                    <div id="rr-list">
-                        <p style="color: var(--text-muted);">Загрузка...</p>
+                <div class="form-group">
+                    <label>Заголовок</label>
+                    <input type="text" id="rr-title" placeholder="Например: Выберите свои роли">
+                </div>
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea id="rr-desc" placeholder="Выберите роли..." style="height: 80px;"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Цвет</label>
+                        <input type="color" id="rr-color" value="#d4af37" style="height: 45px; padding: 5px;">
                     </div>
+                    <div class="form-group" id="channel-group">
+                        <label>ID канала</label>
+                        <input type="text" id="rr-channel" placeholder="123456789...">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Режим выбора</label>
+                    <select id="rr-mode">
+                        <option value="multiple">Можно брать несколько ролей</option>
+                        <option value="single">Только одну роль</option>
+                    </select>
+                </div>
+
+                <div class="panel-title" style="margin-top: 20px;">
+                    <span>Кнопки ролей</span>
+                </div>
+                <div id="roles-container"></div>
+                <button class="btn btn-secondary btn-small" onclick="addRoleRow()" style="margin-bottom: 20px;">+ Добавить кнопку</button>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="saveReactionRoles()" id="btn-save" style="flex: 1;">📤 Отправить</button>
+                    <button class="btn btn-danger" onclick="cancelEdit()" id="btn-cancel" style="display: none;">Отмена</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">
+                    <span>Активные сообщения</span>
+                </div>
+                <div id="rr-list">
+                    <div class="empty-state">Загрузка...</div>
                 </div>
             </div>
         </div>
     </div>
 
+    <style>
+        @media (max-width: 900px) {
+            #rr-layout { grid-template-columns: 1fr !important; }
+        }
+        .role-row {
+            display: grid;
+            grid-template-columns: 1fr 80px 1fr 36px;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .role-row select, .role-row input {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-family: 'Marcellus', serif;
+            font-size: 13px;
+        }
+        .rr-card {
+            background: rgba(0,0,0,0.35);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--gold);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 10px;
+        }
+        .rr-card h4 { color: var(--gold); font-family: 'Cinzel', serif; margin-bottom: 6px; }
+        .rr-card p { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+    </style>
+
     <script>
         const guildId = window.location.pathname.split('/')[2];
-        const banner = document.getElementById('top-banner-link');
-        if (banner) banner.href = `/manage/${guildId}`;
+        const backLink = document.getElementById('back-link');
+        if (backLink) backLink.href = '/manage/' + guildId;
 
-        const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-guild': '/profiles', 'nav-guides': '/guides', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-logs': '/logs', 'nav-emb': '/custom'};
-        for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
-        
         let serverRoles = [];
         let currentEditId = null;
 
-        fetch(`/api/guild/${guildId}`).then(res => res.json()).then(data => {
-            document.getElementById('server-name').innerText = data.name;
-            serverRoles = data.roles;
-            addRoleRow();
-            loadExisting();
-        });
+        fetch('/api/guild/' + guildId, { credentials: 'include' })
+            .then(res => res.json())
+            .then(data => {
+                serverRoles = data.roles || [];
+                addRoleRow();
+                loadExisting();
+            });
 
         function addRoleRow(data = { roleId: '', emoji: '', label: '' }) {
             const container = document.getElementById('roles-container');
             const row = document.createElement('div');
             row.className = 'role-row';
             let options = serverRoles.map(r => `<option value="${r.id}" ${r.id === data.roleId ? 'selected' : ''}>${r.name}</option>`).join('');
-            
             row.innerHTML = `
                 <select class="rr-role">${options}</select>
-                <input type="text" class="rr-emoji" placeholder="Эмодзи" value="${data.emoji || ''}">
-                <input type="text" class="rr-label" placeholder="Текст кнопки" value="${data.label || ''}">
-                <button class="btn btn-danger btn-small" onclick="this.parentElement.remove()"><div class="icon icon-x"></div></button>
+                <input type="text" class="rr-emoji" placeholder="🎭" value="${data.emoji || ''}">
+                <input type="text" class="rr-label" placeholder="Текст" value="${data.label || ''}">
+                <button class="btn btn-danger btn-small" onclick="this.parentElement.remove()">×</button>
             `;
             container.appendChild(row);
         }
 
         function loadExisting() {
-            fetch(`/api/guild/${guildId}/reactionroles`).then(res => res.json()).then(data => {
-                const list = document.getElementById('rr-list');
-                if (data.length === 0) {
-                    list.innerHTML = '<p style="color: var(--text-muted);">Сообщений пока нет.</p>';
-                    return;
-                }
-                list.innerHTML = '';
-                data.forEach(rr => {
-                    list.innerHTML += `
-                        <div class="rr-card">
-                            <h4 style="color: var(--gold); margin-bottom: 5px;">${rr.title}</h4>
-                            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Канал: <#${rr.channelId}> • Ролей: ${rr.roles.length}</p>
+            fetch('/api/guild/' + guildId + '/reactionroles', { credentials: 'include' })
+                .then(res => res.json())
+                .then(data => {
+                    const list = document.getElementById('rr-list');
+                    if (data.length === 0) {
+                        list.innerHTML = '<div class="empty-state">Сообщений пока нет.</div>';
+                        return;
+                    }
+                    list.innerHTML = '';
+                    data.forEach(rr => {
+                        const card = document.createElement('div');
+                        card.className = 'rr-card';
+                        card.innerHTML = `
+                            <h4>${escapeHtml(rr.title)}</h4>
+                            <p>Канал: #${rr.channelId} • Ролей: ${rr.roles.length}</p>
                             <div style="display: flex; gap: 10px;">
-                                <button class="btn btn-small" onclick='editMessage(${JSON.stringify(rr).replace(/'/g, "&#39;")})' style="flex: 1;"><div class="icon icon-pencil"></div> Ред.</button>
-                                <button class="btn btn-danger btn-small" onclick="deleteMessage('${rr.messageId}')" style="flex: 1;"><div class="icon icon-trash"></div> Удалить</button>
+                                <button class="btn btn-secondary btn-small" style="flex: 1;">✏ Ред.</button>
+                                <button class="btn btn-danger btn-small" style="flex: 1;">🗑 Удалить</button>
                             </div>
-                        </div>
-                    `;
+                        `;
+                        card.querySelector('.btn-secondary').onclick = () => editMessage(rr);
+                        card.querySelector('.btn-danger').onclick = () => deleteMessage(rr.messageId);
+                        list.appendChild(card);
+                    });
                 });
-            });
+        }
+
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
         }
 
         function saveReactionRoles() {
@@ -161,7 +185,7 @@
                 desc: document.getElementById('rr-desc').value,
                 color: document.getElementById('rr-color').value,
                 mode: document.getElementById('rr-mode').value,
-                roles: roles
+                roles
             };
 
             if (!currentEditId) {
@@ -170,21 +194,25 @@
             }
 
             const method = currentEditId ? 'PUT' : 'POST';
-            const url = currentEditId ? `/api/guild/${guildId}/reactionroles/${currentEditId}` : `/api/guild/${guildId}/reactionroles`;
+            const url = currentEditId
+                ? '/api/guild/' + guildId + '/reactionroles/' + currentEditId
+                : '/api/guild/' + guildId + '/reactionroles';
 
             const btn = document.getElementById('btn-save');
             btn.innerHTML = 'Отправка...'; btn.disabled = true;
 
-            fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-            .then(res => res.json()).then(data => {
-                if (data.success) {
-                    alert(currentEditId ? '✅ Обновлено!' : '✅ Отправлено!');
-                    cancelEdit();
-                    loadExisting();
-                } else alert('❌ Ошибка: ' + data.error);
-            }).finally(() => {
-                btn.innerHTML = '<div class="icon icon-paper-plane"></div> Отправить'; btn.disabled = false;
-            });
+            fetch(url, { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(currentEditId ? '✅ Обновлено!' : '✅ Отправлено!');
+                        cancelEdit();
+                        loadExisting();
+                    } else alert('❌ Ошибка: ' + (data.error || 'неизвестно'));
+                })
+                .finally(() => {
+                    btn.innerHTML = '📤 Отправить'; btn.disabled = false;
+                });
         }
 
         function editMessage(rr) {
@@ -192,36 +220,34 @@
             document.getElementById('form-title').innerText = 'Редактировать сообщение';
             document.getElementById('rr-title').value = rr.title;
             document.getElementById('rr-desc').value = rr.desc || '';
-            document.getElementById('rr-color').value = rr.color || '#2ecc71';
+            document.getElementById('rr-color').value = rr.color || '#d4af37';
             document.getElementById('rr-mode').value = rr.mode;
-            document.getElementById('channel-group').style.display = 'none'; // Скрываем канал при редактировании
+            document.getElementById('channel-group').style.display = 'none';
             document.getElementById('btn-cancel').style.display = 'block';
-            
+
             document.getElementById('roles-container').innerHTML = '';
             rr.roles.forEach(r => addRoleRow(r));
-            
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function cancelEdit() {
             currentEditId = null;
             document.getElementById('form-title').innerText = 'Создать сообщение';
-            document.getElementById('edit-message-id').value = '';
             document.getElementById('rr-title').value = '';
             document.getElementById('rr-desc').value = '';
-            document.getElementById('rr-color').value = '#2ecc71';
+            document.getElementById('rr-color').value = '#d4af37';
             document.getElementById('rr-channel').value = '';
             document.getElementById('channel-group').style.display = 'block';
             document.getElementById('btn-cancel').style.display = 'none';
-            
             document.getElementById('roles-container').innerHTML = '';
             addRoleRow();
         }
 
         function deleteMessage(id) {
             if (!confirm('Удалить это сообщение из Discord и базы?')) return;
-            fetch(`/api/guild/${guildId}/reactionroles/${id}`, { method: 'DELETE' })
-                .then(res => res.json()).then(data => {
+            fetch('/api/guild/' + guildId + '/reactionroles/' + id, { method: 'DELETE', credentials: 'include' })
+                .then(res => res.json())
+                .then(data => {
                     if (data.success) {
                         alert('Сообщение удалено!');
                         loadExisting();
