@@ -774,6 +774,112 @@ app.post('/api/guild/:id/roster-config', isModerator, async (req, res) => {
 });
 
 // Ручное назначение участника в кастомную должность
+// ─── РОСТЕР ───────────────────────────────────────────────
+
+app.get('/api/guild/:id/roster-check', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    try {
+        const client = req.app.get('botClient');
+        const discordGuild = client.guilds.cache.get(req.params.id);
+        if (!discordGuild) return res.status(404).json({ error: 'Бот не на сервере' });
+
+        const member = await discordGuild.members.fetch(req.user.id).catch(() => null);
+        if (!member) return res.status(403).json({ error: 'Вы не на сервере', canView: false });
+
+        const settings = await Settings.findOne({ guildId: req.params.id });
+        const userGuildInfo = req.user.guilds.find(g => g.id === req.params.id);
+        const isDiscordAdmin = userGuildInfo && (BigInt(userGuildInfo.permissions) & BigInt(0x8)) === BigInt(0x8);
+        const isBotOwner = req.user.id === OWNER_ID;
+        const isModRole = settings && settings.modRoles && member.roles.cache.some(r => settings.modRoles.includes(r.id));
+        const isMod = isBotOwner || isDiscordAdmin || isModRole;
+
+        if (isMod) return res.json({ canView: true, isMod: true, configured: true });
+
+        if (!settings || !settings.rosterRoleIds || settings.rosterRoleIds.length === 0) {
+            return res.json({ canView: false, isMod: false, configured: false });
+        }
+        const hasAccess = member.roles.cache.some(r => settings.rosterRoleIds.includes(r.id));
+        return res.json({ canView: hasAccess, isMod: false, configured: true });
+    } catch (e) {
+        console.error('ROSTER CHECK:', e);
+        res.status(500).json({ error: 'Ошибка' });
+    }
+});
+
+app.get('/api/guild/:id/roster-access', isModerator, async (req, res) => {
+    try {
+        const client = req.app.get('botClient');
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Бот не на сервере' });
+
+        const settings = await Settings.findOne({ guildId: req.params.id }) || await Settings.create({ guildId: req.params.id, modRoles: [] });
+        const allRoles = guild.roles.cache
+            .filter(r => r.id !== guild.id && !r.managed)
+            .map(r => ({ id: r.id, name: r.name, color: r.hexColor }));
+
+        res.json({
+            rosterRoleIds: settings.rosterRoleIds || [],
+            allRoles
+        });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.post('/api/guild/:id/roster-access', isModerator, async (req, res) => {
+    try {
+        const { rosterRoleIds } = req.body || {};
+        if (!Array.isArray(rosterRoleIds)) return res.status(400).json({ error: 'rosterRoleIds должен быть массивом' });
+        await Settings.findOneAndUpdate(
+            { guildId: req.params.id },
+            { rosterRoleIds },
+            { upsert: true }
+        );
+        res.json({ success: true });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.post('/api/guild/:id/roster-config', isModerator, async (req, res) => {
+    try {
+        const { columns } = req.body || {};
+        if (!Array.isArray(columns)) return res.status(400).json({ error: 'columns должен быть массивом' });
+
+        const BASE_CLASSES = [
+            { key: 'dps', name: 'ДД', icon: 'dps', color: '#e74c3c', isClass: true },
+            { key: 'tank', name: 'Танк', icon: 'tank', color: '#2ecc71', isClass: true },
+            { key: 'healer', name: 'Хил', icon: 'healer', color: '#9b59b6', isClass: true }
+        ];
+
+        const existing = await RosterConfig.findOne({ guildId: req.params.id });
+        const existingClasses = (existing && existing.columns || []).filter(c => c.isClass);
+
+        const baseClasses = BASE_CLASSES.map(def => {
+            const found = existingClasses.find(c => c.key === def.key);
+            return found ? { ...def, name: found.name || def.name } : def;
+        });
+
+        const custom = columns.filter(c => c.isClass !== true).map(c => ({
+            key: c.key,
+            name: c.name,
+            icon: c.icon || 'custom',
+            color: c.color || '#d4af37',
+            isClass: false
+        }));
+
+        const finalColumns = [...custom, ...baseClasses];
+        finalColumns.forEach((c, i) => { c.order = i; });
+
+        const config = await RosterConfig.findOneAndUpdate(
+            { guildId: req.params.id },
+            { columns: finalColumns },
+            { upsert: true, new: true }
+        );
+        res.json({ success: true, config });
+        try { refreshRosterMessage(req.app.get('botClient'), req.params.id); } catch (e) {}
+    } catch (e) {
+        console.error('ROSTER CONFIG POST:', e);
+        res.status(500).json({ error: 'Ошибка: ' + e.message });
+    }
+});
+
 app.post('/api/guild/:id/roster-manual', isModerator, async (req, res) => {
     try {
         const { userId, columnKey } = req.body || {};
@@ -786,10 +892,10 @@ app.post('/api/guild/:id/roster-manual', isModerator, async (req, res) => {
         config.markModified('manualAssignments');
         await config.save();
         res.json({ success: true, manualAssignments: config.manualAssignments });
-        try { refreshRosterMessage(req.app.get('botClient'), guildId); } catch (e) {}
+        try { refreshRosterMessage(req.app.get('botClient'), req.params.id); } catch (e) {}
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
-app.get('/api/guild/:id/roster', canViewRoster, async (req, res) => {
+
 app.get('/api/guild/:id/roster', canViewRoster, async (req, res) => {
     try {
         const botClient = req.app.get('botClient');
@@ -828,17 +934,6 @@ app.get('/api/guild/:id/roster-config', isModerator, async (req, res) => {
             manualAssignments: config.manualAssignments || {},
             allRoles
         });
-    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
-});
-
-app.post('/api/guild/:id/roster-config', isModerator, async (req, res) => {
-    try {
-        const config = await RosterConfig.findOneAndUpdate(
-            { guildId: req.params.id },
-            { columns: req.body.columns || [] },
-            { upsert: true, new: true }
-        );
-        res.json({ success: true, config });
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
 
