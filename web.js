@@ -48,6 +48,7 @@ app.get('/logout', (req, res) => req.logout(() => res.redirect('/')));
 app.get('/dashboard', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.get('/manage/:id', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'guild.html')); });
 app.get('/guild/:id', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'guild-home.html')); });
+app.get('/global-profiles', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'global-profiles.html')); });
 app.get('/manage/:id/events', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'events.html')); });
 app.get('/manage/:id/guides', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'guides.html')); });
 app.get('/manage/:id/guides/edit/:guideId', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'guide-edit.html')); });
@@ -199,6 +200,77 @@ app.delete('/api/guild/:id/profiles/:userId', isModerator, async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Ошибка' });
+    }
+});
+
+// ─── СПИСОК ВСЕХ ГИЛЬДИЙ БОТА (для фильтра) ─────────────
+app.get('/api/guilds-list', (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    try {
+        const client = req.app.get('botClient');
+        const list = client.guilds.cache.map(g => ({
+            id: g.id,
+            name: g.name,
+            icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : null
+        }));
+        res.json(list);
+    } catch (e) {
+        console.error('GUILDS LIST:', e);
+        res.status(500).json({ error: 'Ошибка' });
+    }
+});
+
+// ─── ГЛОБАЛЬНЫЕ ПРОФИЛИ (публичный просмотр) ─────────────
+app.get('/api/profiles-global', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    try {
+        const client = req.app.get('botClient');
+        const filterGuild = req.query.guild || 'all';
+        const filterMartial = req.query.martial || 'all';
+
+        const allGlobal = await PlayerProfile.find({ isGlobal: true });
+        const botGuildIds = client.guilds.cache.map(g => g.id);
+        const relevant = allGlobal.filter(p => botGuildIds.includes(p.guildId));
+
+        const enriched = await Promise.all(relevant.map(async (p) => {
+            const discordGuild = client.guilds.cache.get(p.guildId);
+            const member = discordGuild
+                ? await discordGuild.members.fetch(p.userId).catch(() => null)
+                : null;
+            return {
+                _id: p._id,
+                userId: p.userId,
+                guildId: p.guildId,
+                guildName: discordGuild ? discordGuild.name : 'Неизвестная гильдия',
+                isGlobal: p.isGlobal,
+                characters: p.characters,
+                discordName: member ? member.user.username : 'Неизвестный',
+                avatar: member && member.user.avatar
+                    ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png`
+                    : 'https://cdn.discordapp.com/embed/avatars/0.png',
+                inGuild: !!member
+            };
+        }));
+
+        let filtered = enriched;
+        if (filterGuild && filterGuild !== 'all') {
+            filtered = filtered.filter(p => p.guildId === filterGuild);
+        }
+        if (filterMartial && filterMartial !== 'all') {
+            filtered = filtered.filter(p =>
+                (p.characters || []).some(c => {
+                    const pve = (c.builds && c.builds.PvE && c.builds.PvE.martialArts) || [];
+                    const pvp = (c.builds && c.builds.PvP && c.builds.PvP.martialArts) || [];
+                    return pve.includes(filterMartial) || pvp.includes(filterMartial);
+                })
+            );
+        }
+
+        filtered.sort((a, b) => a.discordName.localeCompare(b.discordName));
+        res.json(filtered);
+    } catch (e) {
+        console.error('PROFILES GLOBAL:', e);
+        res.status(500).json({ error: 'Ошибка: ' + e.message });
     }
 });
 
