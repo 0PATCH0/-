@@ -57,6 +57,14 @@
             border-radius: 12px;
             margin-bottom: 12px;
             overflow: hidden;
+            position: relative;
+        }
+        .chapter-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
         }
         .chapter-header {
             display: flex;
@@ -84,27 +92,33 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .chapter-header .ch-toggle {
+        .chapter-header .ch-actions {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .chapter-header .ch-btn {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
             color: var(--text-muted);
-            font-size: 18px;
-            transition: transform 0.2s;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
         }
-        .chapter-card.open .chapter-header .ch-toggle {
-            transform: rotate(90deg);
-        }
+        .chapter-header .ch-btn:hover { color: var(--gold); border-color: var(--gold); }
+        .chapter-header .ch-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         .chapter-body {
             display: none;
             padding: 16px;
             border-top: 1px solid rgba(212,175,55,0.1);
         }
         .chapter-card.open .chapter-body { display: block; }
-        .chapter-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--gold), transparent);
-        }
     </style>
 
     <script>
@@ -116,7 +130,6 @@
         const backLink = document.getElementById('btn-back');
         if (backLink) backLink.href = '/manage/' + guildId + '/guides';
 
-        // Защита от случайного выхода
         let isDirty = false;
         document.addEventListener('input', () => { isDirty = true; });
         if (backLink) {
@@ -129,26 +142,20 @@
             return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
         }
 
-        function renderChapterHeader(card, num, title) {
-            const header = card.querySelector('.chapter-header');
-            header.innerHTML = `
-                <span class="ch-num">${num}.</span>
-                <span class="ch-preview">${escapeHtml(title || 'Без заголовка')}</span>
-                <span class="ch-toggle">▶</span>
-            `;
-            header.onclick = () => {
-                card.classList.toggle('open');
-            };
-        }
-
-        function addChapter(data = { title: '', content: '', color: '#d4af37', imageUrl: '', attachmentUrl: '', attachmentName: '' }) {
+        function addChapter(data = { title: '', content: '', color: '#d4af37', imageUrl: '', attachmentUrl: '', attachmentName: '' }, position) {
             const container = document.getElementById('chapters-container');
-            const index = container.children.length;
             const card = document.createElement('div');
             card.className = 'chapter-card';
-            card.style.position = 'relative';
             card.innerHTML = `
-                <div class="chapter-header"></div>
+                <div class="chapter-header">
+                    <span class="ch-num">1.</span>
+                    <span class="ch-preview">${escapeHtml(data.title || 'Без заголовка')}</span>
+                    <div class="ch-actions">
+                        <button class="ch-btn" title="Выше" onclick="event.stopPropagation(); moveChapter(this, -1)">↑</button>
+                        <button class="ch-btn" title="Ниже" onclick="event.stopPropagation(); moveChapter(this, 1)">↓</button>
+                        <button class="ch-btn" title="Дублировать" onclick="event.stopPropagation(); duplicateChapter(this)">📋</button>
+                    </div>
+                </div>
                 <div class="chapter-body">
                     <div class="form-group">
                         <label>Заголовок главы</label>
@@ -183,22 +190,25 @@
                     </div>
                 </div>
             `;
-            container.appendChild(card);
-            renderChapterHeader(card, index + 1, data.title);
 
-            // Обновление заголовка главы в шапке при вводе
-            card.querySelector('.ch-title').addEventListener('input', (e) => {
-                const header = card.querySelector('.ch-preview');
-                if (header) header.textContent = e.target.value || 'Без заголовка';
+            // Открытие по клику на header
+            card.querySelector('.chapter-header').addEventListener('click', (e) => {
+                if (e.target.closest('.ch-btn')) return;
+                card.classList.toggle('open');
             });
 
-            // Открываем первую главу по умолчанию
-            if (index === 0) card.classList.add('open');
-        }
+            // Обновление превью при вводе
+            card.querySelector('.ch-title').addEventListener('input', (e) => {
+                card.querySelector('.ch-preview').textContent = e.target.value || 'Без заголовка';
+            });
 
-        function removeChapter(btn) {
-            if (!confirm('Удалить эту главу?')) return;
-            btn.closest('.chapter-card').remove();
+            if (position !== undefined && container.children[position]) {
+                container.insertBefore(card, container.children[position]);
+            } else {
+                container.appendChild(card);
+            }
+
+            if (container.children.length === 1) card.classList.add('open');
             renumberChapters();
         }
 
@@ -206,28 +216,69 @@
             document.querySelectorAll('#chapters-container .chapter-card').forEach((card, i) => {
                 const numEl = card.querySelector('.ch-num');
                 if (numEl) numEl.textContent = (i + 1) + '.';
+                // Дизейблим кнопки вверх/вниз на краях
+                const upBtn = card.querySelector('.ch-btn[title="Выше"]');
+                const downBtn = card.querySelector('.ch-btn[title="Ниже"]');
+                if (upBtn) upBtn.disabled = (i === 0);
+                if (downBtn) downBtn.disabled = (i === card.parentElement.children.length - 1);
             });
         }
 
-        // ─── Загрузка существующего гайда ───
+        function moveChapter(btn, direction) {
+            const card = btn.closest('.chapter-card');
+            const container = card.parentElement;
+            const idx = Array.from(container.children).indexOf(card);
+            const target = idx + direction;
+            if (target < 0 || target >= container.children.length) return;
+            if (direction < 0) container.insertBefore(card, container.children[target]);
+            else container.insertBefore(card, container.children[target].nextSibling);
+            renumberChapters();
+            isDirty = true;
+        }
+
+        function duplicateChapter(btn) {
+            const card = btn.closest('.chapter-card');
+            const data = {
+                title: card.querySelector('.ch-title').value + ' (копия)',
+                content: card.querySelector('.ch-content').value,
+                color: card.querySelector('.ch-color').value,
+                imageUrl: card.querySelector('.ch-image').value,
+                attachmentUrl: card.querySelector('.ch-attachment-url').value,
+                attachmentName: card.querySelector('.ch-attachment-name').value
+            };
+            const idx = Array.from(card.parentElement.children).indexOf(card);
+            addChapter(data, idx + 1);
+            isDirty = true;
+        }
+
+        function removeChapter(btn) {
+            if (!confirm('Удалить эту главу?')) return;
+            btn.closest('.chapter-card').remove();
+            renumberChapters();
+            isDirty = true;
+        }
+
+        // Загрузка
         if (!isNew) {
             document.getElementById('page-title').innerHTML = '✍️ Редактирование гайда';
             document.getElementById('btn-delete').style.display = 'block';
 
             fetch('/api/guild/' + guildId + '/guides/' + guideId, { credentials: 'include' })
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    return res.json();
+                })
                 .then(guide => {
                     document.getElementById('guide-name').value = guide.name || '';
                     document.getElementById('guide-desc').value = guide.description || '';
                     (guide.chapters || []).forEach(ch => addChapter(ch));
                     isDirty = false;
                 })
-                .catch(() => alert('Не удалось загрузить гайд'));
+                .catch(err => alert('Не удалось загрузить гайд: ' + err.message));
         } else {
             addChapter();
         }
 
-        // ─── Сохранение ───
         function saveGuide() {
             const name = document.getElementById('guide-name').value.trim();
             const description = document.getElementById('guide-desc').value.trim();
@@ -278,7 +329,6 @@
                 });
         }
 
-        // ─── Удаление ───
         function deleteGuide() {
             if (!confirm('Удалить этот гайд навсегда?')) return;
             fetch('/api/guild/' + guildId + '/guides/' + guideId, {
