@@ -12,14 +12,14 @@ const RosterSchema = new mongoose.Schema({ guildId: String, lastUpdated: { type:
 const RosterConfigSchema = new mongoose.Schema({
     guildId: String,
     columns: [{
-        key: { type: String, required: true },       // 'tank' | 'dps' | 'healer' | 'custom_xxx'
+        key: { type: String, required: true },
         name: String,
-        icon: { type: String, default: 'custom' },   // 'tank' | 'dps' | 'healer' | 'custom'
+        icon: { type: String, default: 'custom' },
         color: { type: String, default: '#d4af37' },
-        order: { type: Number, default: 0 },         // для сортировки
-        isClass: { type: Boolean, default: false }   // true для базовых классов
+        order: { type: Number, default: 0 },
+        isClass: { type: Boolean, default: false }
     }],
-    manualAssignments: { type: Object, default: {} } // { userId: columnKey }
+    manualAssignments: { type: Object, default: {} }
 });
 const RosterMessageSchema = new mongoose.Schema({ guildId: String, channelId: String, messageId: String });
 const LogSchema = new mongoose.Schema({ guildId: String, userId: String, username: String, action: String, details: String, date: { type: Date, default: Date.now } });
