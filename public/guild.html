@@ -200,16 +200,20 @@
         const guildId = pathParts[2];
 
         document.getElementById('back-link').href = '/guild/' + guildId;
-        document.getElementById('tile-roster').href = '/guild/' + guildId + '/roster';
-        document.getElementById('tile-roster-config').href = '/manage/' + guildId + '/roster-config';
-        document.getElementById('tile-profiles').href = '/manage/' + guildId + '/profiles';
-        document.getElementById('tile-guides').href = '/manage/' + guildId + '/guides';
-        document.getElementById('tile-events').href = '/manage/' + guildId + '/events';
-        document.getElementById('tile-reactionroles').href = '/manage/' + guildId + '/reactionroles';
-        document.getElementById('tile-reminders').href = '/manage/' + guildId + '/reminders';
-        document.getElementById('tile-moderation').href = '/manage/' + guildId + '/moderation';
-        document.getElementById('tile-custom').href = '/manage/' + guildId + '/custom';
-        document.getElementById('tile-logs').href = '/manage/' + guildId + '/logs';
+        const setHref = (id, href) => {
+    const el = document.getElementById(id);
+    if (el) el.href = href;
+};
+setHref('tile-roster', '/guild/' + guildId + '/roster');
+setHref('tile-roster-config', '/manage/' + guildId + '/roster-config');
+setHref('tile-profiles', '/manage/' + guildId + '/profiles');
+setHref('tile-guides', '/manage/' + guildId + '/guides');
+setHref('tile-events', '/manage/' + guildId + '/events');
+setHref('tile-reactionroles', '/manage/' + guildId + '/reactionroles');
+setHref('tile-reminders', '/manage/' + guildId + '/reminders');
+setHref('tile-moderation', '/manage/' + guildId + '/moderation');
+setHref('tile-custom', '/manage/' + guildId + '/custom');
+setHref('tile-logs', '/manage/' + guildId + '/logs');
 
         fetch('/api/guild/' + guildId, { credentials: 'include' })
             .then(r => {
