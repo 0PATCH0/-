@@ -1,0 +1,220 @@
+const { EmbedBuilder } = require('discord.js');
+const { PlayerProfile, RosterConfig, RosterMessage, Settings } = require('./models');
+
+const BASE_CLASSES = [
+    { key: 'dps',    name: 'ДД',   icon: 'dps',    color: '#e74c3c', order: 0, isClass: true, emoji: '⚔️' },
+    { key: 'tank',   name: 'Танк', icon: 'tank',   color: '#2ecc71', order: 1, isClass: true, emoji: '🛡️' },
+    { key: 'healer', name: 'Хил',  icon: 'healer', color: '#9b59b6', order: 2, isClass: true, emoji: '💚' }
+];
+
+// Определение класса по боевым искусствам
+function detectClassFromMartialArts(martialArts) {
+    const map = {
+        nameless_sword: 'dps', nameless_spear: 'dps', strategic_sword: 'dps',
+        heavenquaker_spear: 'dps', infernal_twinblades: 'dps', mortal_rope_dart: 'dps',
+        inkwell_fan: 'dps', vernal_umbrella: 'dps',
+        stormbreaker_spear: 'tank', thundercry_blade: 'tank',
+        panacea_fan: 'healer', soulshade_umbrella: 'healer'
+    };
+    const classes = (martialArts || []).map(id => map[id]).filter(Boolean);
+    if (classes.length === 0) return null;
+    const unique = [...new Set(classes)];
+    if (unique.length === 1) return unique[0];
+    return 'hybrid';
+}
+
+function getDefaultRosterColumns() {
+    return BASE_CLASSES.map(c => ({ ...c }));
+}
+
+// Сбор классифицированного состава
+async function buildClassifiedRoster(botClient, guildId) {
+    const discordGuild = botClient.guilds.cache.get(guildId);
+    if (!discordGuild) return { columns: [], members: [], guildName: null };
+
+    let config = await RosterConfig.findOne({ guildId });
+    let columns;
+    if (!config || !config.columns || config.columns.length === 0) {
+        columns = getDefaultRosterColumns();
+    } else {
+        columns = [...config.columns].sort((a, b) => (a.order || 0) - (b.order || 0));
+    }
+    const manual = (config && config.manualAssignments) || {};
+
+    const profiles = await PlayerProfile.find({
+        $or: [ { guildId }, { isGlobal: true } ]
+    });
+    const profileMap = {};
+    profiles.forEach(p => {
+        if (!profileMap[p.userId] || p.guildId === guildId) {
+            profileMap[p.userId] = p;
+        }
+    });
+
+    const memberIds = Object.keys(profileMap);
+    const fetched = await Promise.all(
+        memberIds.map(id => discordGuild.members.fetch(id).catch(() => null))
+    );
+
+    const members = [];
+    fetched.forEach(m => {
+        if (!m || m.user.bot) return;
+        const p = profileMap[m.id];
+        if (!p) return;
+        let detectedClass = null;
+        if (p.characters && p.characters.length > 0) {
+            const c = p.characters[0];
+            const arts = [
+                ...((c.builds?.PvE?.martialArts) || []),
+                ...((c.builds?.PvP?.martialArts) || [])
+            ];
+            detectedClass = detectClassFromMartialArts(arts);
+        }
+        members.push({
+            userId: m.id,
+            displayName: m.displayName,
+            avatar: m.user.avatar
+                ? `https://cdn.discordapp.com/avatars/${m.id}/${m.user.avatar}.png`
+                : `https://cdn.discordapp.com/embed/avatars/0.png`,
+            detectedClass: detectedClass || 'none',
+            manualColumnKey: manual[m.id] || null
+        });
+    });
+
+    members.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+    return { columns, members, guildName: discordGuild.name };
+}
+
+// Сборка Embed для Discord
+function buildRosterEmbeds(roster, guildId) {
+    const { columns, members, guildName } = roster;
+
+    // Группировка: сначала кастомные (по колонкам), потом базовые классы
+    const byColumn = {};
+    columns.forEach(c => { byColumn[c.key] = []; });
+
+    members.forEach(m => {
+        if (m.manualColumnKey && byColumn[m.manualColumnKey]) {
+            byColumn[m.manualColumnKey].push(m);
+            return;
+        }
+        if (m.detectedClass === 'hybrid') {
+            if (byColumn.dps) byColumn.dps.push(m);
+            if (byColumn.tank) byColumn.tank.push(m);
+            if (byColumn.healer) byColumn.healer.push(m);
+            return;
+        }
+        if (byColumn[m.detectedClass]) {
+            byColumn[m.detectedClass].push(m);
+        }
+    });
+
+    const profileUrl = (userId) => `https://patchitos1234.fly.dev/view-profile/${userId}?guild=${guildId}`;
+
+    const embeds = [];
+    let currentEmbed = new EmbedBuilder()
+        .setTitle(`🛡️ Состав гильдии — ${guildName || 'Сервер'}`)
+        .setColor('#d4af37')
+        .setFooter({ text: `Всего: ${members.length}` })
+        .setTimestamp();
+
+    let currentFieldCount = 0;
+    const MAX_FIELDS = 25;
+
+    // Сортируем колонки: кастомные — по order, потом базовые — по order
+    const orderedColumns = columns
+        .map((c, i) => ({ ...c, __idx: i }))
+        .sort((a, b) => {
+            const aIsClass = a.isClass ? 1 : 0;
+            const bIsClass = b.isClass ? 1 : 0;
+            if (aIsClass !== bIsClass) return aIsClass - bIsClass; // кастомные сверху
+            return (a.order || 0) - (b.order || 0);
+        });
+
+    for (const col of orderedColumns) {
+        const list = byColumn[col.key] || [];
+        if (list.length === 0) continue; // не показываем пустые
+
+        const emoji = col.emoji || (col.isClass
+            ? (col.icon === 'tank' ? '🛡️' : col.icon === 'dps' ? '⚔️' : col.icon === 'healer' ? '💚' : '◆')
+            : '⚙️');
+
+        let value = list.map(m => `• <@${m.userId}> — [👁 Профиль](${profileUrl(m.userId)})`).join('\n');
+        if (value.length > 1020) {
+            value = value.substring(0, 1017) + '...';
+        }
+
+        if (currentFieldCount >= MAX_FIELDS) {
+            embeds.push(currentEmbed);
+            currentEmbed = new EmbedBuilder().setColor('#d4af37');
+            currentFieldCount = 0;
+        }
+
+        currentEmbed.addFields({
+            name: `${emoji} ${col.name} (${list.length})`,
+            value,
+            inline: false
+        });
+        currentFieldCount++;
+    }
+
+    if (currentFieldCount > 0 || embeds.length === 0) {
+        if (members.length === 0) {
+            currentEmbed.setDescription('*Пока нет участников с профилями.*');
+        }
+        embeds.push(currentEmbed);
+    }
+
+    return embeds.slice(0, 10); // Discord: до 10 embeds в сообщении
+}
+
+// Троттлинг: обновляем раз в 5 сек после последнего запроса
+const pendingRefreshes = new Map();
+
+function refreshRosterMessage(botClient, guildId) {
+    if (pendingRefreshes.has(guildId)) {
+        clearTimeout(pendingRefreshes.get(guildId).timeout);
+    }
+    const timeout = setTimeout(async () => {
+        pendingRefreshes.delete(guildId);
+        try {
+            await _doRefresh(botClient, guildId);
+        } catch (e) {
+            console.error('[ROSTER REFRESH]', guildId, e.message);
+        }
+    }, 5000);
+    pendingRefreshes.set(guildId, { timeout });
+}
+
+async function _doRefresh(botClient, guildId) {
+    const roster = await buildClassifiedRoster(botClient, guildId);
+    const embeds = buildRosterEmbeds(roster, guildId);
+
+    const records = await RosterMessage.find({ guildId });
+    if (records.length === 0) return;
+
+    for (const rec of records) {
+        try {
+            const channel = await botClient.channels.fetch(rec.channelId).catch(() => null);
+            if (!channel) continue;
+            const message = await channel.messages.fetch(rec.messageId).catch(() => null);
+            if (!message) {
+                await RosterMessage.deleteOne({ _id: rec._id });
+                continue;
+            }
+            await message.edit({ embeds });
+        } catch (e) {
+            console.error('[ROSTER REFRESH MSG]', e.message);
+        }
+    }
+}
+
+module.exports = {
+    buildClassifiedRoster,
+    buildRosterEmbeds,
+    refreshRosterMessage,
+    detectClassFromMartialArts,
+    getDefaultRosterColumns,
+    BASE_CLASSES
+};
