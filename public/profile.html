@@ -69,7 +69,6 @@
         input:checked + .slider { background-color: var(--jade); box-shadow: 0 0 15px var(--jade-glow); }
         input:checked + .slider:before { transform: translateX(24px); }
 
-        /* Стили для вкладок билдов */
         .build-tabs { 
             display: flex; 
             gap: 10px; 
@@ -96,7 +95,6 @@
         .build-content { display: none; animation: fadeInUp 0.3s ease-out; }
         .build-content.active { display: block; }
 
-        /* Панель экипировки */
         .equipment-panel {
             background: rgba(0,0,0,0.3);
             border: 1px solid var(--border);
@@ -132,7 +130,6 @@
         }
         .slot-counter.full { background: rgba(212, 175, 55, 0.2); color: var(--gold); }
 
-        /* Сетка слотов */
         .slots-grid {
             display: grid;
             gap: 10px;
@@ -215,7 +212,15 @@
             opacity: 1;
         }
 
-        /* Модальное окно */
+        /* Цвета редкости */
+        .rarity-Legendary { border-color: #d4af37 !important; box-shadow: inset 0 0 10px rgba(212, 175, 55, 0.2); }
+        .rarity-Epic { border-color: #9b59b6 !important; box-shadow: inset 0 0 10px rgba(155, 89, 182, 0.2); }
+        .rarity-Rare { border-color: #3498db !important; box-shadow: inset 0 0 10px rgba(52, 152, 219, 0.2); }
+        .rarity-Common { border-color: #7f8c8d !important; }
+        .rarity-Offensive { border-color: #e74c3c !important; box-shadow: inset 0 0 10px rgba(231, 76, 60, 0.2); }
+        .rarity-General { border-color: #2ecc71 !important; box-shadow: inset 0 0 10px rgba(46, 204, 113, 0.2); }
+        .rarity-Movement { border-color: #3498db !important; box-shadow: inset 0 0 10px rgba(52, 152, 219, 0.2); }
+
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.9); backdrop-filter: blur(5px);
@@ -305,17 +310,13 @@
         }
         .skill-card.selected span { color: var(--gold); font-weight: bold; }
         
-        /* Адаптивность для маленьких экранов */
+        /* Адаптивность */
         @media (max-width: 600px) {
             .slots-grid.mystic-grid, .slots-grid.inner-grid {
                 grid-template-columns: repeat(4, 1fr);
             }
-            .equip-slot .slot-name {
-                font-size: 8px;
-            }
-            .character-block {
-                padding: 15px;
-            }
+            .equip-slot .slot-name { font-size: 8px; }
+            .character-block { padding: 15px; }
         }
     </style>
 </head>
@@ -356,16 +357,13 @@
         </div>
     </div>
 
-    <!-- Модальное окно выбора -->
     <div class="modal-overlay" id="modal">
         <div class="modal-box">
             <div class="modal-header">
                 <h3 id="modal-title">Выбор навыков</h3>
                 <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
-            <div class="modal-filters" id="modal-filters">
-                <!-- Фильтры будут добавлены динамически -->
-            </div>
+            <div class="modal-filters" id="modal-filters"></div>
             <div class="modal-body" id="modal-body"></div>
             <div class="modal-footer">
                 <button class="btn btn-danger" onclick="closeModal()">Отмена</button>
@@ -375,12 +373,11 @@
     </div>
 
     <script src="/js/gamedata.js"></script>
+    <script src="/js/gamedata_meta.js"></script>
     <script>
-        // Безопасная проверка после полной загрузки страницы
         window.addEventListener('load', () => {
-            if (typeof window.GAME_DATA === 'undefined') {
-                console.warn('ВНИМАНИЕ: gamedata.js не загружен или содержит синтаксическую ошибку!');
-            }
+            if (typeof window.GAME_DATA === 'undefined') console.warn('gamedata.js не загружен!');
+            if (typeof window.GAME_META === 'undefined') console.warn('gamedata_meta.js не загружен!');
         });
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -391,25 +388,23 @@
         if (banner) banner.href = `/manage/${guildId}`;
 
         let charCount = 0;
-        // Контекст модального окна: blockId, type (mystic/inner), activeTab (PvE/PvP), temp (массив ID)
         let modalContext = { blockId: null, type: 'mystic', activeTab: 'PvE', temp: [], filter: 'all' };
         let charDataCache = {};
-
-        // Лимиты по игре
         const LIMITS = { mystic: 8, inner: 4 };
+
+        function getMeta(type, id) {
+            if (!window.GAME_META) return { rarity: 'Common', desc: '' };
+            const source = type === 'mystic' ? window.GAME_META.mysticSkills : window.GAME_META.innerWays;
+            return source[id] || { rarity: 'Common', desc: '' };
+        }
 
         function createBlock(data = {}, index = 0) {
             charCount++;
             const blockId = `char-${charCount}`;
-            // Гарантируем структуру данных
             charDataCache[blockId] = {
                 ...data,
-                builds: data.builds || {
-                    PvE: { mysticSkills: [], innerWays: [] },
-                    PvP: { mysticSkills: [], innerWays: [] }
-                }
+                builds: data.builds || { PvE: { mysticSkills: [], innerWays: [] }, PvP: { mysticSkills: [], innerWays: [] } }
             };
-            // Если билды есть, но не хватает полей, дополняем
             ['PvE', 'PvP'].forEach(tab => {
                 if (!charDataCache[blockId].builds[tab]) charDataCache[blockId].builds[tab] = { mysticSkills: [], innerWays: [] };
                 if (!charDataCache[blockId].builds[tab].mysticSkills) charDataCache[blockId].builds[tab].mysticSkills = [];
@@ -438,15 +433,8 @@
                     <button class="tab-btn pvp" onclick="switchTab('${blockId}', 'PvP')">⚔️ PvP Билд</button>
                 </div>
 
-                <!-- Содержимое для PvE -->
-                <div class="build-content active" id="pve-content-${blockId}">
-                    ${renderBuildUI(blockId, 'PvE')}
-                </div>
-                
-                <!-- Содержимое для PvP -->
-                <div class="build-content" id="pvp-content-${blockId}">
-                    ${renderBuildUI(blockId, 'PvP')}
-                </div>
+                <div class="build-content active" id="pve-content-${blockId}">${renderBuildUI(blockId, 'PvE')}</div>
+                <div class="build-content" id="pvp-content-${blockId}">${renderBuildUI(blockId, 'PvP')}</div>
             `;
             document.getElementById('characters-container').appendChild(block);
             renderAllSlots(blockId);
@@ -454,7 +442,6 @@
 
         function renderBuildUI(blockId, activeTab) {
             return `
-                <!-- Панель Мистических навыков -->
                 <div class="equipment-panel">
                     <div class="panel-header">
                         <div class="panel-title mystic">✨ Мистические навыки</div>
@@ -469,7 +456,6 @@
                     </div>
                 </div>
 
-                <!-- Панель Внутренних путей -->
                 <div class="equipment-panel">
                     <div class="panel-header">
                         <div class="panel-title inner">🌀 Внутренние пути</div>
@@ -480,11 +466,4 @@
                             <div class="equip-slot" id="inner-slot-${activeTab}-${blockId}-${i}" onclick="openModal('${blockId}', 'inner', '${activeTab}', ${i})">
                                 <span class="empty-icon">+</span>
                             </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
-        function switchTab(blockId, type) {
-            const block = document.getElementBy
+              
