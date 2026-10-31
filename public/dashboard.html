@@ -3,76 +3,218 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мои серверы</title>
-    <link rel="stylesheet" href="/css/style.css?v=6">
+    <title>Мои гильдии — Where Winds Meet</title>
+    <link rel="stylesheet" href="/css/style.css?v=25">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Marcellus', serif;
+            color: #e8e3d4;
+            background: #06080a;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        .bg-ink {
+            position: fixed; inset: 0; z-index: 0;
+            background:
+                radial-gradient(ellipse at 20% 10%, rgba(212, 175, 55, 0.06) 0%, transparent 40%),
+                radial-gradient(ellipse at 80% 90%, rgba(46, 204, 113, 0.04) 0%, transparent 40%),
+                linear-gradient(180deg, #06080a 0%, #0b0e13 100%);
+            pointer-events: none;
+        }
+        .fog {
+            position: fixed; inset: 0; z-index: 1; pointer-events: none;
+            background: radial-gradient(ellipse at 50% 100%, rgba(212,175,55,0.05) 0%, transparent 50%);
+        }
+        .container {
+            position: relative; z-index: 2;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+        .top-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 50px;
+            animation: fadeDown 0.8s ease-out;
+        }
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .logo {
+            font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700;
+            letter-spacing: 3px; color: #d4af37;
+            text-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+        }
+        .user-badge {
+            display: flex; align-items: center; gap: 12px;
+            background: rgba(0,0,0,0.4);
+            padding: 6px 16px 6px 6px;
+            border-radius: 50px;
+            border: 1px solid rgba(212,175,55,0.15);
+        }
+        .user-badge img {
+            width: 32px; height: 32px; border-radius: 50%;
+            border: 1px solid rgba(212,175,55,0.4);
+        }
+        .user-badge span { font-size: 14px; color: #e8e3d4; }
+        .user-badge a { color: #8a8578; text-decoration: none; font-size: 12px; margin-left: 8px; }
+        .user-badge a:hover { color: #d4af37; }
+        .page-title {
+            text-align: center; margin-bottom: 50px;
+            animation: fadeUp 1s ease-out 0.2s both;
+        }
+        .page-title h1 {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(32px, 6vw, 48px);
+            background: linear-gradient(135deg, #d4af37, #f4e4a0, #aa8624, #d4af37);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 4px; margin-bottom: 10px;
+            filter: drop-shadow(0 0 20px rgba(212,175,55,0.3));
+        }
+        .page-title p {
+            color: #8a8578; letter-spacing: 6px;
+            text-transform: uppercase; font-size: 13px;
+        }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .guild-list { display: flex; flex-direction: column; gap: 16px; }
+        .guild-card {
+            background: linear-gradient(160deg, rgba(18, 22, 28, 0.9), rgba(10, 12, 16, 0.95));
+            border: 1px solid rgba(212,175,55,0.15);
+            border-radius: 16px; padding: 20px 24px;
+            display: flex; align-items: center; justify-content: space-between; gap: 20px;
+            transition: all 0.3s ease;
+            animation: fadeUp 0.8s ease-out both;
+            position: relative; overflow: hidden;
+            cursor: pointer; text-decoration: none; color: inherit;
+        }
+        .guild-card:nth-child(1) { animation-delay: 0.3s; }
+        .guild-card:nth-child(2) { animation-delay: 0.45s; }
+        .guild-card:nth-child(3) { animation-delay: 0.6s; }
+        .guild-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(212,175,55,0.5);
+            box-shadow: 0 10px 30px rgba(212,175,55,0.12);
+        }
+        .guild-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(212,175,55,0.4), transparent);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .guild-card:hover::before { opacity: 1; }
+        .guild-info { display: flex; align-items: center; gap: 18px; flex: 1; min-width: 0; }
+        .guild-icon {
+            width: 56px; height: 56px; border-radius: 50%;
+            border: 2px solid rgba(212,175,55,0.3);
+            background: #1a1e26;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Cinzel', serif; font-size: 24px; color: #d4af37;
+            flex-shrink: 0; overflow: hidden;
+            box-shadow: 0 0 15px rgba(212,175,55,0.1);
+        }
+        .guild-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .guild-name {
+            font-family: 'Cinzel', serif; font-size: 18px; color: #d4af37;
+            letter-spacing: 1px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .guild-sub { font-size: 12px; color: #8a8578; margin-top: 4px; }
+        .btn-choose {
+            padding: 12px 28px; border-radius: 30px;
+            font-family: 'Cinzel', serif; font-size: 14px; font-weight: 600; letter-spacing: 1px;
+            background: linear-gradient(135deg, #d4af37, #aa8624);
+            color: #0a0b10; border: none; cursor: pointer;
+            transition: 0.2s; flex-shrink: 0;
+            box-shadow: 0 4px 15px rgba(212,175,55,0.2);
+        }
+        .guild-card:hover .btn-choose {
+            box-shadow: 0 6px 25px rgba(212,175,55,0.4);
+            transform: scale(1.05);
+        }
+        .empty-state {
+            text-align: center; color: #8a8578; font-style: italic;
+            padding: 60px 20px;
+        }
+        @media (max-width: 600px) {
+            .guild-card { flex-direction: column; align-items: stretch; gap: 16px; }
+            .btn-choose { width: 100%; text-align: center; }
+            .user-badge span { display: none; }
+        }
+    </style>
 </head>
-<body style="padding-top: 20px;">
+<body>
+    <div class="bg-ink"></div>
+    <div class="fog"></div>
 
-    <div class="main-container">
-        <div class="sidebar">
-            <h2>Панель управления</h2>
-            <a href="/dashboard" class="active"><div class="icon icon-home"></div> Мои серверы</a>
-            <a href="/logout" style="margin-top: 50px; color: var(--danger);"><div class="icon icon-arrow-left"></div> Выйти</a>
+    <div class="container">
+        <nav class="top-nav">
+            <div class="logo">WHERE WINDS MEET</div>
+            <div class="user-badge" id="user-badge">
+                <span>Загрузка...</span>
+            </div>
+        </nav>
+
+        <div class="page-title">
+            <h1>Выбор гильдии</h1>
+            <p>Выберите свой сервер</p>
         </div>
 
-        <div class="content">
-            <div class="header">
-                <h1 id="welcome-text">Привет, загрузка...</h1>
-            </div>
-
-            <div class="grid" id="server-list">
-                <p style="color: var(--text-muted);">Поиск серверов...</p>
-            </div>
+        <div class="guild-list" id="guild-list">
+            <div class="empty-state">Загрузка гильдий...</div>
         </div>
     </div>
 
     <script>
-        fetch('/api/user').then(res => res.json()).then(data => {
-            document.getElementById('welcome-text').innerText = `Привет, ${data.user.username}!`;
-            
-            const grid = document.getElementById('server-list');
-            
-            if (data.guilds.length === 0) {
-                grid.innerHTML = '<p style="color: var(--text-muted);">Бот не найден ни на одном из ваших серверов.</p>';
-                return;
-            }
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        }
 
-            grid.innerHTML = '';
-            
-            data.guilds.forEach(guild => {
-                const isAdmin = (BigInt(guild.permissions) & BigInt(0x8)) === BigInt(0x8);
-                const icon = guild.icon 
-                    ? `<img src="https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--jade);">` 
-                    : `<div style="width: 50px; height: 50px; border-radius: 50%; background: var(--jade); color: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px;">${guild.name.charAt(0)}</div>`;
-                
-                // Формируем кнопки: если админ - две кнопки, если нет - только профиль
-                let buttonsHtml = '';
-                if (isAdmin) {
-                    buttonsHtml = `
-                        <div style="display: flex; gap: 10px; margin-top: 15px;">
-                            <a href="/manage/${guild.id}" class="btn btn-small" style="flex: 1;">Управление</a>
-                            <a href="/profile?guild=${guild.id}" class="btn btn-small" style="flex: 1; background: rgba(212, 175, 55, 0.15); border-color: var(--gold); color: var(--gold);">Мой профиль</a>
-                        </div>
-                    `;
-                } else {
-                    buttonsHtml = `
-                        <div style="margin-top: 15px;">
-                            <a href="/profile?guild=${guild.id}" class="btn btn-small" style="width: 100%;">Заполнить профиль</a>
-                        </div>
-                    `;
+        fetch('/api/user', { credentials: 'include' })
+            .then(r => {
+                if (!r.ok) { window.location.href = '/'; return null; }
+                return r.json();
+            })
+            .then(data => {
+                if (!data) return;
+                const u = data.user;
+                const avatar = u.avatar
+                    ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png`
+                    : `https://cdn.discordapp.com/embed/avatars/0.png`;
+                document.getElementById('user-badge').innerHTML = `
+                    <img src="${avatar}" alt="">
+                    <span>${escapeHtml(u.username)}</span>
+                    <a href="/logout">Выйти</a>
+                `;
+
+                const container = document.getElementById('guild-list');
+                const guilds = data.guilds || [];
+                if (guilds.length === 0) {
+                    container.innerHTML = '<div class="empty-state">Бот не состоит ни на одном сервере, где вы имеете права.</div>';
+                    return;
                 }
 
-                grid.innerHTML += `
-                    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
-                        <div style="display: flex; gap: 15px; align-items: center;">
-                            ${icon}
-                            <h3 style="margin: 0; font-size: 18px;">${guild.name}</h3>
-                        </div>
-                        ${buttonsHtml}
-                    </div>
-                `;
+                container.innerHTML = guilds.map(g => {
+                    const iconUrl = g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : null;
+                    const iconInner = iconUrl
+                        ? `<img src="${iconUrl}" alt="">`
+                        : escapeHtml(g.name.charAt(0).toUpperCase());
+                    return `
+                        <a class="guild-card" href="/guild/${g.id}">
+                            <div class="guild-info">
+                                <div class="guild-icon">${iconInner}</div>
+                                <div style="min-width:0;">
+                                    <div class="guild-name">${escapeHtml(g.name)}</div>
+                                    <div class="guild-sub">ID: ${g.id}</div>
+                                </div>
+                            </div>
+                            <button class="btn-choose">Выбрать</button>
+                        </a>
+                    `;
+                }).join('');
+            })
+            .catch(() => {
+                window.location.href = '/';
             });
-        });
     </script>
 </body>
 </html>
