@@ -469,11 +469,11 @@
                 }
             };
             ['PvE', 'PvP'].forEach(tab => {
-                if (!charDataCache[blockId].builds[tab]) charDataCache[blockId].builds[tab] = { mysticSkills: [], innerWays: [] };
-                if (!Array.isArray(charDataCache[blockId].builds[tab].mysticSkills)) charDataCache[blockId].builds[tab].mysticSkills = [];
-                if (!Array.isArray(charDataCache[blockId].builds[tab].innerWays)) charDataCache[blockId].builds[tab].innerWays = [];
-            });
-
+    if (!charDataCache[blockId].builds[tab]) charDataCache[blockId].builds[tab] = { mysticSkills: [], innerWays: [], martialArts: [] };
+    if (!Array.isArray(charDataCache[blockId].builds[tab].mysticSkills)) charDataCache[blockId].builds[tab].mysticSkills = [];
+    if (!Array.isArray(charDataCache[blockId].builds[tab].innerWays)) charDataCache[blockId].builds[tab].innerWays = [];
+    if (!Array.isArray(charDataCache[blockId].builds[tab].martialArts)) charDataCache[blockId].builds[tab].martialArts = [];
+});
             const block = document.createElement('div');
             block.className = 'character-block';
             block.id = blockId;
@@ -532,6 +532,20 @@
                         `).join('')}
                     </div>
                 </div>
+
+                <div class="equipment-panel">
+    <div class="panel-header">
+        <div class="panel-title" style="color:#c084fc;">🥋 Боевые искусства</div>
+        <div class="slot-counter" id="martial-counter-${activeTab}-${blockId}">0 / 2</div>
+    </div>
+    <div class="slots-grid" style="grid-template-columns: repeat(2, 1fr);" id="martial-slots-${activeTab}-${blockId}">
+        ${Array.from({length: 2}).map((_, i) => `
+            <div class="equip-slot" id="martial-slot-${activeTab}-${blockId}-${i}" onclick="openMartialModal('${blockId}', '${activeTab}', ${i})">
+                <span class="empty-icon">+</span>
+            </div>
+        `).join('')}
+    </div>
+</div>
             `;
         }
 
@@ -568,6 +582,7 @@
                     }
                 });
             });
+            renderMartialSlots(blockId);
         }
 
         function removeSlot(ev, blockId, type, tab, index) {
@@ -713,12 +728,13 @@
                 const characters = Object.keys(charDataCache).map(blockId => {
                     const c = charDataCache[blockId];
                     const cleanBuild = tab => {
-                        const b = c.builds[tab] || { mysticSkills: [], innerWays: [] };
-                        return {
-                            mysticSkills: (b.mysticSkills || []).filter(Boolean),
-                            innerWays: (b.innerWays || []).filter(Boolean)
-                        };
-                    };
+    const b = c.builds[tab] || { mysticSkills: [], innerWays: [], martialArts: [] };
+    return {
+        mysticSkills: (b.mysticSkills || []).filter(Boolean),
+        innerWays: (b.innerWays || []).filter(Boolean),
+        martialArts: (b.martialArts || []).filter(Boolean)
+    };
+};
                     return {
                         gameNickname: c.gameNickname || '',
                         guildName: c.guildName || '',
