@@ -425,9 +425,10 @@
         const urlParams = new URLSearchParams(window.location.search);
         let guildId = urlParams.get('guild') || window.location.pathname.split('/').pop();
         const targetUserId = urlParams.get('user');
+        const effectiveGuildId = (guildId && guildId !== 'profile') ? guildId : 'global';
 
         const banner = document.getElementById('top-banner-link');
-        if (banner) banner.href = `/manage/${guildId}`;
+        if (banner && effectiveGuildId !== 'global') banner.href = `/manage/${effectiveGuildId}`;
 
         let charCount = 0;
         let modalContext = { blockId: null, type: 'mystic', activeTab: 'PvE', slotIndex: null, temp: [], filter: 'all' };
@@ -444,6 +445,14 @@
             if (!window.GAME_DATA) return null;
             const list = type === 'mystic' ? window.GAME_DATA.mysticSkills : window.GAME_DATA.innerWays;
             return (list || []).find(x => x.id === id) || null;
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        }
+
+        function updateField(blockId, field, value) {
+            if (charDataCache[blockId]) charDataCache[blockId][field] = value;
         }
 
         function createBlock(data = {}, index = 0) {
@@ -494,14 +503,6 @@
             renderAllSlots(blockId);
         }
 
-        function escapeHtml(s) {
-            return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-        }
-
-        function updateField(blockId, field, value) {
-            if (charDataCache[blockId]) charDataCache[blockId][field] = value;
-        }
-
         function renderBuildUI(blockId, activeTab) {
             return `
                 <div class="equipment-panel">
@@ -548,7 +549,7 @@
                         if (id) {
                             const item = getItemById(type, id);
                             const meta = getMeta(type, id);
-                            slot.classList.add('filled', 'rarity-' + (meta.rarity || 'Common'));
+                            slot.className = 'equip-slot filled rarity-' + (meta.rarity || 'Common');
                             slot.innerHTML = `
                                 <img src="${item ? item.img : ''}" alt="" onerror="this.style.display='none'">
                                 <span class="slot-name">${item ? escapeHtml(item.nameRU || item.nameEN) : id}</span>
@@ -573,7 +574,6 @@
             ev.stopPropagation();
             const key = type === 'mystic' ? 'mysticSkills' : 'innerWays';
             charDataCache[blockId].builds[tab][key][index] = null;
-            // сжимаем, чтобы не было дырок
             charDataCache[blockId].builds[tab][key] = charDataCache[blockId].builds[tab][key].filter(x => x !== null);
             renderAllSlots(blockId);
         }
@@ -590,8 +590,6 @@
                 if (el) el.classList.toggle('active', t === tab);
             });
         }
-
-        /* ---------- МОДАЛКА ---------- */
 
         function openModal(blockId, type, tab, slotIndex) {
             modalContext = { blockId, type, activeTab: tab, slotIndex, temp: [], filter: 'all' };
@@ -633,10 +631,9 @@
             if (!body) return;
             const data = window.GAME_DATA || { mysticSkills: [], innerWays: [] };
             const meta = window.GAME_META || { mysticSkills: {}, innerWays: {} };
-                        const list = modalContext.type === 'mystic' ? data.mysticSkills : data.innerWays;
+            const list = modalContext.type === 'mystic' ? data.mysticSkills : data.innerWays;
             const typeMeta = modalContext.type === 'mystic' ? meta.mysticSkills : meta.innerWays;
 
-            // текущий слот — если он занят, покажем "выбрано"
             const currentId = charDataCache[modalContext.blockId]
                 && charDataCache[modalContext.blockId].builds[modalContext.activeTab]
                 && charDataCache[modalContext.blockId].builds[modalContext.activeTab][modalContext.type === 'mystic' ? 'mysticSkills' : 'innerWays'][modalContext.slotIndex];
@@ -667,7 +664,6 @@
 
         function pickSkill(id) {
             modalContext.temp = [id];
-            // перерисовываем, чтобы выделить
             renderModalBody();
         }
 
@@ -678,148 +674,148 @@
             const arr = charDataCache[blockId].builds[activeTab][key];
             const pickedId = modalContext.temp[0];
 
-            if (!pickedId) {
-                // пустое применение — просто закрываем
-                closeModal();
-                return;
-            }
-            // защита от дублей
+            if (!pickedId) { closeModal(); return; }
+
             const dup = arr.indexOf(pickedId);
-            if (dup !== -1 && dup !== slotIndex) {
-                arr[dup] = null;
-            }
+            if (dup !== -1 && dup !== slotIndex) arr[dup] = null;
+
             arr[slotIndex] = pickedId;
             charDataCache[blockId].builds[activeTab][key] = arr.filter(x => x !== null);
-            // добиваем пустыми до лимита, чтобы slotIndex был валиден
-            const limit = LIMITS[type];
-            const normalized = charDataCache[blockId].builds[activeTab][key];
-            while (normalized.length < limit) normalized.push(null);
-            // заново фильтруем — null-ы убираем при рендере
-            charDataCache[blockId].builds[activeTab][key] = normalized;
             renderAllSlots(blockId);
             closeModal();
         }
 
-        /* ---------- УПРАВЛЕНИЕ ПЕРСОНАЖАМИ ---------- */
-
         function addCharacter() {
             const blocks = document.querySelectorAll('.character-block').length;
-            if (blocks >= 3) {
-                alert('Максимум 3 персонажа.');
-                return;
-            }
+            if (blocks >= 3) { alert('Максимум 3 персонажа.'); return; }
             createBlock({}, blocks);
         }
 
         function removeCharacter(blockId) {
             const blocks = document.querySelectorAll('.character-block');
-            if (blocks.length <= 1) {
-                alert('Должен остаться хотя бы один персонаж. Используйте «Удалить профиль», чтобы удалить всё.');
-                return;
-            }
+            if (blocks.length <= 1) { alert('Должен остаться хотя бы один персонаж.'); return; }
             const el = document.getElementById(blockId);
             if (el) el.remove();
             delete charDataCache[blockId];
-            // перенумеровываем заголовки
             document.querySelectorAll('.character-block').forEach((b, i) => {
                 const t = b.querySelector('.char-title span');
                 if (t) t.textContent = '⚔️ Персонаж ' + (i + 1);
             });
         }
 
-        /* ---------- СОХРАНЕНИЕ / ЗАГРУЗКА ---------- */
-
         async function saveProfile() {
-    const btn = document.getElementById('btn-save');
-    btn.disabled = true;
-    const original = btn.innerHTML;
-    btn.innerHTML = '⏳ Сохранение...';
+            const btn = document.getElementById('btn-save');
+            btn.disabled = true;
+            const original = btn.innerHTML;
+            btn.innerHTML = '⏳ Сохранение...';
 
-    try {
-        const characters = Object.keys(charDataCache).map(blockId => {
-            const c = charDataCache[blockId];
-            const cleanBuild = tab => {
-                const b = c.builds[tab] || { mysticSkills: [], innerWays: [] };
-                return {
-                    mysticSkills: (b.mysticSkills || []).filter(Boolean),
-                    innerWays: (b.innerWays || []).filter(Boolean)
-                };
-            };
-            return {
-                gameNickname: c.gameNickname || '',
-                guildName: c.guildName || '',
-                bio: c.bio || '',
-                builds: { PvE: cleanBuild('PvE'), PvP: cleanBuild('PvP') }
-            };
-        }).filter(c => c.gameNickname.trim().length > 0);
+            try {
+                const characters = Object.keys(charDataCache).map(blockId => {
+                    const c = charDataCache[blockId];
+                    const cleanBuild = tab => {
+                        const b = c.builds[tab] || { mysticSkills: [], innerWays: [] };
+                        return {
+                            mysticSkills: (b.mysticSkills || []).filter(Boolean),
+                            innerWays: (b.innerWays || []).filter(Boolean)
+                        };
+                    };
+                    return {
+                        gameNickname: c.gameNickname || '',
+                        guildName: c.guildName || '',
+                        bio: c.bio || '',
+                        builds: { PvE: cleanBuild('PvE'), PvP: cleanBuild('PvP') }
+                    };
+                }).filter(c => c.gameNickname.trim().length > 0);
 
-        if (characters.length === 0) {
-            alert('Заполните хотя бы одного персонажа (ник обязателен).');
-            btn.disabled = false;
-            btn.innerHTML = original;
-            return;
+                if (characters.length === 0) {
+                    alert('Заполните хотя бы одного персонажа (ник обязателен).');
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                    return;
+                }
+
+                const isGlobal = document.getElementById('is-global').checked;
+                const res = await fetch('/api/profile/' + encodeURIComponent(effectiveGuildId), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ characters, isGlobal })
+                });
+
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
+
+                alert('✅ Профиль сохранён');
+                if (json.profile) loadProfileFromData(json.profile);
+            } catch (e) {
+                console.error(e);
+                alert('❌ Ошибка сохранения: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = original;
+            }
         }
 
-        const isGlobal = document.getElementById('is-global').checked;
-        const effectiveGuildId = guildId && guildId !== 'profile' ? guildId : 'global';
-
-        const res = await fetch('/api/profile/' + encodeURIComponent(effectiveGuildId), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ characters, isGlobal })
-        });
-
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
-
-        alert('✅ Профиль сохранён');
-        if (json.profile) loadProfileFromData(json.profile);
-    } catch (e) {
-        console.error(e);
-        alert('❌ Ошибка сохранения: ' + e.message);
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = original;
-    }
-}
-
-async function loadProfile() {
-    try {
-        const effectiveGuildId = guildId && guildId !== 'profile' ? guildId : 'global';
-        const q = new URLSearchParams();
-        if (targetUserId) q.set('user', targetUserId);
-        const res = await fetch('/api/profile/' + encodeURIComponent(effectiveGuildId) + '?' + q.toString(), {
-            credentials: 'include'
-        });
-        if (!res.ok) {
-            createBlock({}, 0);
-            return;
+        async function loadProfile() {
+            try {
+                const q = new URLSearchParams();
+                if (targetUserId) q.set('user', targetUserId);
+                const res = await fetch('/api/profile/' + encodeURIComponent(effectiveGuildId) + '?' + q.toString(), {
+                    credentials: 'include'
+                });
+                if (!res.ok) { createBlock({}, 0); return; }
+                const json = await res.json();
+                loadProfileFromData(json);
+            } catch (e) {
+                console.error('loadProfile', e);
+                createBlock({}, 0);
+            }
         }
-        const json = await res.json();
-        loadProfileFromData(json);
-    } catch (e) {
-        console.error('loadProfile', e);
-        createBlock({}, 0);
-    }
-}
 
-async function deleteMyProfile() {
-    if (!confirm('Удалить профиль полностью? Это действие необратимо.')) return;
-    try {
-        const effectiveGuildId = guildId && guildId !== 'profile' ? guildId : 'global';
-        const res = await fetch('/api/profile/' + encodeURIComponent(effectiveGuildId), {
-            method: 'DELETE',
-            credentials: 'include'
-        });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        alert('Профиль удалён');
-        location.reload();
-    } catch (e) {
-        console.error(e);
-        alert('❌ Ошибка удаления: ' + e.message);
-    }
-}
+        function loadProfileFromData(profile) {
+            const container = document.getElementById('characters-container');
+            container.innerHTML = '';
+            Object.keys(charDataCache).forEach(k => delete charDataCache[k]);
+            charCount = 0;
+
+            const characters = (profile && profile.characters) || [];
+            if (characters.length === 0) {
+                createBlock({}, 0);
+            } else {
+                characters.forEach((c, i) => createBlock(c, i));
+            }
+
+            const g = document.getElementById('is-global');
+            if (g) g.checked = !!(profile && profile.isGlobal);
+
+            const delBtn = document.getElementById('btn-delete-profile');
+            if (delBtn) delBtn.style.display = (profile && profile._id) ? 'block' : 'none';
+
+            if (targetUserId) {
+                document.querySelectorAll('input, textarea').forEach(el => el.disabled = true);
+                const addBtn = document.getElementById('btn-add');
+                const saveBtn = document.getElementById('btn-save');
+                if (addBtn) addBtn.style.display = 'none';
+                if (saveBtn) saveBtn.style.display = 'none';
+                if (delBtn) delBtn.style.display = 'none';
+            }
+        }
+
+        async function deleteMyProfile() {
+            if (!confirm('Удалить профиль полностью? Это действие необратимо.')) return;
+            try {
+                const res = await fetch('/api/profile/' + encodeURIComponent(effectiveGuildId), {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                alert('Профиль удалён');
+                location.reload();
+            } catch (e) {
+                console.error(e);
+                alert('❌ Ошибка удаления: ' + e.message);
+            }
+        }
     </script>
 </body>
 </html>
