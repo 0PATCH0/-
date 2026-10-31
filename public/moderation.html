@@ -3,84 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Модерация</title>
-    <link rel="stylesheet" href="/css/style.css?v=3">
+    <title>Модерация — Where Winds Meet</title>
+    <link rel="stylesheet" href="/css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="admin-page">
+    <div class="bg-ink"></div>
+    <div class="fog"></div>
 
-    <video class="bg-video" autoplay loop muted playsinline poster="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2070&auto=format&fit=crop">
-        <source src="https://assets.mixkit.co/videos/preview/mixkit-clouds-and-blue-sky-2408-large.mp4" type="video/mp4">
-    </video>
-    <div class="bg-overlay"></div>
-    <div class="bg-particles"></div>
-    <!-- КОНЕЦ БЛОКА С ФОНОМ -->
+    <div class="container">
+        <nav class="top-nav">
+            <div class="logo">WHERE WINDS MEET</div>
+            <a href="#" class="back-link" id="back-link">← Назад в управление</a>
+        </nav>
 
-    <!-- Кнопка-печать "Главная" -->
-    <a href="#" id="top-banner-link" class="top-banner"></a>
-    
-    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
-    
-    <div class="main-container">
-
-    <a href="#" id="top-banner-link" class="top-banner"></a>
-
-    <div class="main-container">
-        <div class="sidebar">
-            <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><div class="icon icon-arrow-left"></div> К списку серверов</a>
-            <hr style="border-color: var(--border-color); margin-bottom: 20px;">
-            <a href="#" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
-            <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
-            <a href="#" id="nav-guild"><div class="icon icon-users"></div> Гильдия</a>
-            <a href="#" id="nav-guides"><div class="icon icon-book"></div> Гайды</a>
-            <a href="#" id="nav-rr"><div class="icon icon-masks"></div> Роли по кнопкам</a>
-            <a href="#" id="nav-rem"><div class="icon icon-alarm"></div> Напоминания</a>
-            <a href="#" class="active"><div class="icon icon-gear"></div> Модерация</a>
-            <a href="#" id="nav-logs"><div class="icon icon-scroll"></div> Логи действий</a>
-            <a href="#" id="nav-emb"><div class="icon icon-envelope"></div> Эмбеды</a>
+        <div class="page-title">
+            <h1>⚙️ Права модераторов</h1>
+            <p>☯ Кто может управлять порядком</p>
         </div>
 
-        <div class="content">
-            <div class="header"><h1><div class="icon icon-gear"></div> Права модераторов</h1></div>
-            <div class="form-card">
-                <p style="color: var(--text-muted); margin-bottom: 20px;">Выберите роли, которым разрешено использовать команды (/мут, /очистить, /сказать).</p>
-                <div id="roles-list" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px; padding-right: 10px;"></div>
-                <button class="btn" onclick="saveModeration()"><div class="icon icon-floppy-disk"></div> Сохранить права</button>
+        <div class="panel">
+            <div class="panel-title">
+                <span>Роли модераторов</span>
+                <button class="btn btn-primary btn-small" onclick="saveModeration()">💾 Сохранить</button>
             </div>
+            <div class="panel-desc">
+                Выберите роли Discord, которым разрешено использовать команды модерации
+                (/мут, /очистить, /сказать, /настройки и т.д.).
+            </div>
+            <div id="roles-list" style="max-height: 500px; overflow-y: auto;"></div>
+            <div class="status-msg" id="status"></div>
         </div>
     </div>
 
+    <style>
+        .role-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            background: rgba(0,0,0,0.35);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .role-item:hover { border-color: rgba(212,175,55,0.4); }
+        .role-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--jade);
+            cursor: pointer;
+        }
+        .role-item span { font-size: 14px; color: var(--text-main); }
+    </style>
+
     <script>
         const guildId = window.location.pathname.split('/')[2];
-        const banner = document.getElementById('top-banner-link');
-        if (banner) banner.href = `/manage/${guildId}`;
+        const backLink = document.getElementById('back-link');
+        if (backLink) backLink.href = '/manage/' + guildId;
 
-        const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-guild': '/profiles', 'nav-guides': '/guides', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-logs': '/logs', 'nav-emb': '/custom'};
-        for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
+        let serverRoles = [];
+        let selectedRoles = new Set();
 
         Promise.all([
-            fetch(`/api/guild/${guildId}`).then(res => res.json()),
-            fetch(`/api/guild/${guildId}/moderation`).then(res => res.json())
+            fetch('/api/guild/' + guildId, { credentials: 'include' }).then(r => r.json()),
+            fetch('/api/guild/' + guildId + '/moderation', { credentials: 'include' }).then(r => r.json())
         ]).then(([guildData, modData]) => {
-            document.getElementById('server-name').innerText = guildData.name;
-            const list = document.getElementById('roles-list');
-            
-            guildData.roles.forEach(role => {
-                const isChecked = modData.modRoles.includes(role.id) ? 'checked' : '';
-                list.innerHTML += `
-                    <label style="display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(0,0,0,0.4); border-radius: 6px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; transition: 0.2s;" onmouseover="this.style.borderColor='var(--accent-jade)'" onmouseout="this.style.borderColor='transparent'">
-                        <input type="checkbox" value="${role.id}" ${isChecked} style="width: 20px; height: 20px; accent-color: var(--accent-jade); cursor: pointer;">
-                        <span style="font-weight: bold; color: var(--text-main);">${role.name}</span>
-                    </label>
-                `;
-            });
+            serverRoles = guildData.roles || [];
+            selectedRoles = new Set(modData.modRoles || []);
+            renderRoles();
+        }).catch(err => {
+            document.getElementById('roles-list').innerHTML = '<div class="empty-state">Ошибка загрузки.</div>';
         });
 
+        function renderRoles() {
+            const list = document.getElementById('roles-list');
+            if (serverRoles.length === 0) {
+                list.innerHTML = '<div class="empty-state">Роли не найдены.</div>';
+                return;
+            }
+            list.innerHTML = serverRoles.map(r => `
+                <label class="role-item">
+                    <input type="checkbox" value="${r.id}" ${selectedRoles.has(r.id) ? 'checked' : ''} onchange="toggleRole('${r.id}', this.checked)">
+                    <span>${escapeHtml(r.name)}</span>
+                </label>
+            `).join('');
+        }
+
+        function toggleRole(id, checked) {
+            if (checked) selectedRoles.add(id);
+            else selectedRoles.delete(id);
+        }
+
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
+        }
+
+        function setStatus(msg, type) {
+            const el = document.getElementById('status');
+            el.textContent = msg;
+            el.className = 'status-msg ' + (type || '');
+            if (type === 'ok') setTimeout(() => { el.textContent = ''; el.className = 'status-msg'; }, 3000);
+        }
+
         function saveModeration() {
-            const checked = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
-            fetch(`/api/guild/${guildId}/moderation`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ modRoles: checked })
-            }).then(() => alert('✅ Настройки модерации сохранены!'));
+            fetch('/api/guild/' + guildId + '/moderation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ modRoles: Array.from(selectedRoles) })
+            }).then(res => {
+                if (res.ok) setStatus('✅ Настройки модерации сохранены', 'ok');
+                else setStatus('❌ Ошибка сохранения', 'err');
+            }).catch(() => setStatus('❌ Ошибка сети', 'err'));
         }
     </script>
 </body>
