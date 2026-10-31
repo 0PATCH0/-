@@ -3,119 +3,315 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Гильдия - Профили</title>
-    <link rel="stylesheet" href="/css/style.css?v=10">
-    <script src="/js/ui.js"></script>
+    <title>Профили гильдии — Where Winds Meet</title>
+    <link rel="stylesheet" href="/css/style.css?v=25">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #d4af37;
+            --gold-soft: rgba(212, 175, 55, 0.35);
+            --jade: #2ecc71;
+            --danger: #e74c3c;
+            --border: rgba(212, 175, 55, 0.18);
+            --text-main: #e8e3d4;
+            --text-muted: #8a8578;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Marcellus', serif;
+            color: var(--text-main);
+            background: #06080a;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        .bg-ink {
+            position: fixed; inset: 0; z-index: 0;
+            background:
+                radial-gradient(ellipse at 20% 10%, rgba(212, 175, 55, 0.06) 0%, transparent 40%),
+                radial-gradient(ellipse at 80% 90%, rgba(46, 204, 113, 0.04) 0%, transparent 40%),
+                linear-gradient(180deg, #06080a 0%, #0b0e13 100%);
+            pointer-events: none;
+        }
+        .fog {
+            position: fixed; inset: 0; z-index: 1; pointer-events: none;
+            background: radial-gradient(ellipse at 50% 100%, rgba(212,175,55,0.05) 0%, transparent 50%);
+        }
+        .container {
+            position: relative; z-index: 2;
+            max-width: 1100px; margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+        .top-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 40px;
+            animation: fadeDown 0.8s ease-out;
+        }
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .logo {
+            font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700;
+            letter-spacing: 3px; color: var(--gold);
+            text-shadow: 0 0 15px var(--gold-soft);
+        }
+        .back-link {
+            color: var(--text-muted); text-decoration: none; font-size: 13px;
+            transition: color 0.3s;
+        }
+        .back-link:hover { color: var(--gold); }
+
+        .page-title {
+            text-align: center; margin-bottom: 40px;
+            animation: fadeUp 1s ease-out 0.2s both;
+        }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .page-title h1 {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(28px, 5vw, 42px);
+            background: linear-gradient(135deg, #d4af37, #f4e4a0, #aa8624, #d4af37);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 3px; margin-bottom: 10px;
+            filter: drop-shadow(0 0 20px rgba(212,175,55,0.3));
+        }
+        .page-title p {
+            color: var(--text-muted); letter-spacing: 5px;
+            text-transform: uppercase; font-size: 12px;
+        }
+
+        .profiles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        .profile-card {
+            background: linear-gradient(160deg, rgba(18, 22, 28, 0.9), rgba(10, 12, 16, 0.95));
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 22px;
+            position: relative;
+            overflow: hidden;
+            transition: 0.25s;
+            animation: fadeUp 0.5s ease-out;
+            display: flex;
+            flex-direction: column;
+        }
+        .profile-card:hover {
+            border-color: rgba(212,175,55,0.5);
+            box-shadow: 0 8px 30px rgba(212,175,55,0.12);
+            transform: translateY(-2px);
+        }
+        .profile-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+
+        .profile-header {
+            display: flex; align-items: center; gap: 14px;
+            margin-bottom: 18px;
+        }
+        .profile-avatar {
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            border: 2px solid rgba(212,175,55,0.4);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-user-info { min-width: 0; flex: 1; }
+        .profile-username {
+            font-family: 'Cinzel', serif;
+            font-size: 16px; color: var(--gold);
+            letter-spacing: 1px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .profile-badge {
+            display: inline-block;
+            font-size: 11px;
+            margin-top: 4px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: rgba(46,204,113,0.15);
+            color: var(--jade);
+            border: 1px solid rgba(46,204,113,0.4);
+        }
+
+        .characters-list {
+            display: flex; flex-direction: column; gap: 10px;
+            margin-bottom: 16px; flex: 1;
+        }
+        .character-item {
+            background: rgba(0,0,0,0.35);
+            border: 1px solid rgba(212,175,55,0.1);
+            border-radius: 10px;
+            padding: 12px 14px;
+        }
+        .char-name {
+            font-family: 'Cinzel', serif;
+            font-size: 15px; color: var(--gold);
+            margin-bottom: 4px;
+        }
+        .char-detail { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+        .char-detail b { color: #c4bfae; }
+
+        .card-actions { display: flex; gap: 10px; margin-top: 6px; }
+        .btn-view, .btn-edit, .btn-delete {
+            flex: 1; padding: 10px; border-radius: 8px;
+            font-family: 'Marcellus', serif; font-size: 13px;
+            cursor: pointer; border: 1px solid transparent;
+            transition: 0.2s;
+        }
+        .btn-view {
+            background: rgba(212,175,55,0.1); color: var(--gold);
+            border-color: rgba(212,175,55,0.4);
+        }
+        .btn-view:hover { background: rgba(212,175,55,0.25); }
+        .btn-edit {
+            background: rgba(46,204,113,0.1); color: var(--jade);
+            border-color: rgba(46,204,113,0.4);
+        }
+        .btn-edit:hover { background: rgba(46,204,113,0.25); }
+        .btn-delete {
+            background: rgba(231,76,60,0.1); color: var(--danger);
+            border-color: rgba(231,76,60,0.4); flex: 0 0 auto;
+        }
+        .btn-delete:hover { background: rgba(231,76,60,0.25); }
+
+        .empty-state {
+            text-align: center; padding: 40px 20px;
+            color: var(--text-muted); font-style: italic;
+            font-size: 14px;
+            grid-column: 1 / -1;
+        }
+
+        @media (max-width: 600px) {
+            .top-nav { margin-bottom: 25px; }
+            .logo { font-size: 16px; letter-spacing: 2px; }
+            .profiles-grid { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
+    <div class="bg-ink"></div>
+    <div class="fog"></div>
 
-    <video class="bg-video" autoplay loop muted playsinline poster="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2070&auto=format&fit=crop">
-        <source src="https://assets.mixkit.co/videos/preview/mixkit-clouds-and-blue-sky-2408-large.mp4" type="video/mp4">
-    </video>
-    <div class="bg-overlay"></div>
-    <div class="bg-particles"></div>
-    <!-- КОНЕЦ БЛОКА С ФОНОМ -->
+    <div class="container">
+        <nav class="top-nav">
+            <div class="logo">WHERE WINDS MEET</div>
+            <a href="#" class="back-link" id="back-link">← Назад в гильдию</a>
+        </nav>
 
-    <!-- Кнопка-печать "Главная" -->
-    <a href="#" id="top-banner-link" class="top-banner"></a>
-    
-    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
-    
-    <div class="main-container">
-
-    <a href="#" id="top-banner-link" class="top-banner"></a>
-    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
-
-    <div class="main-container">
-        <div class="sidebar">
-            <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard"><div class="icon icon-home"></div> К списку серверов</a>
-            <hr style="border-color: var(--border); margin: 15px 0;">
-            <a href="#" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
-            <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
-            <a href="#" class="active"><div class="icon icon-users"></div> Гильдия</a>
-            <a href="#" id="nav-guides"><div class="icon icon-book"></div> Гайды</a>
-            <a href="#" id="nav-rr"><div class="icon icon-masks"></div> Роли по кнопкам</a>
-            <a href="#" id="nav-rem"><div class="icon icon-alarm"></div> Напоминания</a>
-            <a href="#" id="nav-mod"><div class="icon icon-gear"></div> Модерация</a>
-            <a href="#" id="nav-logs"><div class="icon icon-scroll"></div> Логи действий</a>
-            <a href="#" id="nav-emb"><div class="icon icon-envelope"></div> Эмбеды</a>
+        <div class="page-title">
+            <h1>👥 Профили гильдии</h1>
+            <p>☯ Странники, идущие этим путём</p>
         </div>
 
-        <div class="content">
-            <div class="header"><h1><div class="icon icon-users"></div> Профили гильдии</h1></div>
-            <div class="grid" id="profiles-grid">
-                <p style="color: var(--text-muted);">Загрузка профилей...</p>
-            </div>
+        <div class="profiles-grid" id="profiles-container">
+            <div class="empty-state">Загрузка профилей...</div>
         </div>
     </div>
 
     <script>
-        const guildId = window.location.pathname.split('/')[2];
-        const banner = document.getElementById('top-banner-link');
-        if (banner) banner.href = `/manage/${guildId}`;
+        const pathParts = window.location.pathname.split('/');
+        const guildId = pathParts[2];
+        let canModerate = false;
 
-        const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-guides': '/guides', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-logs': '/logs', 'nav-emb': '/custom'};
-        for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
+        document.getElementById('back-link').href = '/guild/' + guildId;
 
-        fetch(`/api/guild/${guildId}`).then(r=>r.json()).then(d => document.getElementById('server-name').innerText = d.name);
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        }
+        function hasBuild(c, tab) {
+            const b = c.builds && c.builds[tab];
+            if (!b) return false;
+            return (b.mysticSkills && b.mysticSkills.length > 0) ||
+                   (b.innerWays && b.innerWays.length > 0) ||
+                   (b.martialArts && b.martialArts.length > 0);
+        }
 
-        function loadProfiles() {
-            fetch(`/api/guild/${guildId}/profiles`).then(res => res.json()).then(data => {
-                const grid = document.getElementById('profiles-grid');
-                if (data.length === 0) {
-                    grid.innerHTML = '<p style="color: var(--text-muted);">Пока никто не заполнил свой профиль.</p>';
+        function renderCard(p) {
+            const characters = p.characters || [];
+            const characterCards = characters.slice(0, 3).map(c => `
+                <div class="character-item">
+                    <div class="char-name">${escapeHtml(c.gameNickname || 'Без имени')}</div>
+                    <div class="char-detail">
+                        🏰 <b>${escapeHtml(c.guildName || '—')}</b><br>
+                        🎯 ${hasBuild(c, 'PvE') ? '🌿 PvE ' : ''}${hasBuild(c, 'PvP') ? '⚔️ PvP' : ''}${!hasBuild(c, 'PvE') && !hasBuild(c, 'PvP') ? '—' : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            const editBtns = canModerate ? `
+                <button class="btn-edit" onclick="editProfile('${p.userId}')">✏ Ред.</button>
+                <button class="btn-delete" onclick="deleteProfile('${p.userId}')" title="Удалить">🗑</button>
+            ` : '';
+
+            return `
+                <div class="profile-card">
+                    <div class="profile-header">
+                        <div class="profile-avatar"><img src="${p.avatar}" alt=""></div>
+                        <div class="profile-user-info">
+                            <div class="profile-username">@${escapeHtml(p.discordName)}</div>
+                            <div class="profile-badge">🏰 Участник</div>
+                        </div>
+                    </div>
+                    <div class="characters-list">
+                        ${characterCards || '<div class="empty-state" style="padding:14px;font-size:12px;">Нет персонажей</div>'}
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-view" onclick="viewProfile('${p.userId}')">👁 Открыть</button>
+                        ${editBtns}
+                    </div>
+                </div>
+            `;
+        }
+
+        async function init() {
+            try {
+                const res = await fetch('/api/guild/' + guildId, { credentials: 'include' });
+                if (res.ok) canModerate = true;
+            } catch (e) {}
+
+            try {
+                const res = await fetch('/api/guild/' + guildId + '/profiles-public', { credentials: 'include' });
+                if (!res.ok) {
+                    document.getElementById('profiles-container').innerHTML =
+                        '<div class="empty-state">Ошибка загрузки профилей.</div>';
                     return;
                 }
-                grid.innerHTML = '';
-                data.forEach(p => {
-                    let charactersHtml = '';
-                    if (p.characters && p.characters.length > 0) {
-                        charactersHtml = p.characters.map(char => `
-                            <div style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--accent-jade);">
-                                <h4 style="color: var(--accent-gold); margin-bottom: 5px; font-family: 'Georgia', serif; font-size: 16px;">${char.gameNickname || 'Без ника'}</h4>
-                                <p style="font-size: 13px; margin: 0; color: var(--text-main);">${char.roles && char.roles.length > 0 ? char.roles.join(', ') : 'Роль не указана'}</p>
-                                <p style="font-size: 12px; margin: 5px 0 0 0; color: var(--text-muted);">Искусства: ${char.martialArts && char.martialArts.length > 0 ? char.martialArts.join(', ') : 'Не указаны'}</p>
-                                <p style="font-size: 13px; margin: 0; color: var(--text-muted);">${char.guildName || 'Не указана'}</p>
-                                ${char.bio ? `<p style="font-size: 12px; font-style: italic; color: var(--text-muted); margin-top: 5px;">"${char.bio}"</p>` : ''}
-                            </div>
-                        `).join('');
-                    } else {
-                        charactersHtml = '<p style="color: var(--text-muted);">Персонажи не заполнены.</p>';
-                    }
-
-                    grid.innerHTML += `
-                        <div class="card profile-card" style="display: block;">
-                            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
-                                <img src="${p.avatar}" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--accent-jade);">
-                                <div>
-                                    <h3 style="margin: 0; color: var(--text-main); font-family: 'Georgia', serif; font-size: 20px;">@${p.discordName}</h3>
-                                    ${p.isGlobal ? '<span style="font-size: 12px; color: var(--accent-jade);"><div class="icon icon-globe" style="display:inline-block; width:12px; height:12px;"></div> Глобальный</span>' : ''}
-                                </div>
-                            </div>
-                            <div>${charactersHtml}</div>
-                            <div style="display: flex; gap: 10px; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
-                                <a href="/profile?guild=${guildId}&user=${p.userId}" class="btn btn-small" style="flex: 1;"><div class="icon icon-pencil"></div> Ред.</a>
-                                <button class="btn btn-danger btn-small" style="flex: 1;" onclick="deleteProfile('${p.userId}', '${p.discordName}')"><div class="icon icon-trash"></div> Удалить</button>
-                            </div>
-                        </div>
-                    `;
-                });
-            });
+                const data = await res.json();
+                // data может быть { local, global } — берём только local
+                const local = (data && data.local) ? data.local : [];
+                const container = document.getElementById('profiles-container');
+                container.innerHTML = local.length
+                    ? local.map(p => renderCard(p)).join('')
+                    : '<div class="empty-state">Пока никто из участников не создал профиль.</div>';
+            } catch (e) {
+                console.error(e);
+                document.getElementById('profiles-container').innerHTML =
+                    '<div class="empty-state">Ошибка загрузки профилей.</div>';
+            }
         }
-        loadProfiles();
 
-        function deleteProfile(userId, username) {
-            if (!confirm(`Удалить профиль игрока @${username}?`)) return;
-            fetch(`/api/guild/${guildId}/profiles/${userId}`, { method: 'DELETE' })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Профиль удален!');
-                        loadProfiles();
-                    } else alert('Ошибка: ' + data.error);
-                });
+        function viewProfile(userId) {
+            window.location.href = '/view-profile/' + userId + '?guild=' + guildId;
         }
+        function editProfile(userId) {
+            window.location.href = '/profile?guild=' + guildId + '&user=' + userId;
+        }
+        async function deleteProfile(userId) {
+            if (!confirm('Удалить профиль этого игрока?')) return;
+            try {
+                const res = await fetch('/api/guild/' + guildId + '/profiles/' + userId, {
+                    method: 'DELETE', credentials: 'include'
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                init();
+            } catch (e) {
+                alert('Не удалось удалить: ' + e.message);
+            }
+        }
+
+        init();
     </script>
 </body>
 </html>
