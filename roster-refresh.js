@@ -38,7 +38,13 @@ async function buildClassifiedRoster(botClient, guildId) {
     if (!config || !config.columns || config.columns.length === 0) {
         columns = getDefaultRosterColumns();
     } else {
-        columns = [...config.columns].sort((a, b) => (a.order || 0) - (b.order || 0));
+        // Сортируем: кастомные сверху, потом базовые классы, внутри — по order
+        columns = [...config.columns].sort((a, b) => {
+            const aIsClass = a.isClass ? 1 : 0;
+            const bIsClass = b.isClass ? 1 : 0;
+            if (aIsClass !== bIsClass) return aIsClass - bIsClass;
+            return (a.order || 0) - (b.order || 0);
+        });
     }
     const manual = (config && config.manualAssignments) || {};
 
@@ -101,6 +107,7 @@ async function buildClassifiedRoster(botClient, guildId) {
 function buildRosterEmbeds(roster, guildId) {
     const { columns, members, guildName } = roster;
 
+    // Группировка по ключам колонок
     const byColumn = {};
     columns.forEach(c => { byColumn[c.key] = []; });
 
@@ -134,17 +141,11 @@ function buildRosterEmbeds(roster, guildId) {
     let currentFieldCount = 0;
     const MAX_FIELDS = 25;
 
-    const orderedColumns = columns
-        .map((c, i) => ({ ...c, __idx: i }))
-        .sort((a, b) => {
-            const aIsClass = a.isClass ? 1 : 0;
-            const bIsClass = b.isClass ? 1 : 0;
-            if (aIsClass !== bIsClass) return aIsClass - bIsClass;
-            return (a.order || 0) - (b.order || 0);
-        });
-
-    for (const col of orderedColumns) {
+    // columns УЖЕ отсортированы в buildClassifiedRoster. Не сортируем повторно.
+    for (const col of columns) {
         const list = byColumn[col.key] || [];
+        console.log('[ROSTER] col:', col.key, '| list length:', list.length);
+
         if (list.length === 0) continue;
 
         let emoji;
