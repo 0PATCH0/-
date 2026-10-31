@@ -753,7 +753,7 @@ app.post('/api/guild/:id/roster-config', isModerator, async (req, res) => {
             isClass: false
         }));
 
-        const finalColumns = [...baseClasses, ...custom];
+        const finalColumns = [...custom, ...baseClasses];
         finalColumns.forEach((c, i) => { c.order = i; });
 
         const config = await RosterConfig.findOneAndUpdate(
