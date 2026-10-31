@@ -5,7 +5,7 @@ window.GAME_DATA = {
         { id: "celestial_seize", nameEN: "Celestial Seize", nameRU: "Небесный Хват", category: "Offensive", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/2/26/Heavenly-snatch-mystic-art-where-winds-meet-wiki-guide-min.png" },
         { id: "cloud_steps", nameEN: "Cloud Steps", nameRU: "Облачные Шаги", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Cloud-steps-mystic-art-where-winds-meet-wiki-guide-min.png" },
         { id: "leaping_toad", nameEN: "Leaping Toad", nameRU: "Прыжок Жабы", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Leaping-toad-mystic-art-where-winds-meet-wiki-guide-min.png" },
-        { id: "lions_roar", nameEN: "Lion's Roar", nameRU: "Львиный Рык", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Lion%27s-roar-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "lions_roar", nameEN: "Lion's Roar", nameRU: "Львиный Рык", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Lions-roar-mystic-art-where-winds-meet-wiki-guide-min.png" },
         { id: "guardian_palm", nameEN: "Guardian Palm", nameRU: "Ладонь Стража", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Guardian-palm-mystic-art-where-winds-meet-wiki-guide-min.png" },
         { id: "ghost_bind", nameEN: "Ghost Bind", nameRU: "Призрачные Путы", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Ghost-bind-mystic-art-where-winds-meet-wiki-guide-min.png" },
         { id: "flaming_meteor", nameEN: "Flaming Meteor", nameRU: "Пылающий Метеор", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Flaming-meteor-mystic-art-where-winds-meet-wiki-guide-min.png" },
@@ -14,7 +14,7 @@ window.GAME_DATA = {
         { id: "yaksha_rush", nameEN: "Yaksha Rush", nameRU: "Натиск Якши", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Yaksha-rush-mystic-art-where-winds-meet-wiki-guide-min.png" },
         { id: "free_morph", nameEN: "Free Morph", nameRU: "Свободная Трансформация", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Free-morph-mystic-art-where-winds-meet-wiki-guide-min.png" },
         { id: "soaring_spin", nameEN: "Soaring Spin", nameRU: "Взлетающее Вращение", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Soaring-spin-mystic-art-where-winds-meet-wiki-guide-min.png" },
-        { id: "dragons_breath", nameEN: "Dragon's Breath", nameRU: "Дыхание Дракона", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Dragon%27s-breath-mystic-art-where-winds-meet-wiki-guide-min.png" },
+        { id: "dragons_breath", nameEN: "Dragon's Breath", nameRU: "Дыхание Дракона", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Dragons-breath-mystic-art-where-winds-meet-wiki-guide-min.png" },
         { id: "drunken_poet", nameEN: "Drunken Poet", nameRU: "Пьяный Поэт", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Drunken-poet-mystic-art-where-winds-meet-wiki-guide-min.png" },
         { id: "blinding_mist", nameEN: "Blinding Mist", nameRU: "Слепящий Туман", category: "Offensive", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/9/95/Blinding-mist-mystic-art-where-winds-meet-wiki-guide-min.png" },
         { id: "dragon_head", nameEN: "Dragon Head", nameRU: "Голова Дракона", category: "Offensive", img: "https://wherewindsmeet.wiki.fextralife.com/File:Dragon-head-mystic-art-where-winds-meet-wiki-guide-min.png" },
@@ -90,7 +90,7 @@ window.GAME_DATA = {
         { id: "thunderous_bloom", nameEN: "Thunderous Bloom", nameRU: "Громовой Цвет", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/7/7c/Thunderous-bloom-internal-arts-wherewindsmeet-wiki-guide.webp" },
         { id: "vendetta", nameEN: "Vendetta", nameRU: "Вендетта", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/7/77/Vendetta-internal-arts-wherewindsmeet-wiki-guide.webp" },
         { id: "vital_leech", nameEN: "Vital Leech", nameRU: "Жизненный Вампиризм", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/8/8e/Vital-leech-internal-arts-wherewindsmeet-wiki-guide.webp" },
-        { id: "wind_beneath_wings", nameEN: "Wind Beneath Wings", nameRU: "Ветер под Крыльями", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/7/79/Wind-beneath-wings-internal-arts-wherewindsmeet-wiki-guide.webp" }
+          { id: "wind_beneath_wings", nameEN: "Wind Beneath Wings", nameRU: "Ветер под Крыльями", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/7/79/Wind-beneath-wings-internal-arts-wherewindsmeet-wiki-guide.webp" }
     ]
 };
 
