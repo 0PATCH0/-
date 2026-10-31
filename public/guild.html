@@ -3,106 +3,223 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Обзор сервера</title>
-    <link rel="stylesheet" href="/css/style.css?v=12">
+    <title>Управление гильдией — Where Winds Meet</title>
+    <link rel="stylesheet" href="/css/style.css?v=25">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Marcellus', serif;
+            color: #e8e3d4;
+            background: #06080a;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        .bg-ink {
+            position: fixed; inset: 0; z-index: 0;
+            background:
+                radial-gradient(ellipse at 20% 10%, rgba(212, 175, 55, 0.06) 0%, transparent 40%),
+                radial-gradient(ellipse at 80% 90%, rgba(46, 204, 113, 0.04) 0%, transparent 40%),
+                linear-gradient(180deg, #06080a 0%, #0b0e13 100%);
+            pointer-events: none;
+        }
+        .fog {
+            position: fixed; inset: 0; z-index: 1; pointer-events: none;
+            background: radial-gradient(ellipse at 50% 100%, rgba(212,175,55,0.05) 0%, transparent 50%);
+        }
+        .container {
+            position: relative; z-index: 2;
+            max-width: 1000px; margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+        .top-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 40px;
+            animation: fadeDown 0.8s ease-out;
+        }
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .logo {
+            font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700;
+            letter-spacing: 3px; color: #d4af37;
+            text-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+        }
+        .back-link {
+            color: #8a8578; text-decoration: none; font-size: 13px;
+            transition: color 0.3s;
+        }
+        .back-link:hover { color: #d4af37; }
+
+        .page-title {
+            text-align: center; margin-bottom: 50px;
+            animation: fadeUp 1s ease-out 0.2s both;
+        }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .page-title h1 {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(28px, 5vw, 42px);
+            background: linear-gradient(135deg, #d4af37, #f4e4a0, #aa8624, #d4af37);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 3px; margin-bottom: 10px;
+            filter: drop-shadow(0 0 20px rgba(212,175,55,0.3));
+        }
+        .page-title p {
+            color: #8a8578; letter-spacing: 6px;
+            text-transform: uppercase; font-size: 13px;
+        }
+
+        .section-title {
+            font-family: 'Cinzel', serif; font-size: 18px; color: #2ecc71;
+            letter-spacing: 3px; margin: 40px 0 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(46, 204, 113, 0.15);
+            text-transform: uppercase;
+        }
+        .section-title::before { content: '◆'; color: #2ecc71; margin-right: 10px; font-size: 12px; }
+
+        .tiles {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 16px;
+        }
+        .tile {
+            background: linear-gradient(160deg, rgba(18, 22, 28, 0.9), rgba(10, 12, 16, 0.95));
+            border: 1px solid rgba(212,175,55,0.12);
+            border-radius: 14px; padding: 24px 20px;
+            text-decoration: none; color: inherit;
+            display: flex; flex-direction: column; gap: 10px;
+            transition: all 0.3s ease;
+            position: relative; overflow: hidden;
+            animation: fadeUp 0.8s ease-out both;
+        }
+        .tile:hover {
+            transform: translateY(-4px);
+            border-color: rgba(212,175,55,0.4);
+            box-shadow: 0 12px 35px rgba(212,175,55,0.12);
+        }
+        .tile::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(212,175,55,0.4), transparent);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .tile:hover::before { opacity: 1; }
+        .tile-icon { font-size: 30px; filter: drop-shadow(0 0 10px rgba(212,175,55,0.2)); }
+        .tile-title {
+            font-family: 'Cinzel', serif; font-size: 16px; color: #d4af37;
+            letter-spacing: 1px;
+        }
+        .tile-desc { font-size: 13px; color: #8a8578; line-height: 1.5; flex: 1; }
+
+        .tile.green .tile-title { color: #2ecc71; }
+        .tile.green:hover { border-color: rgba(46, 204, 113, 0.4); }
+
+        @media (max-width: 600px) {
+            .top-nav { margin-bottom: 25px; }
+            .logo { font-size: 16px; letter-spacing: 2px; }
+            .tiles { grid-template-columns: 1fr; }
+            .section-title { font-size: 15px; margin: 30px 0 12px; }
+        }
+    </style>
 </head>
 <body>
+    <div class="bg-ink"></div>
+    <div class="fog"></div>
 
-    <a href="#" id="top-banner-link" class="top-banner"></a>
-    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
+    <div class="container">
+        <nav class="top-nav">
+            <div class="logo">WHERE WINDS MEET</div>
+            <a href="/guild/PLACEHOLDER" class="back-link" id="back-link">← Назад в гильдию</a>
+        </nav>
 
-    <div class="main-container">
-        <div class="sidebar">
-            <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard"><div class="icon icon-home"></div> К списку серверов</a>
-            <hr style="border-color: var(--border); margin: 15px 0;">
-            
-            <a href="#" class="active" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
-            <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
-            <a href="#" id="nav-guild"><div class="icon icon-users"></div> Гильдия</a>
-            <a href="#" id="nav-guides"><div class="icon icon-book"></div> Гайды</a>
-            <a href="#" id="nav-events"><div class="icon icon-alarm"></div> События</a>
-            <a href="#" id="nav-rr"><div class="icon icon-masks"></div> Роли по кнопкам</a>
-            <a href="#" id="nav-rem"><div class="icon icon-alarm"></div> Напоминания</a>
-            <a href="#" id="nav-mod"><div class="icon icon-gear"></div> Модерация</a>
-            <a href="#" id="nav-logs"><div class="icon icon-scroll"></div> Логи действий</a>
-            <a href="#" id="nav-emb"><div class="icon icon-envelope"></div> Эмбеды</a>
+        <div class="page-title">
+            <h1 id="guild-name">Управление гильдией</h1>
+            <p>Панель администратора</p>
         </div>
 
-        <div class="content">
-            <div class="header"><h1>Обзор сервера</h1></div>
-            
-            <h2 style="font-family: 'Cinzel', serif; color: var(--jade); margin: 30px 0 15px;">Гильдия и Игроки</h2>
-            <div class="grid">
-                <a href="#" id="card-roster" class="card">
-                    <h3><div class="icon icon-shield"></div> Состав гильдии</h3>
-                    <p>Просмотр списка участников и настройка колонок.</p>
-                </a>
-                <a href="#" id="card-guild" class="card">
-                    <h3><div class="icon icon-users"></div> Профили игроков</h3>
-                    <p>Список всех участников с их классами и оружием.</p>
-                </a>
-                <a href="#" id="card-guides" class="card">
-                    <h3><div class="icon icon-book"></div> Гайды</h3>
-                    <p>Создание и редактирование руководств с вложениями.</p>
-                </a>
-                <a href="#" id="card-events" class="card">
-                    <h3><div class="icon icon-alarm"></div> События</h3>
-                    <p>Рейды, ГВГ и другие сборы с записью участников.</p>
-                </a>
-            </div>
+        <div class="section-title">Участники и контент</div>
+        <div class="tiles">
+            <a href="#" class="tile" id="tile-roster">
+                <span class="tile-icon">🛡️</span>
+                <span class="tile-title">Состав гильдии</span>
+                <span class="tile-desc">Просмотр списка участников и настройка колонок.</span>
+            </a>
+            <a href="#" class="tile" id="tile-profiles">
+                <span class="tile-icon">👥</span>
+                <span class="tile-title">Профили игроков</span>
+                <span class="tile-desc">Список всех участников с их классами и оружием.</span>
+            </a>
+            <a href="#" class="tile" id="tile-guides">
+                <span class="tile-icon">📖</span>
+                <span class="tile-title">Гайды</span>
+                <span class="tile-desc">Создание и редактирование руководств.</span>
+            </a>
+            <a href="#" class="tile" id="tile-events">
+                <span class="tile-icon">📅</span>
+                <span class="tile-title">События</span>
+                <span class="tile-desc">Рейды, ГВГ и сборы с записью участников.</span>
+            </a>
+        </div>
 
-            <h2 style="font-family: 'Cinzel', serif; color: var(--jade); margin: 40px 0 15px;">Управление и Модерация</h2>
-            <div class="grid">
-                <a href="#" id="card-mod" class="card">
-                    <h3><div class="icon icon-gear"></div> Модерация</h3>
-                    <p>Выдача прав на использование мутов и других команд.</p>
-                </a>
-                <a href="#" id="card-logs" class="card">
-                    <h3><div class="icon icon-scroll"></div> Логи действий</h3>
-                    <p>История мутов, закрытий каналов и других действий.</p>
-                </a>
-            </div>
-
-            <h2 style="font-family: 'Cinzel', serif; color: var(--jade); margin: 40px 0 15px;">Контент и Утилиты</h2>
-            <div class="grid">
-                <a href="#" id="card-rr" class="card">
-                    <h3><div class="icon icon-masks"></div> Роли по кнопкам</h3>
-                    <p>Выдача ролей по клику на кнопку в Embed-сообщении.</p>
-                </a>
-                <a href="#" id="card-rem" class="card">
-                    <h3><div class="icon icon-alarm"></div> Напоминания</h3>
-                    <p>Управление активными напоминаниями и событиями.</p>
-                </a>
-                <a href="#" id="card-emb" class="card">
-                    <h3><div class="icon icon-envelope"></div> Эмбед-сообщения</h3>
-                    <p>Создание и редактирование красивых сообщений.</p>
-                </a>
-            </div>
+        <div class="section-title">Модерация</div>
+        <div class="tiles">
+            <a href="#" class="tile green" id="tile-reactionroles">
+                <span class="tile-icon">🎭</span>
+                <span class="tile-title">Роли по кнопкам</span>
+                <span class="tile-desc">Кнопки для получения ролей в Discord.</span>
+            </a>
+            <a href="#" class="tile green" id="tile-reminders">
+                <span class="tile-icon">⏰</span>
+                <span class="tile-title">Напоминания</span>
+                <span class="tile-desc">Автоматические пинги и события.</span>
+            </a>
+            <a href="#" class="tile green" id="tile-moderation">
+                <span class="tile-icon">⚙️</span>
+                <span class="tile-title">Модерация</span>
+                <span class="tile-desc">Настройка мод-ролей и прав.</span>
+            </a>
+            <a href="#" class="tile green" id="tile-custom">
+                <span class="tile-icon">✉️</span>
+                <span class="tile-title">Кастомные сообщения</span>
+                <span class="tile-desc">Отправка сообщений от имени бота.</span>
+            </a>
+            <a href="#" class="tile green" id="tile-logs">
+                <span class="tile-icon">📜</span>
+                <span class="tile-title">Логи</span>
+                <span class="tile-desc">История действий и событий.</span>
+            </a>
         </div>
     </div>
 
     <script>
-        const guildId = window.location.pathname.split('/').pop();
-        const banner = document.getElementById('top-banner-link');
-        if (banner) banner.href = `/manage/${guildId}`;
+        const pathParts = window.location.pathname.split('/');
+        const guildId = pathParts[2];
 
-        const links = {
-            'nav-roster': 'roster', 'card-roster': 'roster',
-            'nav-guild': 'profiles', 'card-guild': 'profiles',
-            'nav-guides': 'guides', 'card-guides': 'guides',
-            'nav-events': 'events', 'card-events': 'events',
-            'nav-mod': 'moderation', 'card-mod': 'moderation',
-            'nav-logs': 'logs', 'card-logs': 'logs',
-            'nav-rr': 'reactionroles', 'card-rr': 'reactionroles',
-            'nav-rem': 'reminders', 'card-rem': 'reminders',
-            'nav-emb': 'custom', 'card-emb': 'custom'
-        };
-        for (const [id, path] of Object.entries(links)) {
-            const el = document.getElementById(id);
-            if (el) el.href = `/manage/${guildId}/${path}`;
-        }
-        fetch(`/api/guild/${guildId}`).then(r=>r.json()).then(d => document.getElementById('server-name').innerText = d.name);
+        document.getElementById('back-link').href = '/guild/' + guildId;
+        document.getElementById('tile-roster').href = '/manage/' + guildId + '/roster';
+        document.getElementById('tile-profiles').href = '/manage/' + guildId + '/profiles';
+        document.getElementById('tile-guides').href = '/manage/' + guildId + '/guides';
+        document.getElementById('tile-events').href = '/manage/' + guildId + '/events';
+        document.getElementById('tile-reactionroles').href = '/manage/' + guildId + '/reactionroles';
+        document.getElementById('tile-reminders').href = '/manage/' + guildId + '/reminders';
+        document.getElementById('tile-moderation').href = '/manage/' + guildId + '/moderation';
+        document.getElementById('tile-custom').href = '/manage/' + guildId + '/custom';
+        document.getElementById('tile-logs').href = '/manage/' + guildId + '/logs';
+
+        fetch('/api/guild/' + guildId, { credentials: 'include' })
+            .then(r => {
+                if (r.status === 403 || r.status === 401) {
+                    // Не модератор — нечего тут делать, назад в гильдию
+                    window.location.href = '/guild/' + guildId;
+                    return null;
+                }
+                return r.ok ? r.json() : null;
+            })
+            .then(data => {
+                if (data && data.name) {
+                    document.getElementById('guild-name').textContent = data.name;
+                }
+            })
+            .catch(() => {});
     </script>
 </body>
 </html>
