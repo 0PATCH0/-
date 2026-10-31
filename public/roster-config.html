@@ -514,9 +514,17 @@ if (draggingClass && !targetClass) return;
         }
 
         function removeColumn(key) {
-            if (!confirm('Удалить эту должность?')) return;
-            columns = columns.filter(c => c.key !== key || c.isClass);
-            renderColumns();
+    const col = columns.find(c => c.key === key);
+    if (!col) return;
+    if (col.isClass === true) {
+        alert('Базовые классы (Танк / ДД / Хил) удалить нельзя.');
+        return;
+    }
+    if (!confirm('Удалить должность "' + col.name + '"?')) return;
+    columns = columns.filter(c => c.key !== key);
+    renderColumns();
+    renderManual();
+    saveColumns();
         }
 
         function addColumn() {
