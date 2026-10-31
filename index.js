@@ -2,6 +2,7 @@ const { Client, GatewayIntentBits, Collection, REST, Routes, EmbedBuilder } = re
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
+const { refreshRosterMessage } = require('./roster-refresh');
 require('dotenv').config();
 
 const { startWebServer } = require('./web'); 
@@ -215,8 +216,14 @@ client.once('ready', async () => {
 client.on('guildMemberUpdate', (oldMember, newMember) => {
     if (oldMember.roles.cache.size !== newMember.roles.cache.size) scheduleUpdate(newMember.guild.id);
 });
-client.on('guildMemberAdd', (member) => scheduleUpdate(member.guild.id));
-client.on('guildMemberRemove', (member) => scheduleUpdate(member.guild.id));
+client.on('guildMemberAdd', (member) => {
+    scheduleUpdate(member.guild.id);
+    try { refreshRosterMessage(client, member.guild.id); } catch (e) {}
+});
+client.on('guildMemberRemove', (member) => {
+    scheduleUpdate(member.guild.id);
+    try { refreshRosterMessage(client, member.guild.id); } catch (e) {}
+});
 
 module.exports.updateRosterForGuild = updateRosterForGuild;
 module.exports.refreshRosterMessage = refreshRosterMessage;
