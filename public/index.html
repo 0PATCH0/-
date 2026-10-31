@@ -7,179 +7,196 @@
     <link rel="stylesheet" href="/css/style.css?v=25">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; }
-        html, body { margin: 0; padding: 0; overflow-x: hidden; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; }
         body {
             font-family: 'Marcellus', serif;
             color: #e8e3d4;
-            background: #06070a;
+            background: #06080a;
             min-height: 100vh;
             position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
 
-        /* ─────── Атмосферный фон с туманом ─────── */
-        .hero-bg {
+        /* ─── Фон с чернильными разводами и шумом ─── */
+        .bg-ink {
             position: fixed;
             inset: 0;
             z-index: 0;
             background:
-                radial-gradient(ellipse at 20% 15%, rgba(212, 175, 55, 0.12) 0%, transparent 45%),
-                radial-gradient(ellipse at 80% 85%, rgba(46, 204, 113, 0.08) 0%, transparent 45%),
-                linear-gradient(180deg, #06070a 0%, #0d1015 50%, #06070a 100%);
+                radial-gradient(ellipse at 20% 20%, rgba(212, 175, 55, 0.08) 0%, transparent 45%),
+                radial-gradient(ellipse at 80% 80%, rgba(46, 204, 113, 0.05) 0%, transparent 45%),
+                radial-gradient(circle at 50% 50%, #0d1015 0%, #06080a 100%);
+            pointer-events: none;
+        }
+        .bg-ink::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            opacity: 0.5;
             pointer-events: none;
         }
 
-        /* Параллакс-горы (CSS-only, без картинок) */
-        .parallax-layer {
-            position: fixed;
-            bottom: 0; left: 0;
-            width: 100%;
-            height: 45vh;
-            z-index: 0;
-            pointer-events: none;
-            will-change: transform;
-            transition: transform 0.15s ease-out;
-        }
-        .mountains-back {
-            background: linear-gradient(180deg, transparent 0%, rgba(30, 35, 45, 0.4) 40%, rgba(15, 18, 24, 0.8) 100%);
-            clip-path: polygon(0 100%, 0 65%, 8% 45%, 18% 60%, 28% 35%, 40% 55%, 52% 25%, 64% 50%, 76% 30%, 88% 55%, 100% 40%, 100% 100%);
-            opacity: 0.7;
-        }
-        .mountains-mid {
-            background: linear-gradient(180deg, transparent 0%, rgba(20, 24, 32, 0.7) 50%, rgba(10, 12, 16, 0.95) 100%);
-            clip-path: polygon(0 100%, 0 75%, 10% 55%, 22% 70%, 35% 45%, 48% 65%, 60% 40%, 72% 62%, 85% 48%, 100% 68%, 100% 100%);
-            height: 35vh;
-            opacity: 0.85;
-        }
-
-        /* Туман */
+        /* ─── Туман ─── */
         .fog {
             position: fixed;
             inset: 0;
-            pointer-events: none;
             z-index: 1;
+            pointer-events: none;
             background:
-                radial-gradient(ellipse at 50% 100%, rgba(212, 175, 55, 0.06) 0%, transparent 50%),
-                radial-gradient(ellipse at 20% 80%, rgba(255, 255, 255, 0.02) 0%, transparent 40%);
-            animation: fogPulse 12s ease-in-out infinite alternate;
+                radial-gradient(ellipse at 30% 90%, rgba(212, 175, 55, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 10%, rgba(255, 255, 255, 0.015) 0%, transparent 40%);
+            animation: fogDrift 20s ease-in-out infinite alternate;
         }
-        @keyframes fogPulse {
-            0% { opacity: 0.5; }
-            100% { opacity: 1; }
+        @keyframes fogDrift {
+            0% { opacity: 0.6; transform: scale(1); }
+            100% { opacity: 1; transform: scale(1.05); }
         }
 
-        /* Плавающие частицы (лепестки/пыль) */
+        /* ─── Частицы ─── */
         .particles {
             position: fixed;
             inset: 0;
-            pointer-events: none;
             z-index: 1;
+            pointer-events: none;
             overflow: hidden;
         }
         .particle {
             position: absolute;
-            width: 3px;
-            height: 3px;
+            width: 2px; height: 2px;
             background: rgba(212, 175, 55, 0.6);
             border-radius: 50%;
             box-shadow: 0 0 6px rgba(212, 175, 55, 0.8);
-            animation: floatParticle linear infinite;
+            animation: floatUp linear infinite;
         }
-        @keyframes floatParticle {
+        @keyframes floatUp {
             0% { transform: translateY(0) translateX(0); opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { transform: translateY(-100vh) translateX(50px); opacity: 0; }
+            10% { opacity: 0.8; }
+            90% { opacity: 0.8; }
+            100% { transform: translateY(-100vh) translateX(30px); opacity: 0; }
         }
 
-        /* ─────── Контент ─────── */
-        .container {
-            position: relative;
-            z-index: 2;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 40px 20px 120px;
+        /* ─── Навигация (только профиль, если залогинен) ─── */
+        .nav {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            z-index: 10;
         }
-
-        .header-nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 80px;
-            animation: fadeDown 1s ease-out;
-        }
-        @keyframes fadeDown {
-            from { opacity: 0; transform: translateY(-30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .logo {
-            font-family: 'Cinzel', serif;
-            font-size: 22px;
-            font-weight: 700;
-            letter-spacing: 3px;
-            color: var(--gold, #d4af37);
-            text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
-        }
-
-        .nav-user {
+        .nav-auth {
             display: flex;
             align-items: center;
             gap: 12px;
+            font-size: 13px;
+            color: #8a8578;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 6px 14px 6px 6px;
+            border-radius: 50px;
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            backdrop-filter: blur(10px);
         }
-        .nav-user img {
-            width: 40px; height: 40px;
+        .nav-auth img {
+            width: 32px; height: 32px;
             border-radius: 50%;
-            border: 2px solid rgba(212, 175, 55, 0.5);
-            box-shadow: 0 0 12px rgba(212, 175, 55, 0.3);
+            border: 1px solid rgba(212, 175, 55, 0.4);
         }
-        .nav-user span { color: #e8e3d4; font-size: 14px; }
+        .nav-auth a {
+            color: #8a8578;
+            text-decoration: none;
+            margin-left: 8px;
+            transition: color 0.3s;
+        }
+        .nav-auth a:hover { color: #d4af37; }
 
-        /* ─────── Hero ─────── */
-        .hero {
+        /* ─── Контент ─── */
+        .container {
+            position: relative;
+            z-index: 2;
             text-align: center;
-            padding: 60px 0 100px;
-            animation: fadeUp 1.2s ease-out 0.3s both;
+            padding: 20px;
+            max-width: 800px;
+            animation: fadeUp 1.2s ease-out 0.2s both;
         }
         @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(40px); }
+            from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* ─── Печать ветра ─── */
+        .seal {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 80px; height: 80px;
+            border: 2px solid rgba(212, 175, 55, 0.5);
+            border-radius: 50%;
+            margin-bottom: 35px;
+            font-family: 'Cinzel', serif;
+            font-size: 34px;
+            color: #d4af37;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+            position: relative;
+            box-shadow: 0 0 25px rgba(212, 175, 55, 0.15), inset 0 0 20px rgba(212, 175, 55, 0.1);
+            animation: sealGlow 4s ease-in-out infinite alternate;
+        }
+        .seal::before,
+        .seal::after {
+            content: '';
+            position: absolute;
+            width: 10px; height: 10px;
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            border-radius: 50%;
+        }
+        .seal::before { top: -6px; left: 50%; transform: translateX(-50%); }
+        .seal::after { bottom: -6px; left: 50%; transform: translateX(-50%); }
+        @keyframes sealGlow {
+            0% { box-shadow: 0 0 25px rgba(212, 175, 55, 0.15), inset 0 0 20px rgba(212, 175, 55, 0.1); }
+            100% { box-shadow: 0 0 40px rgba(212, 175, 55, 0.35), inset 0 0 25px rgba(212, 175, 55, 0.2); }
+        }
+
+        /* ─── Заголовок ─── */
         .hero-title {
             font-family: 'Cinzel', serif;
-            font-size: clamp(38px, 8vw, 72px);
+            font-size: clamp(36px, 8vw, 76px);
             font-weight: 700;
-            letter-spacing: 4px;
+            letter-spacing: 8px;
             background: linear-gradient(135deg, #d4af37 0%, #f4e4a0 40%, #aa8624 70%, #d4af37 100%);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin: 0 0 20px;
+            margin-bottom: 18px;
             line-height: 1.1;
-            filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.4));
+            filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.3));
         }
-
-        .hero-subtitle {
-            font-size: clamp(14px, 2.5vw, 18px);
+        .hero-sub {
+            font-size: clamp(12px, 2vw, 15px);
             color: #8a8578;
-            letter-spacing: 6px;
+            letter-spacing: 10px;
             text-transform: uppercase;
             margin-bottom: 60px;
-            animation: fadeUp 1.2s ease-out 0.6s both;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
         }
-        .hero-subtitle::before,
-        .hero-subtitle::after {
+        .hero-sub::before,
+        .hero-sub::after {
             content: '——';
-            color: rgba(212, 175, 55, 0.5);
-            margin: 0 15px;
+            color: rgba(212, 175, 55, 0.4);
+            font-size: 12px;
+            letter-spacing: normal;
         }
 
-        .cta-button {
+        /* ─── Кнопка ─── */
+        .btn-main {
             display: inline-flex;
             align-items: center;
-            gap: 12px;
-            padding: 18px 40px;
+            gap: 14px;
+            padding: 18px 50px;
             font-family: 'Cinzel', serif;
             font-size: 16px;
             font-weight: 600;
@@ -192,215 +209,118 @@
             cursor: pointer;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 10px 40px rgba(212, 175, 55, 0.3), 0 0 0 1px rgba(244, 228, 160, 0.5) inset;
+            box-shadow: 0 10px 40px rgba(212, 175, 55, 0.25), inset 0 0 0 1px rgba(244, 228, 160, 0.4);
             transition: all 0.3s ease;
-            animation: fadeUp 1.2s ease-out 0.9s both;
         }
-        .cta-button::before {
+        .btn-main::before {
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(135deg, transparent 30%, rgba(255, 255, 255, 0.5) 50%, transparent 70%);
+            background: linear-gradient(135deg, transparent 30%, rgba(255, 255, 255, 0.4) 50%, transparent 70%);
             transform: translateX(-100%);
-            transition: transform 0.6s;
+            transition: transform 0.6s ease;
         }
-        .cta-button:hover {
+        .btn-main:hover {
             transform: translateY(-3px);
-            box-shadow: 0 15px 50px rgba(212, 175, 55, 0.5), 0 0 0 1px rgba(244, 228, 160, 0.7) inset;
+            box-shadow: 0 15px 50px rgba(212, 175, 55, 0.4), inset 0 0 0 1px rgba(244, 228, 160, 0.6);
         }
-        .cta-button:hover::before {
-            transform: translateX(100%);
-        }
-
-        /* ─────── Features ─────── */
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 24px;
-            margin-top: 60px;
+        .btn-main:hover::before { transform: translateX(100%); }
+        .btn-main svg {
+            width: 20px; height: 20px;
+            fill: currentColor;
         }
 
-        .feature-card {
-            background: linear-gradient(160deg, rgba(20, 24, 32, 0.85), rgba(12, 14, 20, 0.95));
-            border: 1px solid rgba(212, 175, 55, 0.18);
-            border-radius: 16px;
-            padding: 32px 24px;
-            position: relative;
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-            transition: all 0.4s ease;
-            animation: fadeUp 1s ease-out both;
-        }
-        .feature-card:nth-child(1) { animation-delay: 1.1s; }
-        .feature-card:nth-child(2) { animation-delay: 1.25s; }
-        .feature-card:nth-child(3) { animation-delay: 1.4s; }
-        .feature-card:nth-child(4) { animation-delay: 1.55s; }
-
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.6), transparent);
-            opacity: 0;
-            transition: opacity 0.4s;
-        }
-        .feature-card:hover {
-            transform: translateY(-6px);
-            border-color: rgba(212, 175, 55, 0.5);
-            box-shadow: 0 15px 40px rgba(212, 175, 55, 0.15);
-        }
-        .feature-card:hover::before { opacity: 1; }
-
-        .feature-icon {
-            font-size: 42px;
-            margin-bottom: 16px;
-            display: block;
-            filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.4));
-        }
-        .feature-title {
-            font-family: 'Cinzel', serif;
-            font-size: 18px;
-            color: #d4af37;
-            margin-bottom: 10px;
-            letter-spacing: 1px;
-        }
-        .feature-desc {
-            font-size: 14px;
-            color: #8a8578;
-            line-height: 1.6;
-        }
-
-        /* ─────── Footer ─────── */
+        /* ─── Футер ─── */
         .footer {
-            text-align: center;
-            margin-top: 80px;
-            padding-top: 40px;
-            border-top: 1px solid rgba(212, 175, 55, 0.1);
-            color: #4a4538;
-            font-size: 12px;
-            letter-spacing: 3px;
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #3a3528;
+            font-size: 10px;
+            letter-spacing: 5px;
             text-transform: uppercase;
-        }
-
-        /* ─────── Loading state ─────── */
-        #auth-area {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
+            z-index: 2;
         }
 
         @media (max-width: 600px) {
-            .header-nav { margin-bottom: 40px; }
-            .hero { padding: 30px 0 60px; }
-            .feature-card { padding: 24px 20px; }
-            .cta-button { padding: 16px 32px; font-size: 14px; }
+            .nav { top: 15px; right: 15px; }
+            .seal { width: 64px; height: 64px; font-size: 26px; margin-bottom: 25px; }
+            .hero-title { letter-spacing: 4px; }
+            .btn-main { padding: 16px 36px; font-size: 14px; }
+            .hero-sub { margin-bottom: 45px; }
         }
     </style>
 </head>
 <body>
-    <div class="hero-bg"></div>
-    <div class="parallax-layer mountains-back" id="mountains-back"></div>
-    <div class="parallax-layer mountains-mid" id="mountains-mid"></div>
+    <!-- Фон -->
+    <div class="bg-ink"></div>
     <div class="fog"></div>
     <div class="particles" id="particles"></div>
 
+    <!-- Навигация -->
+    <nav class="nav">
+        <div class="nav-auth" id="auth-area" style="display: none;"></div>
+    </nav>
+
+    <!-- Контент -->
     <div class="container">
-        <nav class="header-nav">
-            <div class="logo">WHERE WINDS MEET</div>
-            <div id="auth-area">
-                <span style="color:#8a8578; font-size:14px;">Загрузка...</span>
-            </div>
-        </nav>
-
-        <section class="hero">
-            <h1 class="hero-title">Где Встречаются Ветра</h1>
-            <p class="hero-subtitle">Панель управления</p>
-            <a href="/auth/discord" class="cta-button" id="cta-main">
-                <span>⚔</span>
-                <span>Войти через Discord</span>
-            </a>
-        </section>
-
-        <section class="features">
-            <div class="feature-card">
-                <span class="feature-icon">🥋</span>
-                <div class="feature-title">Профили персонажей</div>
-                <div class="feature-desc">Создавай до 3 персонажей, настраивай PvE и PvP билды: мистические навыки, внутренние пути и боевые искусства.</div>
-            </div>
-            <div class="feature-card">
-                <span class="feature-icon">📅</span>
-                <div class="feature-title">События и Сборы</div>
-                <div class="feature-desc">Планируй рейды, турниры и мировые события. Записывайся в один клик, следи за составом в реальном времени.</div>
-            </div>
-            <div class="feature-card">
-                <span class="feature-icon">📖</span>
-                <div class="feature-title">Гайды и Знания</div>
-                <div class="feature-desc">Делитесь тактиками, билдами и секретами мира Уся. Все гайды доступны как в браузере, так и прямо в Discord.</div>
-            </div>
-            <div class="feature-card">
-                <span class="feature-icon">🛡️</span>
-                <div class="feature-title">Управление Гильдией</div>
-                <div class="feature-desc">Модерация, роли по кнопкам, напоминания и состав гильдии — всё в одной панели. Прозрачно и удобно.</div>
-            </div>
-        </section>
-
-        <div class="footer">
-            Where Winds Meet • Fan Project • 2026
-        </div>
+        <div class="seal">風</div>
+        <h1 class="hero-title">WHERE WINDS MEET</h1>
+        <p class="hero-sub">Панель управления</p>
+        <a href="/auth/discord" class="btn-main" id="cta-main">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+            <span>Войти через Discord</span>
+        </a>
     </div>
 
+    <footer class="footer">Where Winds Meet • Fan Project • 2026</footer>
+
     <script>
-        // ─── Параллакс ───
-        const mBack = document.getElementById('mountains-back');
-        const mMid = document.getElementById('mountains-mid');
-        let ticking = false;
-        window.addEventListener('scroll', () => {
-            if (!ticking) {
-                window.requestAnimationFrame(() => {
-                    const y = window.scrollY;
-                    mBack.style.transform = `translateY(${y * 0.15}px)`;
-                    mMid.style.transform = `translateY(${y * 0.3}px)`;
-                    ticking = false;
-                });
-                ticking = true;
+        // Частицы
+        (function() {
+            const wrap = document.getElementById('particles');
+            for (let i = 0; i < 30; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.bottom = (Math.random() * 20) + '%';
+                p.style.animationDuration = (10 + Math.random() * 15) + 's';
+                p.style.animationDelay = (Math.random() * 10) + 's';
+                p.style.opacity = 0.2 + Math.random() * 0.4;
+                wrap.appendChild(p);
             }
-        }, { passive: true });
+        })();
 
-        // ─── Частицы ───
-        const particlesWrap = document.getElementById('particles');
-        for (let i = 0; i < 30; i++) {
-            const p = document.createElement('div');
-            p.className = 'particle';
-            p.style.left = Math.random() * 100 + '%';
-            p.style.bottom = (Math.random() * 30) + '%';
-            p.style.animationDuration = (8 + Math.random() * 12) + 's';
-            p.style.animationDelay = (Math.random() * 10) + 's';
-            p.style.opacity = 0.3 + Math.random() * 0.5;
-            particlesWrap.appendChild(p);
-        }
-
-        // ─── Проверяем авторизацию ───
+        // Проверка авторизации
         fetch('/api/user', { credentials: 'include' })
             .then(r => r.ok ? r.json() : null)
             .then(data => {
                 const authArea = document.getElementById('auth-area');
                 const cta = document.getElementById('cta-main');
+                if (!authArea) return;
                 if (data && data.user) {
                     const u = data.user;
-                    const avatar = u.avatar ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png';
+                    const avatar = u.avatar
+                        ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png`
+                        : `https://cdn.discordapp.com/embed/avatars/0.png`;
+                    authArea.style.display = 'flex';
                     authArea.innerHTML = `
                         <img src="${avatar}" alt="">
                         <span>${u.username}</span>
+                        <a href="/logout">Выйти</a>
                     `;
-                    cta.href = '/dashboard';
-                    cta.querySelector('span:last-child').textContent = 'Перейти в панель';
+                    if (cta) {
+                        cta.href = '/dashboard';
+                        cta.querySelector('span:last-child').textContent = 'Перейти в панель';
+                    }
                 } else {
-                    authArea.innerHTML = '';
+                    authArea.style.display = 'none';
                 }
             })
             .catch(() => {
-                document.getElementById('auth-area').innerHTML = '';
+                const authArea = document.getElementById('auth-area');
+                if (authArea) authArea.style.display = 'none';
             });
     </script>
 </body>
