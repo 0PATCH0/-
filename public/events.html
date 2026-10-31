@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>События — Where Winds Meet</title>
     <link rel="stylesheet" href="/css/style.css?v=25">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Marcellus&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
     <style>
         :root {
             --gold: #d4af37;
@@ -16,54 +16,108 @@
             --text-main: #e8e3d4;
             --text-muted: #8a8578;
         }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            background:
-                radial-gradient(circle at 20% 10%, rgba(212, 175, 55, 0.06), transparent 40%),
-                radial-gradient(circle at 80% 90%, rgba(46, 204, 113, 0.05), transparent 45%),
-                linear-gradient(180deg, #0a0b10 0%, #0d0f14 100%);
-            color: var(--text-main);
             font-family: 'Marcellus', serif;
+            color: var(--text-main);
+            background: #06080a;
             min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
         }
-        .fog-layer {
-            position: fixed; inset: 0; pointer-events: none; z-index: 0;
-            background: radial-gradient(ellipse at center, transparent 40%, rgba(212,175,55,0.04) 100%);
+        .bg-ink {
+            position: fixed; inset: 0; z-index: 0;
+            background:
+                radial-gradient(ellipse at 20% 10%, rgba(212, 175, 55, 0.06) 0%, transparent 40%),
+                radial-gradient(ellipse at 80% 90%, rgba(46, 204, 113, 0.04) 0%, transparent 40%),
+                linear-gradient(180deg, #06080a 0%, #0b0e13 100%);
+            pointer-events: none;
         }
-        .events-header { text-align: center; margin-bottom: 30px; position: relative; z-index: 1; }
-        .events-header h1 {
-            font-family: 'Cinzel', serif; font-size: 40px; color: var(--gold);
-            text-shadow: 0 0 25px var(--gold-soft); letter-spacing: 3px; margin-bottom: 8px;
+        .fog {
+            position: fixed; inset: 0; z-index: 1; pointer-events: none;
+            background: radial-gradient(ellipse at 50% 100%, rgba(212,175,55,0.05) 0%, transparent 50%);
         }
-        .events-header p { color: var(--text-muted); font-style: italic; }
+        .container {
+            position: relative; z-index: 2;
+            max-width: 1100px; margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+        .top-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 40px;
+            animation: fadeDown 0.8s ease-out;
+        }
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .logo {
+            font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700;
+            letter-spacing: 3px; color: var(--gold);
+            text-shadow: 0 0 15px var(--gold-soft);
+        }
+        .back-link {
+            color: var(--text-muted); text-decoration: none; font-size: 13px;
+            transition: color 0.3s;
+        }
+        .back-link:hover { color: var(--gold); }
+
+        .page-title {
+            text-align: center; margin-bottom: 30px;
+            animation: fadeUp 1s ease-out 0.2s both;
+        }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .page-title h1 {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(28px, 5vw, 42px);
+            background: linear-gradient(135deg, #d4af37, #f4e4a0, #aa8624, #d4af37);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 3px; margin-bottom: 10px;
+            filter: drop-shadow(0 0 20px rgba(212,175,55,0.3));
+        }
+        .page-title p {
+            color: var(--text-muted); letter-spacing: 5px;
+            text-transform: uppercase; font-size: 12px;
+        }
+
         .toolbar {
-            display: flex; gap: 12px; margin-bottom: 30px;
-            flex-wrap: wrap; justify-content: center; position: relative; z-index: 1;
+            display: flex; gap: 10px; margin-bottom: 30px;
+            flex-wrap: wrap; justify-content: center;
         }
         .toolbar button {
-            background: rgba(0,0,0,0.5); border: 1px solid var(--border);
-            color: var(--text-main); padding: 10px 18px; border-radius: 30px;
-            font-family: 'Marcellus', serif; font-size: 14px; cursor: pointer; transition: 0.2s;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 10px 20px; border-radius: 30px;
+            font-family: 'Marcellus', serif;
+            font-size: 14px; cursor: pointer;
+            transition: 0.2s;
         }
         .toolbar button:hover { border-color: var(--gold); color: var(--gold); }
         .toolbar button.primary {
             background: linear-gradient(135deg, #d4af37, #aa8624);
-            color: #0a0b10; border-color: transparent; font-weight: bold;
+            color: #0a0b10; border-color: transparent;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(212,175,55,0.25);
         }
         .toolbar button.primary:hover { filter: brightness(1.1); color: #0a0b10; }
+
         .events-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 20px; position: relative; z-index: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
         }
         .event-card {
-            background: linear-gradient(160deg, rgba(20, 24, 32, 0.96), rgba(12, 14, 20, 0.98));
-            border: 1px solid var(--border); border-radius: 16px; padding: 22px;
-            position: relative; overflow: hidden; transition: 0.25s;
-            display: flex; flex-direction: column; animation: fadeInUp 0.5s ease-out;
+            background: linear-gradient(160deg, rgba(18, 22, 28, 0.9), rgba(10, 12, 16, 0.95));
+            border: 1px solid var(--border);
+            border-radius: 16px; padding: 22px;
+            position: relative; overflow: hidden;
+            transition: 0.25s;
+            display: flex; flex-direction: column;
+            animation: fadeUp 0.5s ease-out;
         }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .event-card:hover {
-            border-color: rgba(212, 175, 55, 0.5);
-            box-shadow: 0 8px 30px rgba(212, 175, 55, 0.12); transform: translateY(-2px);
+            border-color: rgba(212,175,55,0.5);
+            box-shadow: 0 8px 30px rgba(212,175,55,0.12);
+            transform: translateY(-2px);
         }
         .event-card::before {
             content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
@@ -73,89 +127,156 @@
             font-family: 'Cinzel', serif; font-size: 20px; color: var(--gold);
             margin-bottom: 8px; letter-spacing: 1px;
         }
-        .event-date { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        .event-date {
+            font-size: 13px; color: var(--text-muted);
+            margin-bottom: 12px;
+            display: flex; align-items: center; gap: 6px;
+        }
         .event-date.past { color: var(--danger); }
-        .event-desc { font-size: 14px; color: #c4bfae; line-height: 1.5; margin-bottom: 16px; flex: 1; }
-        .event-attendees { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        .event-desc {
+            font-size: 14px; color: #c4bfae;
+            line-height: 1.5; margin-bottom: 16px;
+            flex: 1;
+        }
+        .event-attendees {
+            font-size: 12px; color: var(--text-muted);
+            margin-bottom: 12px;
+            display: flex; align-items: center; gap: 6px;
+        }
         .event-attendees b { color: var(--jade); }
-        .event-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .event-actions {
+            display: flex; gap: 8px; flex-wrap: wrap;
+        }
         .btn-join, .btn-leave, .btn-delete {
-            padding: 8px 16px; border-radius: 8px; font-family: 'Marcellus', serif;
-            font-size: 13px; cursor: pointer; transition: 0.2s;
+            padding: 8px 16px; border-radius: 8px;
+            font-family: 'Marcellus', serif; font-size: 13px;
+            cursor: pointer; transition: 0.2s;
             border: 1px solid transparent; flex: 1;
         }
-        .btn-join { background: rgba(46, 204, 113, 0.15); color: var(--jade); border-color: rgba(46, 204, 113, 0.4); }
+        .btn-join {
+            background: rgba(46, 204, 113, 0.15);
+            color: var(--jade);
+            border-color: rgba(46, 204, 113, 0.4);
+        }
         .btn-join:hover { background: rgba(46, 204, 113, 0.3); }
-        .btn-leave { background: rgba(231, 76, 60, 0.12); color: var(--danger); border-color: rgba(231, 76, 60, 0.4); }
+        .btn-leave {
+            background: rgba(231, 76, 60, 0.12);
+            color: var(--danger);
+            border-color: rgba(231, 76, 60, 0.4);
+        }
         .btn-leave:hover { background: rgba(231, 76, 60, 0.3); }
-        .btn-delete { background: rgba(0,0,0,0.4); color: var(--text-muted); border-color: var(--border); flex: 0 0 auto; }
+        .btn-delete {
+            background: rgba(0,0,0,0.4);
+            color: var(--text-muted);
+            border-color: var(--border);
+            flex: 0 0 auto;
+        }
         .btn-delete:hover { color: var(--danger); border-color: var(--danger); }
-        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); font-style: italic; position: relative; z-index: 1; }
+
+        .empty-state {
+            text-align: center; padding: 60px 20px;
+            color: var(--text-muted); font-style: italic;
+            grid-column: 1 / -1;
+        }
 
         .modal-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.92); backdrop-filter: blur(6px);
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.92); backdrop-filter: blur(6px);
             display: none; justify-content: center; align-items: center; z-index: 9999;
         }
         .modal-overlay.active { display: flex; }
         .modal-box {
             background: linear-gradient(160deg, #12161c, #0a0c11);
-            width: 95%; max-width: 580px; border-radius: 16px; border: 1px solid var(--gold);
-            box-shadow: 0 0 50px rgba(212, 175, 55, 0.25); padding: 28px;
+            width: 95%; max-width: 580px;
+            border-radius: 16px; border: 1px solid var(--gold);
+            box-shadow: 0 0 50px rgba(212, 175, 55, 0.25);
+            padding: 28px;
             max-height: 92vh; overflow-y: auto;
         }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .modal-header h3 { color: var(--gold); font-family: 'Cinzel', serif; margin: 0; font-size: 20px; }
-        .modal-close { background: none; border: none; color: var(--danger); font-size: 28px; cursor: pointer; }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px;
+        }
+        .modal-header h3 {
+            color: var(--gold); font-family: 'Cinzel', serif;
+            margin: 0; font-size: 20px;
+        }
+        .modal-close {
+            background: none; border: none; color: var(--danger);
+            font-size: 28px; cursor: pointer;
+        }
         .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+        .form-group label {
+            display: block; font-size: 12px;
+            color: var(--text-muted); margin-bottom: 6px;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
         .form-group input, .form-group textarea, .form-group select {
-            width: 100%; background: rgba(0,0,0,0.5); border: 1px solid var(--border);
-            color: var(--text-main); padding: 10px 12px; border-radius: 8px;
-            font-family: 'Marcellus', serif; font-size: 14px; transition: 0.2s;
+            width: 100%;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 10px 12px; border-radius: 8px;
+            font-family: 'Marcellus', serif; font-size: 14px;
+            transition: 0.2s;
         }
         .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
-            outline: none; border-color: var(--gold); box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+            outline: none; border-color: var(--gold);
+            box-shadow: 0 0 10px rgba(212,175,55,0.2);
         }
         .form-group textarea { resize: vertical; min-height: 80px; }
-        .form-group .hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; font-style: italic; text-transform: none; letter-spacing: 0; }
-        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
-        .modal-actions button {
-            padding: 10px 20px; border-radius: 8px; font-family: 'Marcellus', serif;
-            font-size: 14px; cursor: pointer; border: 1px solid transparent;
+        .form-group .hint {
+            font-size: 11px; color: var(--text-muted);
+            margin-top: 4px; font-style: italic;
+            text-transform: none; letter-spacing: 0;
         }
-        .btn-cancel { background: rgba(0,0,0,0.4); color: var(--text-muted); border-color: var(--border); }
-        .btn-save { background: linear-gradient(135deg, #d4af37, #aa8624); color: #0a0b10; font-weight: bold; }
+        .modal-actions {
+            display: flex; gap: 10px; justify-content: flex-end;
+            margin-top: 20px;
+        }
+        .modal-actions button {
+            padding: 10px 20px; border-radius: 8px;
+            font-family: 'Marcellus', serif; font-size: 14px;
+            cursor: pointer; border: 1px solid transparent;
+        }
+        .btn-cancel {
+            background: rgba(0,0,0,0.4); color: var(--text-muted);
+            border-color: var(--border);
+        }
+        .btn-save {
+            background: linear-gradient(135deg, #d4af37, #aa8624);
+            color: #0a0b10; font-weight: bold;
+        }
         .btn-save:hover { filter: brightness(1.1); }
 
         @media (max-width: 600px) {
-            .events-header h1 { font-size: 30px; }
+            .top-nav { margin-bottom: 25px; }
+            .logo { font-size: 16px; letter-spacing: 2px; }
             .events-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <div class="fog-layer"></div>
-    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
+    <div class="bg-ink"></div>
+    <div class="fog"></div>
 
-    <div class="main-container">
-        <div class="sidebar">
-            <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard"><div class="icon icon-home"></div> К списку серверов</a>
-            <hr style="border-color: var(--border); margin: 15px 0;">
-            <a href="/dashboard"><div class="icon icon-arrow-left"></div> Назад в панель</a>
+    <div class="container">
+        <nav class="top-nav">
+            <div class="logo">WHERE WINDS MEET</div>
+            <a href="#" class="back-link" id="back-link">← Назад в гильдию</a>
+        </nav>
+
+        <div class="page-title">
+            <h1>📅 События</h1>
+            <p>☯ Соберитесь вместе на рейды и турниры</p>
         </div>
 
-        <div class="content" style="max-width: 1100px; position: relative; z-index: 1;">
-            <div class="events-header">
-                <h1>📅 События</h1>
-                <p>☯ Соберитесь вместе на рейды и турниры</p>
-            </div>
-            <div class="toolbar">
-                <button id="btn-create" class="primary" onclick="openCreateModal()" style="display:none;">+ Создать событие</button>
-                <button onclick="loadEvents()">🔄 Обновить</button>
-            </div>
-            <div id="events-container" class="events-grid"></div>
+        <div class="toolbar">
+            <button id="btn-create" class="primary" onclick="openCreateModal()" style="display:none;">+ Создать событие</button>
+            <button onclick="loadEvents()">🔄 Обновить</button>
         </div>
+
+        <div id="events-container" class="events-grid"></div>
     </div>
 
     <div class="modal-overlay" id="create-modal">
@@ -181,7 +302,7 @@
                 <select id="ev-channel">
                     <option value="">— Не отправлять в Discord —</option>
                 </select>
-                <div class="hint">В этот канал бот пришлёт красивый эмбед с датой, описанием и кнопкой на сайт.</div>
+                <div class="hint">В этот канал бот пришлёт эмбед с датой, описанием и кнопкой на сайт.</div>
             </div>
             <div class="form-group">
                 <label>Роль для пинга</label>
@@ -204,6 +325,9 @@
     <script>
         const pathParts = window.location.pathname.split('/');
         const guildId = pathParts[2] || new URLSearchParams(window.location.search).get('guild');
+        const backLink = document.getElementById('back-link');
+        if (backLink && guildId) backLink.href = '/guild/' + guildId;
+
         let currentUser = null;
         let canModerate = false;
 
@@ -218,17 +342,13 @@
                 if (!res.ok) return;
                 const data = await res.json();
                 currentUser = data.user;
-                const serverName = document.getElementById('server-name');
-                const guild = (data.guilds || []).find(g => g.id === guildId);
-                if (guild && serverName) serverName.textContent = guild.name;
 
-                // Пытаемся понять, есть ли права модератора — дергаем админский эндпоинт
+                // Проверяем права модератора
                 const modRes = await fetch('/api/guild/' + guildId, { credentials: 'include' });
                 if (modRes.ok) {
                     canModerate = true;
                     const createBtn = document.getElementById('btn-create');
                     if (createBtn) createBtn.style.display = 'inline-block';
-                    // Загружаем каналы и роли через новый эндпоинт (см. пункт 3 патча web.js)
                     await loadGuildChannelsAndRoles();
                 }
             } catch (e) { console.error(e); }
@@ -360,7 +480,6 @@
             if (!dateInput) { alert('Укажите дату и время.'); return; }
 
             const dateUnix = Math.floor(new Date(dateInput).getTime() / 1000);
-
             try {
                 const res = await fetch('/api/events/' + guildId, {
                     method: 'POST',
