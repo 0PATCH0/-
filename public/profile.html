@@ -730,136 +730,96 @@
         /* ---------- СОХРАНЕНИЕ / ЗАГРУЗКА ---------- */
 
         async function saveProfile() {
-            const btn = document.getElementById('btn-save');
-            btn.disabled = true;
-            const original = btn.innerHTML;
-            btn.innerHTML = '⏳ Сохранение...';
+    const btn = document.getElementById('btn-save');
+    btn.disabled = true;
+    const original = btn.innerHTML;
+    btn.innerHTML = '⏳ Сохранение...';
 
-            try {
-                const characters = Object.keys(charDataCache).map(blockId => {
-                    const c = charDataCache[blockId];
-                    const cleanBuild = tab => {
-                        const b = c.builds[tab] || { mysticSkills: [], innerWays: [] };
-                        return {
-                            mysticSkills: (b.mysticSkills || []).filter(Boolean),
-                            innerWays: (b.innerWays || []).filter(Boolean)
-                        };
-                    };
-                    return {
-                        _id: c._id || undefined,
-                        gameNickname: c.gameNickname || '',
-                        guildName: c.guildName || '',
-                        bio: c.bio || '',
-                        builds: {
-                            PvE: cleanBuild('PvE'),
-                            PvP: cleanBuild('PvP')
-                        }
-                    };
-                }).filter(c => c.gameNickname.trim().length > 0);
+    try {
+        const characters = Object.keys(charDataCache).map(blockId => {
+            const c = charDataCache[blockId];
+            const cleanBuild = tab => {
+                const b = c.builds[tab] || { mysticSkills: [], innerWays: [] };
+                return {
+                    mysticSkills: (b.mysticSkills || []).filter(Boolean),
+                    innerWays: (b.innerWays || []).filter(Boolean)
+                };
+            };
+            return {
+                gameNickname: c.gameNickname || '',
+                guildName: c.guildName || '',
+                bio: c.bio || '',
+                builds: { PvE: cleanBuild('PvE'), PvP: cleanBuild('PvP') }
+            };
+        }).filter(c => c.gameNickname.trim().length > 0);
 
-                if (characters.length === 0) {
-                    alert('Заполните хотя бы одного персонажа (ник обязателен).');
-                    btn.disabled = false;
-                    btn.innerHTML = original;
-                    return;
-                }
-
-                const isGlobal = document.getElementById('is-global').checked;
-                const res = await fetch('/api/profile/save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        guildId,
-                        characters,
-                        isGlobal
-                    })
-                });
-
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                const json = await res.json().catch(() => ({}));
-                if (json.error) throw new Error(json.error);
-
-                alert('✅ Профиль сохранён');
-                if (json.profile) loadProfileFromData(json.profile);
-            } catch (e) {
-                console.error(e);
-                alert('❌ Ошибка сохранения: ' + e.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = original;
-            }
+        if (characters.length === 0) {
+            alert('Заполните хотя бы одного персонажа (ник обязателен).');
+            btn.disabled = false;
+            btn.innerHTML = original;
+            return;
         }
 
-        async function loadProfile() {
-            try {
-                const q = new URLSearchParams();
-                if (guildId) q.set('guild', guildId);
-                if (targetUserId) q.set('user', targetUserId);
-                const res = await fetch('/api/profile?' + q.toString(), { credentials: 'include' });
-                if (!res.ok) {
-                    // профиля нет — стартуем с одного пустого персонажа
-                    createBlock({}, 0);
-                    return;
-                }
-                const json = await res.json();
-                loadProfileFromData(json);
-            } catch (e) {
-                console.error('loadProfile', e);
-                createBlock({}, 0);
-            }
+        const isGlobal = document.getElementById('is-global').checked;
+        const effectiveGuildId = guildId && guildId !== 'profile' ? guildId : 'global';
+
+        const res = await fetch('/api/profile/' + encodeURIComponent(effectiveGuildId), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ characters, isGlobal })
+        });
+
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
+
+        alert('✅ Профиль сохранён');
+        if (json.profile) loadProfileFromData(json.profile);
+    } catch (e) {
+        console.error(e);
+        alert('❌ Ошибка сохранения: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = original;
+    }
+}
+
+async function loadProfile() {
+    try {
+        const effectiveGuildId = guildId && guildId !== 'profile' ? guildId : 'global';
+        const q = new URLSearchParams();
+        if (targetUserId) q.set('user', targetUserId);
+        const res = await fetch('/api/profile/' + encodeURIComponent(effectiveGuildId) + '?' + q.toString(), {
+            credentials: 'include'
+        });
+        if (!res.ok) {
+            createBlock({}, 0);
+            return;
         }
+        const json = await res.json();
+        loadProfileFromData(json);
+    } catch (e) {
+        console.error('loadProfile', e);
+        createBlock({}, 0);
+    }
+}
 
-        function loadProfileFromData(profile) {
-            const container = document.getElementById('characters-container');
-            container.innerHTML = '';
-            Object.keys(charDataCache).forEach(k => delete charDataCache[k]);
-            charCount = 0;
-
-            const characters = (profile && profile.characters) || [];
-            if (characters.length === 0) {
-                createBlock({}, 0);
-            } else {
-                characters.forEach((c, i) => createBlock(c, i));
-            }
-
-            const g = document.getElementById('is-global');
-            if (g) g.checked = !!(profile && profile.isGlobal);
-
-            const delBtn = document.getElementById('btn-delete-profile');
-            if (delBtn) delBtn.style.display = (profile && profile._id) ? 'block' : 'none';
-
-            // если смотрим чужой профиль — блокируем редактирование
-            if (targetUserId) {
-                document.querySelectorAll('input, textarea, button').forEach(el => {
-                    if (el.classList.contains('remove-char-btn')) return;
-                    if (el.id === 'btn-add' || el.id === 'btn-save' || el.id === 'btn-delete-profile') return;
-                    if (el.closest('.build-tabs')) return;
-                    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.disabled = true;
-                });
-                const addBtn = document.getElementById('btn-add');
-                const saveBtn = document.getElementById('btn-save');
-                if (addBtn) addBtn.style.display = 'none';
-                if (saveBtn) saveBtn.style.display = 'none';
-                if (delBtn) delBtn.style.display = 'none';
-            }
-        }
-
-        async function deleteMyProfile() {
-            if (!confirm('Удалить профиль полностью? Это действие необратимо.')) return;
-            try {
-                const res = await fetch('/api/profile?guild=' + encodeURIComponent(guildId), {
-                    method: 'DELETE',
-                    credentials: 'include'
-                });
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                alert('Профиль удалён');
-                location.reload();
-            } catch (e) {
-                console.error(e);
-                alert('❌ Ошибка удаления: ' + e.message);
-            }
-        }
+async function deleteMyProfile() {
+    if (!confirm('Удалить профиль полностью? Это действие необратимо.')) return;
+    try {
+        const effectiveGuildId = guildId && guildId !== 'profile' ? guildId : 'global';
+        const res = await fetch('/api/profile/' + encodeURIComponent(effectiveGuildId), {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        alert('Профиль удалён');
+        location.reload();
+    } catch (e) {
+        console.error(e);
+        alert('❌ Ошибка удаления: ' + e.message);
+    }
+}
     </script>
 </body>
 </html>
