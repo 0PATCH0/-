@@ -3,108 +3,638 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache">
-    <title>Настройка колонок</title>
-    <link rel="stylesheet" href="/css/style.css?v=3">
+    <title>Настройка состава — Where Winds Meet</title>
+    <link rel="stylesheet" href="/css/style.css?v=25">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #d4af37;
+            --gold-soft: rgba(212, 175, 55, 0.35);
+            --jade: #2ecc71;
+            --danger: #e74c3c;
+            --border: rgba(212, 175, 55, 0.18);
+            --text-main: #e8e3d4;
+            --text-muted: #8a8578;
+            --icon-tank: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzJlY2M3MSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBhdGggZD0iTTMyIDE0IEwxOCAyMiBMMTggMzQgUTE4IDQ2IDMyIDUyIFE0NiA0NiA0NiAzNCBMNDYgMjIgWiIgZmlsbD0iIzJlY2M3MSIgb3BhY2l0eT0iMC4yIiBzdHJva2U9IiMyZWNjNzEiIHN0cm9rZS13aWR0aD0iMiIvPjwvc3ZnPg==");
+            --icon-dps: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2U3NGMzYyIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBhdGggZD0iTTMyIDE0IEw0MCAzMiBMMzIgNTAgTDI0IDMyIFoiIGZpbGw9IiNlNzRjM2MiIG9wYWNpdHk9IjAuMyIgc3Ryb2tlPSIjZTc0YzNjIiBzdHJva2Utd2lkdGg9IjIiLz48L3N2Zz4=");
+            --icon-healer: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzliNTliNiIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBhdGggZD0iTTMyIDE2IEw0MCAyOCBMMzYgMjggTDM2IDQwIEwyOCA0MCBMMjggMjggTDI0IDI4IFoiIGZpbGw9IiM5YjU5YjYiIG9wYWNpdHk9IjAuMyIgc3Ryb2tlPSIjOWI1OWI2IiBzdHJva2Utd2lkdGg9IjIiLz48L3N2Zz4=");
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Marcellus', serif;
+            color: var(--text-main);
+            background: #06080a;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        .bg-ink {
+            position: fixed; inset: 0; z-index: 0;
+            background:
+                radial-gradient(ellipse at 20% 10%, rgba(212, 175, 55, 0.06) 0%, transparent 40%),
+                radial-gradient(ellipse at 80% 90%, rgba(46, 204, 113, 0.04) 0%, transparent 40%),
+                linear-gradient(180deg, #06080a 0%, #0b0e13 100%);
+            pointer-events: none;
+        }
+        .fog {
+            position: fixed; inset: 0; z-index: 1; pointer-events: none;
+            background: radial-gradient(ellipse at 50% 100%, rgba(212,175,55,0.05) 0%, transparent 50%);
+        }
+        .container {
+            position: relative; z-index: 2;
+            max-width: 900px; margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+        .top-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 30px;
+            animation: fadeDown 0.8s ease-out;
+        }
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .logo {
+            font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700;
+            letter-spacing: 3px; color: var(--gold);
+            text-shadow: 0 0 15px var(--gold-soft);
+        }
+        .back-link {
+            color: var(--text-muted); text-decoration: none; font-size: 13px;
+            transition: color 0.3s;
+        }
+        .back-link:hover { color: var(--gold); }
+
+        .page-title {
+            text-align: center; margin-bottom: 40px;
+            animation: fadeUp 1s ease-out 0.2s both;
+        }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .page-title h1 {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(26px, 5vw, 38px);
+            background: linear-gradient(135deg, #d4af37, #f4e4a0, #aa8624, #d4af37);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 3px; margin-bottom: 10px;
+            filter: drop-shadow(0 0 20px rgba(212,175,55,0.3));
+        }
+        .page-title p {
+            color: var(--text-muted); letter-spacing: 5px;
+            text-transform: uppercase; font-size: 12px;
+        }
+
+        .panel {
+            background: linear-gradient(160deg, rgba(18, 22, 28, 0.9), rgba(10, 12, 16, 0.95));
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .panel-title {
+            font-family: 'Cinzel', serif;
+            font-size: 18px;
+            color: var(--gold);
+            margin-bottom: 16px;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .panel-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            line-height: 1.5;
+        }
+
+        /* Роли доступа */
+        .role-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .role-checkbox {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            color: var(--text-muted);
+        }
+        .role-checkbox:hover { background: rgba(255,255,255,0.1); }
+        .role-checkbox.selected {
+            background: rgba(212,175,55,0.15);
+            border-color: rgba(212,175,55,0.5);
+            color: var(--gold);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-family: 'Marcellus', serif;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid transparent;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #d4af37, #aa8624);
+            color: #0a0b10;
+            font-weight: bold;
+        }
+        .btn-primary:hover { filter: brightness(1.1); }
+        .btn-secondary {
+            background: rgba(0,0,0,0.4);
+            color: var(--text-muted);
+            border-color: var(--border);
+        }
+        .btn-secondary:hover { color: var(--gold); border-color: var(--gold); }
+        .btn-danger {
+            background: rgba(231,76,60,0.1);
+            color: var(--danger);
+            border-color: rgba(231,76,60,0.4);
+        }
+        .btn-danger:hover { background: rgba(231,76,60,0.25); }
+        .btn-small { padding: 6px 12px; font-size: 12px; }
+
+        /* Колонки */
+        .column-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            background: rgba(0,0,0,0.35);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            transition: 0.2s;
+        }
+        .column-item.dragging { opacity: 0.5; }
+        .column-item.class-locked {
+            border-left: 3px solid var(--gold);
+            background: rgba(212,175,55,0.05);
+        }
+        .drag-handle {
+            cursor: grab;
+            font-size: 18px;
+            color: var(--text-muted);
+            user-select: none;
+        }
+        .drag-handle.disabled { cursor: not-allowed; opacity: 0.3; }
+        .drag-handle:active:not(.disabled) { cursor: grabbing; }
+        .column-icon {
+            font-size: 20px;
+            width: 28px; text-align: center;
+        }
+        .column-icon .badge-icon {
+            width: 20px; height: 20px;
+            background-size: contain; background-repeat: no-repeat;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .badge-icon.tank { background-image: var(--icon-tank); }
+        .badge-icon.dps { background-image: var(--icon-dps); }
+        .badge-icon.healer { background-image: var(--icon-healer); }
+        .column-name {
+            flex: 1;
+            font-size: 14px;
+            color: var(--text-main);
+        }
+        .column-name input {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-family: 'Marcellus', serif;
+            font-size: 13px;
+            width: 100%;
+        }
+        .column-actions {
+            display: flex; gap: 6px;
+        }
+
+        .add-column-form {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .add-column-form input {
+            flex: 1;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 10px;
+            border-radius: 8px;
+            font-family: 'Marcellus', serif;
+        }
+
+        /* Ручные назначения */
+        .manual-list {
+            display: flex; flex-direction: column; gap: 8px;
+            max-height: 400px; overflow-y: auto;
+        }
+        .manual-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px;
+            background: rgba(0,0,0,0.35);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        .manual-item img {
+            width: 32px; height: 32px; border-radius: 50%;
+        }
+        .manual-item-info { flex: 1; min-width: 0; }
+        .manual-item-name { font-size: 14px; color: var(--text-main); }
+        .manual-item select {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-family: 'Marcellus', serif;
+            font-size: 13px;
+        }
+
+        .status-msg {
+            text-align: center;
+            font-size: 13px;
+            margin-top: 10px;
+            min-height: 18px;
+        }
+        .status-msg.ok { color: var(--jade); }
+        .status-msg.err { color: var(--danger); }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 600px) {
+            .top-nav { margin-bottom: 20px; }
+            .logo { font-size: 16px; letter-spacing: 2px; }
+            .panel { padding: 18px; }
+            .add-column-form { flex-direction: column; }
+        }
+    </style>
 </head>
 <body>
+    <div class="bg-ink"></div>
+    <div class="fog"></div>
 
-    <video class="bg-video" autoplay loop muted playsinline poster="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2070&auto=format&fit=crop">
-        <source src="https://assets.mixkit.co/videos/preview/mixkit-clouds-and-blue-sky-2408-large.mp4" type="video/mp4">
-    </video>
-    <div class="bg-overlay"></div>
-    <div class="bg-particles"></div>
-    <!-- КОНЕЦ БЛОКА С ФОНОМ -->
+    <div class="container">
+        <nav class="top-nav">
+            <div class="logo">WHERE WINDS MEET</div>
+            <a href="#" class="back-link" id="back-link">← Назад в управление</a>
+        </nav>
 
-    <!-- Кнопка-печать "Главная" -->
-    <a href="#" id="top-banner-link" class="top-banner"></a>
-    
-    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
-    
-    <div class="main-container">
-
-    <a href="#" id="top-banner-link" class="top-banner"></a>
-
-    <div class="main-container">
-        <div class="sidebar">
-            <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><div class="icon icon-arrow-left"></div> К списку серверов</a>
-            <hr style="border-color: var(--border-color); margin-bottom: 20px;">
-            <a href="#" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
-            <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
-            <a href="#" class="active"><div class="icon icon-gear"></div> Настройка колонок</a>
+        <div class="page-title">
+            <h1>🛡️ Настройка состава</h1>
+            <p>Роли, колонки и назначения</p>
         </div>
 
-        <div class="content">
-            <div class="header"><h1><div class="icon icon-gear"></div> Настройка колонок</h1></div>
-            <div class="form-card">
-                <p style="color: var(--text-muted); margin-bottom: 20px;">Выберите роли и укажите названия. Можно использовать эмодзи сервера (напишите :имя_эмодзи:).</p>
-                <div id="columns-container"></div>
-                <button class="btn btn-success btn-small" onclick="addColumn()" style="margin-bottom: 20px;"><div class="icon icon-plus"></div> Добавить колонку</button>
-                <div style="border-top: 1px solid var(--border-color); padding-top: 20px;">
-                    <button class="btn" onclick="saveConfig()"><div class="icon icon-floppy-disk"></div> Сохранить</button>
-                </div>
+        <div class="toolbar">
+            <button class="btn btn-secondary" onclick="refreshRoster()">🔄 Обновить состав из Discord</button>
+            <a href="#" class="btn btn-secondary" id="view-roster-link">👁 Открыть состав</a>
+        </div>
+
+        <!-- РОЛИ ДОСТУПА -->
+        <div class="panel">
+            <div class="panel-title">
+                <span>🔐 Роли доступа</span>
+                <button class="btn btn-primary btn-small" onclick="saveAccessRoles()">💾 Сохранить</button>
+            </div>
+            <div class="panel-desc">
+                Только участники с одной из выбранных ролей (или модераторы) смогут просматривать состав гильдии.
+                Если ни одна роль не выбрана — состав видят только модераторы.
+            </div>
+            <div class="role-selector" id="role-selector">
+                <div class="empty-msg" style="color:var(--text-muted);font-size:13px;">Загрузка ролей...</div>
+            </div>
+            <div class="status-msg" id="access-status"></div>
+        </div>
+
+        <!-- КОЛОНКИ -->
+        <div class="panel">
+            <div class="panel-title">
+                <span>📋 Колонки</span>
+                <button class="btn btn-primary btn-small" onclick="saveColumns()">💾 Сохранить порядок</button>
+            </div>
+            <div class="panel-desc">
+                Три базовых класса (Танк / ДД / Хил) всегда сверху. Ниже можно добавлять кастомные должности
+                (Глава, Зам, Офицер и т.д.) и перемещать их вверх/вниз. Классы перемещать нельзя — они всегда первые.
+            </div>
+            <div id="columns-list"></div>
+
+            <div class="add-column-form">
+                <input type="text" id="new-column-name" placeholder="Название должности (например, Глава)">
+                <button class="btn btn-primary" onclick="addColumn()">+ Добавить</button>
+            </div>
+            <div class="status-msg" id="columns-status"></div>
+        </div>
+
+        <!-- РУЧНЫЕ НАЗНАЧЕНИЯ -->
+        <div class="panel">
+            <div class="panel-title">
+                <span>👤 Ручные назначения</span>
+            </div>
+            <div class="panel-desc">
+                Если игрок должен быть в кастомной должности (например, «Глава»), назначьте его здесь.
+                Он останется в своём классе, но получит метку должности.
+            </div>
+            <div class="manual-list" id="manual-list">
+                <div class="empty-msg" style="color:var(--text-muted);font-size:13px;">Загрузка участников...</div>
             </div>
         </div>
     </div>
 
     <script>
-        const guildId = window.location.pathname.split('/')[2];
-        const banner = document.getElementById('top-banner-link');
-        if (banner) banner.href = `/manage/${guildId}`;
+        const pathParts = window.location.pathname.split('/');
+        const guildId = pathParts[2];
 
-        document.getElementById('nav-home').href = `/manage/${guildId}`;
-        document.getElementById('nav-roster').href = `/manage/${guildId}/roster`;
-        let serverRoles = [];
+        const backLink = document.getElementById('back-link');
+        if (backLink) backLink.href = '/manage/' + guildId;
 
-        Promise.all([
-            fetch(`/api/guild/${guildId}`).then(res => res.json()),
-            fetch(`/api/guild/${guildId}/roster-config`).then(res => res.json())
-        ]).then(([guildData, configData]) => {
-            document.getElementById('server-name').innerText = guildData.name;
-            serverRoles = guildData.roles;
+        const viewLink = document.getElementById('view-roster-link');
+        if (viewLink) viewLink.href = '/guild/' + guildId + '/roster';
 
-            if (configData && configData.columns && configData.columns.length > 0) {
-                configData.columns.forEach(col => addColumn(col.roleId, col.name, col.color));
-            } else {
-                addColumn(); 
-            }
-        });
+        let allRoles = [];
+        let selectedAccessRoles = new Set();
+        let columns = [];
+        let members = [];
+        let manualAssignments = {};
 
-        function addColumn(selectedRoleId = '', currentName = '', currentColor = '#2ecc71') {
-            const container = document.getElementById('columns-container');
-            const row = document.createElement('div');
-            row.className = 'role-row';
-            let options = serverRoles.map(r => `<option value="${r.id}" ${r.id === selectedRoleId ? 'selected' : ''}>${r.name}</option>`).join('');
-            
-            row.innerHTML = `
-                <select class="col-role">${options}</select>
-                <input type="text" class="col-name" placeholder="Название" value="${currentName}">
-                <input type="color" class="col-color color-picker" value="${currentColor}" title="Цвет">
-                <button class="btn btn-danger btn-small" onclick="this.parentElement.remove()"><div class="icon icon-x"></div></button>
-            `;
-            container.appendChild(row);
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
         }
 
-        function saveConfig() {
-            const columns = [];
-            document.querySelectorAll('#columns-container .role-row').forEach(row => {
-                columns.push({
-                    roleId: row.querySelector('.col-role').value,
-                    name: row.querySelector('.col-name').value || 'Без названия',
-                    color: row.querySelector('.col-color').value
+        // ─── РОЛИ ДОСТУПА ───
+        async function loadAccess() {
+            try {
+                const res = await fetch('/api/guild/' + guildId + '/roster-access', { credentials: 'include' });
+                if (!res.ok) {
+                    document.getElementById('role-selector').innerHTML =
+                        '<div style="color:var(--danger);font-size:13px;">Ошибка загрузки ролей (нужны права модератора)</div>';
+                    return;
+                }
+                const data = await res.json();
+                allRoles = data.allRoles || [];
+                selectedAccessRoles = new Set(data.rosterRoleIds || []);
+                renderRoles();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderRoles() {
+            const wrap = document.getElementById('role-selector');
+            if (allRoles.length === 0) {
+                wrap.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Роли не найдены.</div>';
+                return;
+            }
+            wrap.innerHTML = allRoles.map(r => {
+                const sel = selectedAccessRoles.has(r.id);
+                return `<div class="role-checkbox ${sel ? 'selected' : ''}" onclick="toggleRole('${r.id}')">${escapeHtml(r.name)}</div>`;
+            }).join('');
+        }
+
+        function toggleRole(roleId) {
+            if (selectedAccessRoles.has(roleId)) selectedAccessRoles.delete(roleId);
+            else selectedAccessRoles.add(roleId);
+            renderRoles();
+        }
+
+        async function saveAccessRoles() {
+            try {
+                const res = await fetch('/api/guild/' + guildId + '/roster-access', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ rosterRoleIds: Array.from(selectedAccessRoles) })
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                setStatus('access-status', '✅ Роли доступа сохранены', 'ok');
+            } catch (e) {
+                setStatus('access-status', '❌ Ошибка: ' + e.message, 'err');
+            }
+        }
+
+        // ─── КОЛОНКИ ───
+        async function loadColumns() {
+            try {
+                const res = await fetch('/api/guild/' + guildId + '/roster-config', { credentials: 'include' });
+                if (!res.ok) {
+                    document.getElementById('columns-list').innerHTML =
+                        '<div style="color:var(--danger);font-size:13px;">Ошибка загрузки колонок</div>';
+                    return;
+                }
+                const data = await res.json();
+                columns = data.columns || [];
+                manualAssignments = data.manualAssignments || {};
+                renderColumns();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function getClassIcon(icon) {
+            if (icon === 'tank') return '<span class="badge-icon tank"></span>';
+            if (icon === 'dps') return '<span class="badge-icon dps"></span>';
+            if (icon === 'healer') return '<span class="badge-icon healer"></span>';
+            return '◆';
+        }
+
+        function renderColumns() {
+            const wrap = document.getElementById('columns-list');
+            if (columns.length === 0) {
+                wrap.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Нет колонок.</div>';
+                return;
+            }
+            wrap.innerHTML = columns.map((col, idx) => {
+                const isClass = col.isClass;
+                return `
+                    <div class="column-item ${isClass ? 'class-locked' : ''}" data-key="${col.key}" data-idx="${idx}" draggable="${!isClass}">
+                        <span class="drag-handle ${isClass ? 'disabled' : ''}" title="${isClass ? 'Классы нельзя перемещать' : 'Перетащите'}">☰</span>
+                        <span class="column-icon">${getClassIcon(col.icon)}</span>
+                        <div class="column-name">
+                            <input type="text" value="${escapeHtml(col.name)}" ${isClass ? 'disabled' : ''} onchange="renameColumn('${col.key}', this.value)">
+                        </div>
+                        <div class="column-actions">
+                            ${!isClass ? `<button class="btn btn-danger btn-small" onclick="removeColumn('${col.key}')">🗑</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            setupDragAndDrop();
+        }
+
+        function setupDragAndDrop() {
+            const items = document.querySelectorAll('.column-item');
+            let dragged = null;
+
+            items.forEach(item => {
+                if (item.dataset.draggable === 'false' || item.getAttribute('draggable') === 'false') return;
+                item.addEventListener('dragstart', (e) => {
+                    dragged = item;
+                    item.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                item.addEventListener('dragend', () => {
+                    item.classList.remove('dragging');
+                    dragged = null;
+                });
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    if (!dragged || dragged === item) return;
+                    const draggingClass = dragged.classList.contains('class-locked');
+                    const targetClass = item.classList.contains('class-locked');
+                    // Кастомные нельзя ставить выше классов
+                    if (!draggingClass && targetClass) return;
+                    const parent = item.parentNode;
+                    const items = [...parent.querySelectorAll('.column-item')];
+                    const draggedIdx = items.indexOf(dragged);
+                    const targetIdx = items.indexOf(item);
+                    if (draggedIdx < targetIdx) {
+                        parent.insertBefore(dragged, item.nextSibling);
+                    } else {
+                        parent.insertBefore(dragged, item);
+                    }
                 });
             });
-
-            fetch(`/api/guild/${guildId}/roster-config`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ columns })
-            }).then(res => res.json()).then(data => {
-                if (data.success) {
-                    alert('✅ Настройки сохранены!');
-                    window.location.href = `/manage/${guildId}/roster`;
-                }
-            });
         }
+
+        function renameColumn(key, newName) {
+            const col = columns.find(c => c.key === key);
+            if (col) col.name = newName;
+        }
+
+        function removeColumn(key) {
+            if (!confirm('Удалить эту должность?')) return;
+            columns = columns.filter(c => c.key !== key || c.isClass);
+            renderColumns();
+        }
+
+        function addColumn() {
+            const input = document.getElementById('new-column-name');
+            const name = input.value.trim();
+            if (!name) return;
+            const key = 'custom_' + Date.now();
+            columns.push({
+                key,
+                name,
+                icon: 'custom',
+                color: '#d4af37',
+                isClass: false,
+                order: columns.length
+            });
+            input.value = '';
+            renderColumns();
+        }
+
+        async function saveColumns() {
+            // Пересчитываем порядок: классы всегда первые
+            const classes = columns.filter(c => c.isClass);
+            const custom = columns.filter(c => !c.isClass);
+            const finalColumns = [...classes, ...custom];
+            finalColumns.forEach((c, i) => { c.order = i; });
+
+            try {
+                const res = await fetch('/api/guild/' + guildId + '/roster-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ columns: finalColumns })
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                columns = finalColumns;
+                renderColumns();
+                setStatus('columns-status', '✅ Колонки сохранены', 'ok');
+            } catch (e) {
+                setStatus('columns-status', '❌ Ошибка: ' + e.message, 'err');
+            }
+        }
+
+        // ─── РУЧНЫЕ НАЗНАЧЕНИЯ ───
+        async function loadMembers() {
+            try {
+                const res = await fetch('/api/guild/' + guildId + '/roster', { credentials: 'include' });
+                if (!res.ok) {
+                    document.getElementById('manual-list').innerHTML =
+                        '<div style="color:var(--text-muted);font-size:13px;">Не удалось загрузить участников.</div>';
+                    return;
+                }
+                const data = await res.json();
+                members = data.members || [];
+                renderManual();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderManual() {
+            const wrap = document.getElementById('manual-list');
+            if (members.length === 0) {
+                wrap.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Нет участников.</div>';
+                return;
+            }
+            const customCols = columns.filter(c => !c.isClass);
+            wrap.innerHTML = members.map(m => {
+                const current = manualAssignments[m.userId] || '';
+                const options = ['<option value="">— Без должности —</option>']
+                    .concat(customCols.map(c => `<option value="${c.key}" ${current === c.key ? 'selected' : ''}>${escapeHtml(c.name)}</option>`))
+                    .join('');
+                return `
+                    <div class="manual-item">
+                        <img src="${m.avatar}" alt="">
+                        <div class="manual-item-info">
+                            <div class="manual-item-name">${escapeHtml(m.displayName)}</div>
+                        </div>
+                        <select onchange="assignManual('${m.userId}', this.value)">
+                            ${options}
+                        </select>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function assignManual(userId, columnKey) {
+            try {
+                const res = await fetch('/api/guild/' + guildId + '/roster-manual', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ userId, columnKey: columnKey || null })
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                manualAssignments = data.manualAssignments || {};
+                setStatus('columns-status', '✅ Назначение сохранено', 'ok');
+            } catch (e) {
+                setStatus('columns-status', '❌ Ошибка: ' + e.message, 'err');
+            }
+        }
+
+        // ─── ОБНОВЛЕНИЕ ───
+        async function refreshRoster() {
+            await loadMembers();
+            setStatus('columns-status', '✅ Состав обновлён из Discord', 'ok');
+        }
+
+        function setStatus(id, msg, cls) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = msg;
+            el.className = 'status-msg ' + (cls || '');
+            if (cls === 'ok') setTimeout(() => { if (el.textContent === msg) { el.textContent = ''; el.className = 'status-msg'; } }, 3000);
+        }
+
+        // ─── СТАРТ ───
+        loadAccess();
+        loadColumns().then(() => loadMembers());
     </script>
 </body>
 </html>
