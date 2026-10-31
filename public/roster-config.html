@@ -523,12 +523,27 @@ if (draggingClass && !targetClass) return;
     const input = document.getElementById('new-column-name');
     const name = input.value.trim();
     if (!name) return;
+
+    // Проверка на дубль с классами или другими колонками
+    const duplicate = columns.find(c => c.name.toLowerCase() === name.toLowerCase());
+    if (duplicate) {
+        alert('Такая должность уже есть: "' + duplicate.name + '". Выберите другое имя.');
+        return;
+    }
+
     const key = 'custom_' + Date.now();
-    columns.push({ key, name, icon: 'custom', color: '#d4af37', isClass: false, order: columns.length });
+    columns.push({
+        key,
+        name,
+        icon: 'custom',
+        color: '#d4af37',
+        isClass: false,
+        order: columns.length
+    });
     input.value = '';
     renderColumns();
-    renderManual();     // ← чтобы селект в «Ручных назначениях» увидел новую должность
-    saveColumns();      // ← автосохранение
+    renderManual();
+    saveColumns();
         }
 
         async function saveColumns() {
