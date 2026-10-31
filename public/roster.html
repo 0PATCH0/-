@@ -362,13 +362,14 @@
             const header = document.querySelector('.hero');
             header.insertAdjacentHTML('afterend', filtersHtml);
 
-            const counter = document.getElementById('guild-counter');
-if (counter) {
-    const stats = window.__rosterStats || { total: allMembers.length, classified: 0 };
-    counter.innerHTML = `Всего с профилем: ${stats.total} &nbsp;•&nbsp; <span style="color:#2ecc71;">Классифицировано: ${stats.classified}</span>`;
+                const counter = document.getElementById('guild-counter');
+    if (counter) {
+        const stats = window.__rosterStats || { total: allMembers.length, classified: 0 };
+        counter.innerHTML = `Всего с профилем: ${stats.total}  •  <span style="color:#2ecc71;">Классифицировано: ${stats.classified}</span>`;
+    }
 }
 
-        function selectFilter(key) {
+function selectFilter(key) {
             currentFilter = key;
             document.querySelectorAll('#filters .chip').forEach(c => {
                 c.classList.toggle('active', c.dataset.filter === key);
