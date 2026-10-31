@@ -3,151 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Эмбед-сообщения</title>
-    <link rel="stylesheet" href="/css/style.css?v=3">
+    <title>Эмбеды — Where Winds Meet</title>
+    <link rel="stylesheet" href="/css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="admin-page">
+    <div class="bg-ink"></div>
+    <div class="fog"></div>
 
-    <!-- ВСТАВЛЯТЬ СЮДА: Фон и эффекты -->
-    <video class="bg-video" autoplay loop muted playsinline poster="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2070&auto=format&fit=crop">
-        <source src="https://assets.mixkit.co/videos/preview/mixkit-clouds-and-blue-sky-2408-large.mp4" type="video/mp4">
-    </video>
-    <div class="bg-overlay"></div>
-    <div class="bg-particles"></div>
-    <!-- КОНЕЦ БЛОКА С ФОНОМ -->
+    <div class="container">
+        <nav class="top-nav">
+            <div class="logo">WHERE WINDS MEET</div>
+            <a href="#" class="back-link" id="back-link">← Назад в управление</a>
+        </nav>
 
-    <!-- Кнопка-печать "Главная" -->
-    <a href="#" id="top-banner-link" class="top-banner"></a>
-    
-    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
-    
-    <div class="main-container">
-        <!-- ... остальной код ... -->
-
-    <a href="#" id="top-banner-link" class="top-banner"></a>
-
-    <div class="main-container">
-        <div class="sidebar">
-            <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><div class="icon icon-arrow-left"></div> К списку серверов</a>
-            <hr style="border-color: var(--border-color); margin-bottom: 20px;">
-            <a href="#" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
-            <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
-            <a href="#" id="nav-guild"><div class="icon icon-users"></div> Гильдия</a>
-            <a href="#" id="nav-guides"><div class="icon icon-book"></div> Гайды</a>
-            <a href="#" id="nav-rr"><div class="icon icon-masks"></div> Роли по кнопкам</a>
-            <a href="#" id="nav-rem"><div class="icon icon-alarm"></div> Напоминания</a>
-            <a href="#" id="nav-mod"><div class="icon icon-gear"></div> Модерация</a>
-            <a href="#" id="nav-logs"><div class="icon icon-scroll"></div> Логи действий</a>
-            <a href="#" class="active"><div class="icon icon-envelope"></div> Эмбеды</a>
+        <div class="page-title">
+            <h1>✉️ Эмбеды</h1>
+            <p>☯ Сообщения от имени бота</p>
         </div>
 
-        <div class="content">
-            <div class="header"><h1><div class="icon icon-envelope"></div> Управление сообщениями</h1></div>
-            <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); align-items: start;">
-                <div class="form-card">
-                    <h3 id="form-title" style="color: var(--accent-gold); margin-bottom: 20px; font-family: 'Georgia', serif;">Создать сообщение</h3>
-                    <input type="hidden" id="edit-message-id" value="">
-                    <div class="form-group"><label>ID Канала</label><input type="text" id="channel-id" placeholder="123456789..."></div>
-                    <div class="form-group"><label>Заголовок</label><input type="text" id="cmd-title" placeholder="Заголовок"></div>
-                    <div class="form-group"><label>Текст</label><textarea id="cmd-desc" placeholder="Описание..." style="height: 100px;"></textarea></div>
-                    <div class="form-group"><label>Цвет полоски</label><input type="color" id="cmd-color" value="#2ecc71" style="height: 45px; padding: 5px;"></div>
-                    <div style="display: flex; gap: 10px; margin-top: 20px;">
-                        <button class="btn" onclick="saveMessage()" id="btn-save" style="flex: 1;"><div class="icon icon-paper-plane"></div> Отправить</button>
-                        <button class="btn btn-danger" onclick="cancelEdit()" id="btn-cancel" style="display: none;"><div class="icon icon-x"></div></button>
-                    </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;" id="custom-layout">
+            <div class="panel">
+                <div class="panel-title">
+                    <span id="form-title">Создать сообщение</span>
                 </div>
 
-                <div class="form-card">
-                    <h3 style="color: var(--accent-gold); margin-bottom: 20px; font-family: 'Georgia', serif;">Отправленные</h3>
-                    <div id="messages-list"><p style="color: var(--text-muted);">Загрузка...</p></div>
+                <div class="form-group">
+                    <label>ID канала</label>
+                    <input type="text" id="channel-id" placeholder="123456789...">
+                </div>
+                <div class="form-group">
+                    <label>Заголовок</label>
+                    <input type="text" id="cmd-title" placeholder="Заголовок сообщения">
+                </div>
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea id="cmd-desc" placeholder="Текст сообщения..." style="min-height: 100px;"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Цвет полоски</label>
+                    <input type="color" id="cmd-color" value="#d4af37" style="height: 45px; padding: 5px;">
+                </div>
+                <div class="form-group">
+                    <label>Картинка (URL, опционально)</label>
+                    <input type="url" id="cmd-image" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label>Автор (опционально)</label>
+                    <input type="text" id="cmd-author" placeholder="Имя автора">
+                </div>
+                <div class="form-group">
+                    <label>Подвал (опционально)</label>
+                    <input type="text" id="cmd-footer" placeholder="Footer текст">
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="saveMessage()" id="btn-save" style="flex: 1;">📤 Отправить</button>
+                    <button class="btn btn-danger" onclick="cancelEdit()" id="btn-cancel" style="display: none;">Отмена</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">
+                    <span>Отправленные</span>
+                </div>
+                <div id="messages-list">
+                    <div class="empty-state">Загрузка...</div>
                 </div>
             </div>
         </div>
     </div>
 
+    <style>
+        @media (max-width: 900px) {
+            #custom-layout { grid-template-columns: 1fr !important; }
+        }
+        .msg-card {
+            background: rgba(0,0,0,0.35);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 10px;
+        }
+        .msg-card h4 { color: var(--gold); font-family: 'Cinzel', serif; margin-bottom: 6px; font-size: 15px; }
+        .msg-card p { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+    </style>
+
     <script>
         const guildId = window.location.pathname.split('/')[2];
-        const banner = document.getElementById('top-banner-link');
-        if (banner) banner.href = `/manage/${guildId}`;
+        const backLink = document.getElementById('back-link');
+        if (backLink) backLink.href = '/manage/' + guildId;
 
-        const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-guild': '/profiles', 'nav-guides': '/guides', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-logs': '/logs'};
-        for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
-        
-        fetch(`/api/guild/${guildId}`).then(res => res.json()).then(data => document.getElementById('server-name').innerText = data.name);
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
+        }
 
         function loadMessages() {
-            fetch(`/api/guild/${guildId}/embeds`).then(res => res.json()).then(data => {
-                const list = document.getElementById('messages-list');
-                if (data.length === 0) return list.innerHTML = '<p style="color: var(--text-muted);">Сообщений нет.</p>';
-                
-                list.innerHTML = '';
-                data.forEach(msg => {
-                    list.innerHTML += `
-                        <div style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${msg.color || 'var(--accent-jade)'};">
-                            <h4 style="color: var(--accent-gold); margin-bottom: 5px;">${msg.title || 'Без заголовка'}</h4>
-                            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">${msg.description ? msg.description.substring(0, 50) + '...' : ''}</p>
+            fetch('/api/guild/' + guildId + '/custom', { credentials: 'include' })
+                .then(res => res.json())
+                .then(data => {
+                    const list = document.getElementById('messages-list');
+                    if (!data || data.length === 0) {
+                        list.innerHTML = '<div class="empty-state">Сообщений нет.</div>';
+                        return;
+                    }
+                    list.innerHTML = '';
+                    data.forEach(msg => {
+                        const card = document.createElement('div');
+                        card.className = 'msg-card';
+                        card.style.borderLeft = '3px solid ' + (msg.color || '#d4af37');
+                        card.innerHTML = `
+                            <h4>${escapeHtml(msg.title || 'Без заголовка')}</h4>
+                            <p>${msg.description ? escapeHtml(msg.description.substring(0, 80)) + '...' : 'Без описания'}</p>
                             <div style="display: flex; gap: 10px;">
-                                <button class="btn btn-small" onclick='editMessage(${JSON.stringify(msg)})'><div class="icon icon-pencil"></div> Ред.</button>
-                                <button class="btn btn-danger btn-small" onclick="deleteMessage('${msg.messageId}')"><div class="icon icon-trash"></div> Удалить</button>
+                                <button class="btn btn-secondary btn-small" style="flex: 1;">✏ Ред.</button>
+                                <button class="btn btn-danger btn-small" style="flex: 1;">🗑 Удалить</button>
                             </div>
-                        </div>
-                    `;
+                        `;
+                        card.querySelector('.btn-secondary').onclick = () => editMessage(msg);
+                        card.querySelector('.btn-danger').onclick = () => deleteMessage(msg.messageId);
+                        list.appendChild(card);
+                    });
+                })
+                .catch(() => {
+                    document.getElementById('messages-list').innerHTML = '<div class="empty-state">Ошибка загрузки.</div>';
                 });
-            });
         }
+
         loadMessages();
 
         function saveMessage() {
-            const messageId = document.getElementById('edit-message-id').value;
+            const messageId = document.getElementById('btn-cancel').style.display === 'block';
             const payload = {
                 channelId: document.getElementById('channel-id').value,
                 title: document.getElementById('cmd-title').value,
                 description: document.getElementById('cmd-desc').value,
                 color: document.getElementById('cmd-color').value,
-                image: '', footer: '', author: ''
+                image: document.getElementById('cmd-image').value,
+                author: document.getElementById('cmd-author').value,
+                footer: document.getElementById('cmd-footer').value
             };
 
             if (!messageId && !payload.channelId) return alert('Укажите ID канала!');
 
-            const method = messageId ? 'PUT' : 'POST';
-            const url = messageId ? `/api/guild/${guildId}/embeds/${messageId}` : `/api/guild/${guildId}/embeds`;
+            const method = messageId ? 'POST' : 'POST'; // web.js не имеет PUT — только POST/DELETE
+            const url = '/api/guild/' + guildId + '/custom';
 
-            fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-            .then(res => res.json()).then(data => {
+            fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            }).then(res => res.json()).then(data => {
                 if (data.success) {
-                    alert(method === 'PUT' ? 'Обновлено!' : 'Отправлено!');
-                    cancelEdit(); loadMessages();
-                }
-            });
+                    alert('✅ Отправлено!');
+                    cancelEdit();
+                    loadMessages();
+                } else alert('❌ Ошибка: ' + (data.error || 'неизвестно'));
+            }).catch(() => alert('❌ Ошибка сети'));
         }
 
         function editMessage(msg) {
-            document.getElementById('form-title').innerText = 'Редактировать';
-            document.getElementById('edit-message-id').value = msg.messageId;
+            document.getElementById('form-title').innerText = 'Редактировать (только текст)';
             document.getElementById('channel-id').value = msg.channelId;
             document.getElementById('channel-id').disabled = true;
             document.getElementById('cmd-title').value = msg.title || '';
             document.getElementById('cmd-desc').value = msg.description || '';
-            document.getElementById('cmd-color').value = msg.color || '#2ecc71';
-            document.getElementById('btn-save').innerHTML = '<div class="icon icon-floppy-disk"></div> Сохранить';
+            document.getElementById('cmd-color').value = msg.color || '#d4af37';
+            document.getElementById('cmd-image').value = msg.image || '';
+            document.getElementById('cmd-author').value = msg.author || '';
+            document.getElementById('cmd-footer').value = msg.footer || '';
             document.getElementById('btn-cancel').style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function cancelEdit() {
             document.getElementById('form-title').innerText = 'Создать сообщение';
-            document.getElementById('edit-message-id').value = '';
-            document.getElementById('channel-id').disabled = false;
             document.getElementById('channel-id').value = '';
+            document.getElementById('channel-id').disabled = false;
             document.getElementById('cmd-title').value = '';
             document.getElementById('cmd-desc').value = '';
-            document.getElementById('btn-save').innerHTML = '<div class="icon icon-paper-plane"></div> Отправить';
+            document.getElementById('cmd-color').value = '#d4af37';
+            document.getElementById('cmd-image').value = '';
+            document.getElementById('cmd-author').value = '';
+            document.getElementById('cmd-footer').value = '';
             document.getElementById('btn-cancel').style.display = 'none';
         }
 
         function deleteMessage(id) {
             if (!confirm('Удалить сообщение?')) return;
-            fetch(`/api/guild/${guildId}/embeds/${id}`, { method: 'DELETE' }).then(() => loadMessages());
+            fetch('/api/guild/' + guildId + '/custom/' + id, { method: 'DELETE', credentials: 'include' })
+                .then(() => loadMessages());
         }
     </script>
 </body>
