@@ -79,38 +79,97 @@ app.get('/api/guild/:id', isModerator, async (req, res) => {
 app.get('/api/profile/:guildId', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     const targetUserId = req.query.user || req.user.id;
-    
-    let profile = await PlayerProfile.findOne({ userId: targetUserId, guildId: req.params.guildId });
-    if (!profile) profile = await PlayerProfile.findOne({ userId: targetUserId, isGlobal: true });
-    
-    if (!profile) {
-        profile = { 
-            userId: targetUserId, guildId: req.params.guildId, isGlobal: false, 
-            characters: [ { gameNickname: '', guildName: '', roles: [], martialArts: [], bio: '', buildUrl: '', builds: { PvE: { innerWays: [], mysticSkills: [] }, PvP: { innerWays: [], mysticSkills: [] } } } ] 
+    // ─── Профили персонажей ────────────────────────────────────────────────
+function normalizeProfileCharacters(input) {
+    if (!Array.isArray(input)) return [];
+    const LIMITS = { mysticSkills: 8, innerWays: 4 };
+    return input.slice(0, 3).map(c => {
+        const clean = {
+            gameNickname: String(c && c.gameNickname || '').trim().slice(0, 64),
+            guildName: String(c && c.guildName || '').trim().slice(0, 64),
+            bio: String(c && c.bio || '').slice(0, 500),
+            builds: { PvE: { mysticSkills: [], innerWays: [] }, PvP: { mysticSkills: [], innerWays: [] } }
         };
+        ['PvE', 'PvP'].forEach(tab => {
+            const src = (c && c.builds && c.builds[tab]) || {};
+            ['mysticSkills', 'innerWays'].forEach(key => {
+                const arr = Array.isArray(src[key]) ? src[key] : [];
+                clean.builds[tab][key] = arr
+                    .filter(x => typeof x === 'string' && x.length <= 64)
+                    .slice(0, LIMITS[key]);
+            });
+        });
+        return clean;
+    }).filter(c => c.gameNickname.length > 0);
+}
+
+function resolveProfileGuildId(req) {
+    const fromUrl = req.params.guildId;
+    if (fromUrl && fromUrl !== 'profile') return fromUrl;
+    const fromQuery = req.query.guild;
+    if (fromQuery && typeof fromQuery === 'string') return fromQuery;
+    return 'global';
+}
+
+app.get('/api/profile/:guildId', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    const targetUserId = req.query.user || req.user.id;
+    const guildId = resolveProfileGuildId(req);
+
+    let profile = await PlayerProfile.findOne({ userId: targetUserId, guildId });
+    if (!profile) profile = await PlayerProfile.findOne({ userId: targetUserId, isGlobal: true });
+
+    if (!profile) {
+        return res.json({
+            _id: null,
+            userId: targetUserId,
+            guildId,
+            isGlobal: false,
+            characters: [{
+                gameNickname: '', guildName: '', bio: '',
+                builds: { PvE: { mysticSkills: [], innerWays: [] }, PvP: { mysticSkills: [], innerWays: [] } }
+            }]
+        });
     }
     res.json(profile);
 });
 
 app.post('/api/profile/:guildId', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
-    const { characters, isGlobal, targetUser } = req.body;
+    const guildId = resolveProfileGuildId(req);
+    const { characters, isGlobal, targetUser } = req.body || {};
     const finalUserId = targetUser || req.user.id;
 
+    // Сохранять чужой профиль может только владелец бота
+    if (targetUser && targetUser !== req.user.id && req.user.id !== OWNER_ID) {
+        return res.status(403).json({ error: 'Нельзя изменить чужой профиль' });
+    }
+
+    const cleanCharacters = normalizeProfileCharacters(characters);
+    if (cleanCharacters.length === 0) {
+        return res.status(400).json({ error: 'Нужен хотя бы один персонаж с ником' });
+    }
+
     try {
-        await PlayerProfile.findOneAndUpdate(
-            { userId: finalUserId, guildId: req.params.guildId }, 
-            { characters, isGlobal }, 
-            { upsert: true, new: true }
+        const profile = await PlayerProfile.findOneAndUpdate(
+            { userId: finalUserId, guildId },
+            { characters: cleanCharacters, isGlobal: !!isGlobal },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
         );
-        res.json({ success: true });
+        res.json({ success: true, profile });
     } catch (e) {
         console.error('ОШИБКА БАЗЫ:', e);
         res.status(500).json({ error: 'Ошибка базы данных' });
     }
 });
 
-app.delete('/api/profile/:guildId', async (req, res) => { if (!req.user) return res.status(401).json({ error: 'Не авторизован' }); await PlayerProfile.findOneAndDelete({ userId: req.user.id, guildId: req.params.guildId }); res.json({ success: true }); });
+app.delete('/api/profile/:guildId', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    const guildId = resolveProfileGuildId(req);
+    await PlayerProfile.findOneAndDelete({ userId: req.user.id, guildId });
+    res.json({ success: true });
+});
+// ──────────────────────────────────────────────────────────────────────
 app.get('/api/guild/:id/profiles', isModerator, async (req, res) => { const client = req.app.get('botClient'); const discordGuild = client.guilds.cache.get(req.params.id); const profiles = await PlayerProfile.find({ $or: [ { guildId: req.params.id }, { isGlobal: true } ] }); const enriched = await Promise.all(profiles.map(async (p) => { const member = await discordGuild.members.fetch(p.userId).catch(() => null); return { ...p._doc, discordName: member ? member.user.username : 'Неизвестный', avatar: member && member.user.avatar ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png' }; })); res.json(enriched); });
 app.delete('/api/guild/:id/profiles/:userId', isModerator, async (req, res) => { await PlayerProfile.findOneAndDelete({ userId: req.params.userId, guildId: req.params.id }); res.json({ success: true }); });
 
