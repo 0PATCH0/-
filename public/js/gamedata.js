@@ -90,4 +90,6 @@ window.GAME_DATA = {
         { id: "thunderous_bloom", nameEN: "Thunderous Bloom", nameRU: "Громовой Цвет", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/7/7c/Thunderous-bloom-internal-arts-wherewindsmeet-wiki-guide.webp" },
         { id: "vendetta", nameEN: "Vendetta", nameRU: "Вендетта", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/7/77/Vendetta-internal-arts-wherewindsmeet-wiki-guide.webp" },
         { id: "vital_leech", nameEN: "Vital Leech", nameRU: "Жизненный Вампиризм", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/8/8e/Vital-leech-internal-arts-wherewindsmeet-wiki-guide.webp" },
-        { id: "wind_beneath_wings", nameEN: "Wind 
+        { id: "wind_beneath_wings", nameEN: "Wind Beneath Wings", nameRU: "Ветер под Крыльями", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/7/79/Wind-beneath-wings-internal-arts-wherewindsmeet-wiki-guide.webp" }
+    ]
+};
