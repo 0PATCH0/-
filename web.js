@@ -79,7 +79,7 @@ app.get('/api/guild/:id', isModerator, async (req, res) => {
 // ─── ПРОФИЛЬ ──────────────────────────────────────────────
 function normalizeProfileCharacters(input) {
     if (!Array.isArray(input)) return [];
-    const LIMITS = { mysticSkills: 8, innerWays: 4 };
+    const LIMITS = { mysticSkills: 8, innerWays: 4, martialArts: 2 };
     return input.slice(0, 3).map(c => {
         const clean = {
             gameNickname: String(c && c.gameNickname || '').trim().slice(0, 64),
@@ -89,7 +89,7 @@ function normalizeProfileCharacters(input) {
         };
         ['PvE', 'PvP'].forEach(tab => {
             const src = (c && c.builds && c.builds[tab]) || {};
-            ['mysticSkills', 'innerWays'].forEach(key => {
+            ['mysticSkills', 'innerWays', 'martialArts'].forEach(key => {
                 const arr = Array.isArray(src[key]) ? src[key] : [];
                 clean.builds[tab][key] = arr
                     .filter(x => typeof x === 'string' && x.length <= 64)
