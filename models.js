@@ -11,7 +11,6 @@ const LogSchema = new mongoose.Schema({ guildId: String, userId: String, usernam
 const GuideSchema = new mongoose.Schema({ guildId: String, name: String, description: String, chapters: [{ title: String, content: String, color: String, imageUrl: String, attachmentUrl: String, attachmentName: String }], date: { type: Date, default: Date.now } });
 const EventSchema = new mongoose.Schema({ guildId: String, title: String, description: String, date: Number, creatorId: String, attendees: [{ type: String }] });
 
-// СТРУКТУРА ПРОФИЛЯ С ДВУМЯ БИЛДАМИ
 const PlayerProfileSchema = new mongoose.Schema({
     userId: { type: String, required: true },
     guildId: { type: String, required: true },
@@ -23,17 +22,9 @@ const PlayerProfileSchema = new mongoose.Schema({
         martialArts: { type: [String], default: [] }, 
         bio: { type: String, default: '' },
         buildUrl: { type: String, default: '' },
-        
-        // ВОТ СЮДА БУДУТ ПИСАТЬСЯ ДАННЫЕ ИЗ ФОРМЫ
         builds: {
-            PvE: { 
-                innerWays: { type: [String], default: [] }, 
-                mysticSkills: { type: [String], default: [] } 
-            },
-            PvP: { 
-                innerWays: { type: [String], default: [] }, 
-                mysticSkills: { type: [String], default: [] } 
-            }
+            PvE: { innerWays: { type: [String], default: [] }, mysticSkills: { type: [String], default: [] } },
+            PvP: { innerWays: { type: [String], default: [] }, mysticSkills: { type: [String], default: [] } }
         }
     }]
 });
