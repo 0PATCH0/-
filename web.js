@@ -728,14 +728,32 @@ app.post('/api/guild/:id/roster-config', isModerator, async (req, res) => {
     try {
         const { columns } = req.body || {};
         if (!Array.isArray(columns)) return res.status(400).json({ error: 'columns должен быть массивом' });
-        // Валидация: базовые классы всегда первые 3, кастомные — после
-        const classes = columns.filter(c => c.isClass);
-        const custom = columns.filter(c => !c.isClass);
-        if (classes.length !== 3) {
-            return res.status(400).json({ error: 'Должно быть ровно 3 базовых класса' });
-        }
-        // Кастомные не могут идти выше классов
-        const finalColumns = [...classes, ...custom];
+
+        // Гарантируем, что три базовых класса всегда есть и всегда сверху
+        const BASE_CLASSES = [
+            { key: 'tank',   name: 'Танк', icon: 'tank',   color: '#2ecc71', isClass: true },
+            { key: 'dps',    name: 'ДД',   icon: 'dps',    color: '#e74c3c', isClass: true },
+            { key: 'healer', name: 'Хил',  icon: 'healer', color: '#9b59b6', isClass: true }
+        ];
+        // Сохраняем только кастомные колонки, но при этом восстанавливаем базовые из дефолта
+        // (или из существующих, если они есть — чтобы не сбрасывать переименование, если кто-то его сделал)
+        const existing = await RosterConfig.findOne({ guildId: req.params.id });
+        const existingClasses = (existing && existing.columns || []).filter(c => c.isClass);
+
+        const baseClasses = BASE_CLASSES.map(def => {
+            const found = existingClasses.find(c => c.key === def.key);
+            return found ? { ...def, name: found.name || def.name } : def;
+        });
+
+        const custom = columns.filter(c => !c.isClass).map(c => ({
+            key: c.key,
+            name: c.name,
+            icon: c.icon || 'custom',
+            color: c.color || '#d4af37',
+            isClass: false
+        }));
+
+        const finalColumns = [...baseClasses, ...custom];
         finalColumns.forEach((c, i) => { c.order = i; });
 
         const config = await RosterConfig.findOneAndUpdate(
@@ -744,7 +762,10 @@ app.post('/api/guild/:id/roster-config', isModerator, async (req, res) => {
             { upsert: true, new: true }
         );
         res.json({ success: true, config });
-    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+    } catch (e) {
+        console.error('ROSTER CONFIG POST:', e);
+        res.status(500).json({ error: 'Ошибка: ' + e.message });
+    }
 });
 
 // Ручное назначение участника в кастомную должность
