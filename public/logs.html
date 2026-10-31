@@ -3,86 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Логи действий</title>
-    <link rel="stylesheet" href="/css/style.css?v=3">
+    <title>Логи — Where Winds Meet</title>
+    <link rel="stylesheet" href="/css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="admin-page">
+    <div class="bg-ink"></div>
+    <div class="fog"></div>
 
-    <video class="bg-video" autoplay loop muted playsinline poster="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2070&auto=format&fit=crop">
-        <source src="https://assets.mixkit.co/videos/preview/mixkit-clouds-and-blue-sky-2408-large.mp4" type="video/mp4">
-    </video>
-    <div class="bg-overlay"></div>
-    <div class="bg-particles"></div>
-    <!-- КОНЕЦ БЛОКА С ФОНОМ -->
+    <div class="container">
+        <nav class="top-nav">
+            <div class="logo">WHERE WINDS MEET</div>
+            <a href="#" class="back-link" id="back-link">← Назад в управление</a>
+        </nav>
 
-    <!-- Кнопка-печать "Главная" -->
-    <a href="#" id="top-banner-link" class="top-banner"></a>
-    
-    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
-    
-    <div class="main-container">
-
-    <a href="#" id="top-banner-link" class="top-banner"></a>
-
-    <div class="main-container">
-        <div class="sidebar">
-            <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><div class="icon icon-arrow-left"></div> К списку серверов</a>
-            <hr style="border-color: var(--border-color); margin-bottom: 20px;">
-            <a href="#" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
-            <a href="#" id="nav-roster"><div class="icon icon-shield"></div> Состав гильдии</a>
-            <a href="#" id="nav-guild"><div class="icon icon-users"></div> Гильдия</a>
-            <a href="#" id="nav-guides"><div class="icon icon-book"></div> Гайды</a>
-            <a href="#" id="nav-rr"><div class="icon icon-masks"></div> Роли по кнопкам</a>
-            <a href="#" id="nav-rem"><div class="icon icon-alarm"></div> Напоминания</a>
-            <a href="#" id="nav-mod"><div class="icon icon-gear"></div> Модерация</a>
-            <a href="#" class="active"><div class="icon icon-scroll"></div> Логи действий</a>
-            <a href="#" id="nav-emb"><div class="icon icon-envelope"></div> Эмбеды</a>
+        <div class="page-title">
+            <h1>📜 Журнал действий</h1>
+            <p>☯ Кто, когда и что делал</p>
         </div>
 
-        <div class="content">
-            <div class="header"><h1><div class="icon icon-scroll"></div> Журнал действий</h1></div>
-            <div class="form-card" style="overflow-x: auto; padding: 20px;">
-                <table style="width: 100%; border-collapse: collapse; text-align: left;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid var(--border-color); color: var(--accent-gold); font-family: 'Georgia', serif;">
-                            <th style="padding: 15px;">Время</th>
-                            <th style="padding: 15px;">Модератор</th>
-                            <th style="padding: 15px;">Действие</th>
-                            <th style="padding: 15px;">Детали</th>
-                        </tr>
-                    </thead>
-                    <tbody id="logs-body">
-                        <tr><td colspan="4" style="text-align: center; padding: 20px; color: var(--text-muted);">Загрузка...</td></tr>
-                    </tbody>
-                </table>
+        <div class="panel">
+            <div class="panel-title">
+                <span>История</span>
+            </div>
+            <div id="logs-list">
+                <div class="empty-state">Загрузка...</div>
             </div>
         </div>
     </div>
 
+    <style>
+        .log-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .log-item:last-child { border-bottom: none; }
+        .log-time {
+            font-size: 12px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            min-width: 130px;
+            padding-top: 3px;
+        }
+        .log-content { flex: 1; min-width: 0; }
+        .log-user {
+            color: var(--jade);
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        .log-action {
+            display: inline-block;
+            background: rgba(46,204,113,0.15);
+            color: var(--jade);
+            border: 1px solid rgba(46,204,113,0.3);
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+        .log-details {
+            font-size: 13px;
+            color: #c4bfae;
+            line-height: 1.5;
+        }
+        @media (max-width: 600px) {
+            .log-item { flex-direction: column; gap: 6px; }
+            .log-time { min-width: 0; }
+        }
+    </style>
+
     <script>
         const guildId = window.location.pathname.split('/')[2];
-        const banner = document.getElementById('top-banner-link');
-        if (banner) banner.href = `/manage/${guildId}`;
+        const backLink = document.getElementById('back-link');
+        if (backLink) backLink.href = '/manage/' + guildId;
 
-        const navs = {'nav-home': '', 'nav-roster': '/roster', 'nav-guild': '/profiles', 'nav-guides': '/guides', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-emb': '/custom'};
-        for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
+        }
 
-        fetch(`/api/guild/${guildId}`).then(r=>r.json()).then(d => document.getElementById('server-name').innerText = d.name);
-
-        fetch(`/api/guild/${guildId}/logs`).then(res => res.json()).then(data => {
-            const tbody = document.getElementById('logs-body');
-            if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">Логов пока нет.</td></tr>';
-            
-            tbody.innerHTML = data.map(log => `
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <td style="padding: 15px; color: var(--text-muted); font-size: 13px;">${new Date(log.date).toLocaleString('ru-RU')}</td>
-                    <td style="padding: 15px; color: var(--accent-jade); font-weight: bold;">${log.username}</td>
-                    <td style="padding: 15px;"><span style="background: rgba(46, 204, 113, 0.15); color: var(--accent-jade); padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(46, 204, 113, 0.3);">${log.action}</span></td>
-                    <td style="padding: 15px; font-size: 14px;">${log.details}</td>
-                </tr>
-            `).join('');
-        });
+        fetch('/api/guild/' + guildId + '/logs', { credentials: 'include' })
+            .then(res => res.json())
+            .then(data => {
+                const list = document.getElementById('logs-list');
+                if (!data || data.length === 0) {
+                    list.innerHTML = '<div class="empty-state">Логов пока нет.</div>';
+                    return;
+                }
+                list.innerHTML = data.map(log => {
+                    const date = new Date(log.date).toLocaleString('ru-RU');
+                    return `
+                        <div class="log-item">
+                            <div class="log-time">${date}</div>
+                            <div class="log-content">
+                                <div class="log-user">${escapeHtml(log.username || 'Неизвестный')}</div>
+                                <div class="log-action">${escapeHtml(log.action || '—')}</div>
+                                <div class="log-details">${escapeHtml(log.details || '')}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            })
+            .catch(() => {
+                document.getElementById('logs-list').innerHTML = '<div class="empty-state">Ошибка загрузки.</div>';
+            });
     </script>
 </body>
 </html>
