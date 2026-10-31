@@ -59,45 +59,7 @@ async function registerCommands() {
     }
 }
 
-async function refreshRosterMessage(guildId, client) {
-    try {
-        const msgRecord = await RosterMessage.findOne({ guildId });
-        if (!msgRecord) return; 
 
-        const config = await RosterConfig.findOne({ guildId });
-        const rosterData = await Roster.findOne({ guildId });
-        if (!config || !rosterData) return;
-
-        const embedsToSend = [];
-        let totalUnique = new Set();
-
-        config.columns.forEach((col) => {
-            const roleData = rosterData.data[col.roleId] || [];
-            roleData.forEach(m => totalUnique.add(m.id));
-            let memberList = roleData.length > 0 ? roleData.map(m => `<@${m.id}>`).join('\n') : '*Никого нет*';
-            if (memberList.length > 4000) memberList = memberList.substring(0, 4000) + '\n...и другие';
-
-            embedsToSend.push(new EmbedBuilder()
-                .setTitle(col.name).setColor(col.color || '#5865F2').setDescription(memberList)
-                .setFooter({ text: `Участников: ${roleData.length} • Обновлено: ${new Date(rosterData.lastUpdated).toLocaleString('ru-RU')}` }));
-        });
-
-        embedsToSend.unshift(new EmbedBuilder().setTitle('🛡️ Состав гильдии').setColor('#2b2d31')
-            .setDescription(`**Всего уникальных участников:** ${totalUnique.size}`).setTimestamp());
-
-        const channel = await client.channels.fetch(msgRecord.channelId).catch(() => null);
-        if (!channel) return;
-        const message = await channel.messages.fetch(msgRecord.messageId).catch(() => null);
-        if (!message) {
-            await RosterMessage.deleteOne({ guildId });
-            return;
-        }
-
-        await message.edit({ embeds: embedsToSend.slice(0, 10) });
-    } catch (e) {
-        console.error('[ROSTER] Ошибка при обновлении сообщения:', e);
-    }
-}
 
 async function updateRosterForGuild(guild) {
     try {
