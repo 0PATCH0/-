@@ -22,6 +22,10 @@
             <p>☯ Знания, что передаются из поколения в поколение</p>
         </div>
 
+        <div class="panel" id="error-panel" style="display:none;">
+            <div class="empty-state" id="error-msg"></div>
+        </div>
+
         <div style="text-align: center; margin-bottom: 30px;">
             <a href="#" id="btn-create" class="btn btn-primary">+ Создать гайд</a>
         </div>
@@ -30,6 +34,36 @@
             <div class="empty-state">Загрузка...</div>
         </div>
     </div>
+
+    <style>
+        .guide-tile {
+            position: relative;
+            overflow: hidden;
+        }
+        .guide-tile.has-cover {
+            background-size: cover;
+            background-position: center;
+        }
+        .guide-tile.has-cover::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(6,8,10,0.3) 0%, rgba(6,8,10,0.95) 80%);
+            z-index: 0;
+        }
+        .guide-tile > * { position: relative; z-index: 1; }
+        .guide-cover-tag {
+            display: inline-block;
+            background: rgba(212,175,55,0.2);
+            color: var(--gold);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            border: 1px solid rgba(212,175,55,0.4);
+        }
+    </style>
 
     <script>
         const guildId = window.location.pathname.split('/')[2];
@@ -42,8 +76,27 @@
             return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
         }
 
+        function findCover(guide) {
+            const chapters = guide.chapters || [];
+            for (const ch of chapters) {
+                if (ch.imageUrl && typeof ch.imageUrl === 'string' && ch.imageUrl.trim()) {
+                    return ch.imageUrl.trim();
+                }
+            }
+            return null;
+        }
+
         fetch('/api/guild/' + guildId + '/guides', { credentials: 'include' })
-            .then(res => res.json())
+            .then(res => {
+                if (res.status === 403) {
+                    document.getElementById('error-panel').style.display = 'block';
+                    document.getElementById('error-msg').textContent = '❌ У вас нет прав модератора на этом сервере.';
+                    document.getElementById('guides-grid').innerHTML = '';
+                    throw new Error('forbidden');
+                }
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            })
             .then(data => {
                 const grid = document.getElementById('guides-grid');
                 if (!data || data.length === 0) {
@@ -54,13 +107,22 @@
                 data.forEach(guide => {
                     const chaptersCount = (guide.chapters || []).length;
                     const date = guide.date ? new Date(guide.date).toLocaleDateString('ru-RU') : '—';
+                    const cover = findCover(guide);
+                    const preview = (guide.description || '').length > 120
+                        ? guide.description.substring(0, 120) + '...'
+                        : (guide.description || 'Без описания');
+
                     const card = document.createElement('div');
-                    card.className = 'tile';
+                    card.className = 'tile guide-tile' + (cover ? ' has-cover' : '');
+                    if (cover) {
+                        card.style.backgroundImage = `url("${cover.replace(/"/g, '\\"')}")`;
+                    }
                     card.innerHTML = `
+                        ${cover ? '<span class="guide-cover-tag">📸 с обложкой</span>' : ''}
                         <span class="tile-icon">📖</span>
                         <span class="tile-title">${escapeHtml(guide.name || 'Без названия')}</span>
                         <span class="tile-desc">
-                            ${escapeHtml(guide.description || 'Без описания')}<br>
+                            ${escapeHtml(preview)}<br>
                             <span style="color:var(--text-muted);font-size:12px;">Глав: ${chaptersCount} • ${date}</span>
                         </span>
                         <div style="display:flex;gap:8px;margin-top:10px;">
@@ -75,8 +137,10 @@
                     grid.appendChild(card);
                 });
             })
-            .catch(() => {
-                document.getElementById('guides-grid').innerHTML = '<div class="empty-state">Ошибка загрузки.</div>';
+            .catch(err => {
+                if (err.message === 'forbidden') return;
+                document.getElementById('guides-grid').innerHTML =
+                    '<div class="empty-state">Ошибка загрузки: ' + escapeHtml(err.message) + '</div>';
             });
 
         function deleteGuide(id) {
