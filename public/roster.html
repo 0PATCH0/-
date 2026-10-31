@@ -363,8 +363,10 @@
             header.insertAdjacentHTML('afterend', filtersHtml);
 
             const counter = document.getElementById('guild-counter');
-            if (counter) counter.textContent = `Всего участников: ${allMembers.length}`;
-        }
+if (counter) {
+    const stats = window.__rosterStats || { total: allMembers.length, classified: 0 };
+    counter.innerHTML = `Всего с профилем: ${stats.total} &nbsp;•&nbsp; <span style="color:#2ecc71;">Классифицировано: ${stats.classified}</span>`;
+}
 
         function selectFilter(key) {
             currentFilter = key;
