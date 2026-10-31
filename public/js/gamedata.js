@@ -92,8 +92,7 @@
         { id: "vital_leech", nameEN: "Vital Leech", nameRU: "Жизненный Вампиризм", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/8/8e/Vital-leech-internal-arts-wherewindsmeet-wiki-guide.webp" },
           { id: "wind_beneath_wings", nameEN: "Wind Beneath Wings", nameRU: "Ветер под Крыльями", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/7/79/Wind-beneath-wings-internal-arts-wherewindsmeet-wiki-guide.webp" }
     ]
-};
-    ],
+},
     martialArts: [
         { id: "nameless_sword", nameEN: "Nameless Sword", nameRU: "Безымянный меч", path: "Bellstrike - Splendor", emoji: "🗡️", desc: "Быстрый и чистый стиль ближнего боя, ориентированный на быстрые удары и мобильность." },
         { id: "nameless_spear", nameEN: "Nameless Spear", nameRU: "Безымянное копьё", path: "Bellstrike - Splendor", emoji: "🔱", desc: "Ближний бой с высокой мобильностью. Обездвиживает цель и наносит мощный удар по прямой." },
