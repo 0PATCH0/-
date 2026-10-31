@@ -768,8 +768,6 @@ app.get('/api/guild/:id/roster', canViewRoster, async (req, res) => {
         const discordGuild = client.guilds.cache.get(req.params.id);
         if (!discordGuild) return res.status(404).json({ error: 'Бот не на сервере' });
 
-        await discordGuild.members.fetch({ time: 60000, force: false }).catch(() => {});
-
         let config = await RosterConfig.findOne({ guildId: req.params.id });
         let columns;
         if (!config || !config.columns || config.columns.length === 0) {
@@ -779,32 +777,35 @@ app.get('/api/guild/:id/roster', canViewRoster, async (req, res) => {
         }
         const manual = (config && config.manualAssignments) || {};
 
-        // Собираем участников с их классами
-        const members = [];
-        discordGuild.members.cache.forEach(m => {
-            if (m.user.bot) return;
-            const profileEntry = null; // профили подтягиваются отдельно, но нам нужны arts
-            members.push({
-                userId: m.id,
-                displayName: m.displayName,
-                username: m.user.username,
-                avatar: m.user.avatar
-                    ? `https://cdn.discordapp.com/avatars/${m.id}/${m.user.avatar}.png`
-                    : `https://cdn.discordapp.com/embed/avatars/0.png`,
-                roles: m.roles.cache.filter(r => r.id !== discordGuild.id).map(r => r.id)
-            });
+        // Только те, у кого есть профиль: на этом сервере ИЛИ глобальный
+        const profiles = await PlayerProfile.find({
+            $or: [ { guildId: req.params.id }, { isGlobal: true } ]
         });
 
-        // Подтягиваем профили этого сервера (для определения класса по искусствам)
-        const profiles = await PlayerProfile.find({ guildId: req.params.id });
         const profileMap = {};
-        profiles.forEach(p => { profileMap[p.userId] = p; });
+        profiles.forEach(p => {
+            // не перезаписываем, если уже есть локальный (локальный приоритетнее)
+            if (!profileMap[p.userId] || p.guildId === req.params.id) {
+                profileMap[p.userId] = p;
+            }
+        });
 
-        // Определяем класс и назначаем
-        const enriched = members.map(m => {
-            const p = profileMap[m.userId];
+        // Тянем только нужных участников из Discord
+        const memberIds = Object.keys(profileMap);
+        const fetchedMembers = await Promise.all(
+            memberIds.map(id => discordGuild.members.fetch(id).catch(() => null))
+        );
+
+        const members = [];
+        let classifiedCount = 0;
+
+        fetchedMembers.forEach(m => {
+            if (!m || m.user.bot) return;
+            const p = profileMap[m.id];
+            if (!p) return;
+
             let detectedClass = null;
-            if (p && p.characters && p.characters.length > 0) {
+            if (p.characters && p.characters.length > 0) {
                 const c = p.characters[0];
                 const arts = [
                     ...((c.builds?.PvE?.martialArts) || []),
@@ -812,18 +813,39 @@ app.get('/api/guild/:id/roster', canViewRoster, async (req, res) => {
                 ];
                 detectedClass = detectClassFromMartialArts(arts);
             }
-            return {
-                ...m,
+            if (detectedClass && detectedClass !== 'none') classifiedCount++;
+
+            members.push({
+                userId: m.id,
+                displayName: m.displayName,
+                username: m.user.username,
+                avatar: m.user.avatar
+                    ? `https://cdn.discordapp.com/avatars/${m.id}/${m.user.avatar}.png`
+                    : `https://cdn.discordapp.com/embed/avatars/0.png`,
+                roles: m.roles.cache.filter(r => r.id !== discordGuild.id).map(r => r.id),
                 detectedClass: detectedClass || 'none',
-                manualColumnKey: manual[m.userId] || null
-            };
+                manualColumnKey: manual[m.id] || null,
+                isGlobal: p.isGlobal
+            });
+        });
+
+        // Сортируем: сначала классифицированные, потом без класса; внутри — по алфавиту
+        members.sort((a, b) => {
+            const rank = (m) => m.detectedClass === 'none' && !m.manualColumnKey ? 1 : 0;
+            const r = rank(a) - rank(b);
+            if (r !== 0) return r;
+            return a.displayName.localeCompare(b.displayName);
         });
 
         res.json({
             configured: true,
             columns,
-            members: enriched,
-            isMod: !!req.isRosterMod
+            members,
+            isMod: !!req.isRosterMod,
+            stats: {
+                total: members.length,
+                classified: classifiedCount
+            }
         });
     } catch (e) {
         console.error('ROSTER GET:', e);
