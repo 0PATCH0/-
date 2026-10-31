@@ -2,9 +2,9 @@ const { EmbedBuilder } = require('discord.js');
 const { PlayerProfile, RosterConfig, RosterMessage, Settings } = require('./models');
 
 const BASE_CLASSES = [
-    { key: 'dps',    name: 'ДД',   icon: 'dps',    color: '#e74c3c', order: 0, isClass: true, emoji: '⚔️' },
-    { key: 'tank',   name: 'Танк', icon: 'tank',   color: '#2ecc71', order: 1, isClass: true, emoji: '🛡️' },
-    { key: 'healer', name: 'Хил',  icon: 'healer', color: '#9b59b6', order: 2, isClass: true, emoji: '💚' }
+    { key: 'dps',    name: 'ДД',   icon: 'dps',    color: '#e74c3c', order: 0, isClass: true, emoji: '<:dd:1564320122708037692>' },
+    { key: 'tank',   name: 'Танк', icon: 'tank',   color: '#2ecc71', order: 1, isClass: true, emoji: '<:tank:1564320623507935334>' },
+    { key: 'healer', name: 'Хил',  icon: 'healer', color: '#9b59b6', order: 2, isClass: true, emoji: '<:heal:1564320644496363702>' }
 ];
 
 // Определение класса по боевым искусствам
@@ -136,9 +136,13 @@ function buildRosterEmbeds(roster, guildId) {
         const list = byColumn[col.key] || [];
         if (list.length === 0) continue; // не показываем пустые
 
-        const emoji = col.emoji || (col.isClass
-            ? (col.icon === 'tank' ? '🛡️' : col.icon === 'dps' ? '⚔️' : col.icon === 'healer' ? '💚' : '◆')
-            : '⚙️');
+        let emoji;
+if (col.isClass) {
+    const base = BASE_CLASSES.find(b => b.key === col.key);
+    emoji = base ? base.emoji : '◆';
+} else {
+    emoji = col.emoji || '⚙️';
+}
 
         let value = list.map(m => `• <@${m.userId}> — [👁 Профиль](${profileUrl(m.userId)})`).join('\n');
         if (value.length > 1020) {
