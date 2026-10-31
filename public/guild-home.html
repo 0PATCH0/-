@@ -158,6 +158,11 @@
                 <span class="tile-title">Гайды</span>
                 <span class="tile-desc">Читать тактики и руководства гильдии.</span>
             </a>
+            <a href="#" class="tile" id="tile-global">
+    <span class="tile-icon">🌐</span>
+    <span class="tile-title">Глобальные странники</span>
+    <span class="tile-desc">Найти игроков по всей сети гильдий. Фильтр по гильдии и боевым искусствам.</span>
+            </a>
         </div>
 
         <div id="admin-section" style="display:none;">
@@ -189,6 +194,7 @@
         document.getElementById('tile-profile').href = '/profile?guild=' + guildId;
         document.getElementById('tile-events').href = '/manage/' + guildId + '/events';
         document.getElementById('tile-guides').href = '/manage/' + guildId + '/guides';
+        document.getElementById('tile-global').href = '/global-profiles';
         document.getElementById('tile-manage').href = '/manage/' + guildId;
         document.getElementById('tile-roster').href = '/manage/' + guildId + '/roster';
         document.getElementById('tile-profiles-admin').href = '/manage/' + guildId + '/profiles';
