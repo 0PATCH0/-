@@ -2,69 +2,462 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>События</title>
-    <link rel="stylesheet" href="/css/style.css?v=23">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>События — Where Winds Meet</title>
+    <link rel="stylesheet" href="/css/style.css?v=25">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Marcellus&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #d4af37;
+            --gold-soft: rgba(212, 175, 55, 0.35);
+            --jade: #2ecc71;
+            --danger: #e74c3c;
+            --border: rgba(212, 175, 55, 0.18);
+            --text-main: #e8e3d4;
+            --text-muted: #8a8578;
+            --bg-deep: #0a0b10;
+        }
+        body {
+            background:
+                radial-gradient(circle at 20% 10%, rgba(212, 175, 55, 0.06), transparent 40%),
+                radial-gradient(circle at 80% 90%, rgba(46, 204, 113, 0.05), transparent 45%),
+                linear-gradient(180deg, #0a0b10 0%, #0d0f14 100%);
+            color: var(--text-main);
+            font-family: 'Marcellus', serif;
+            min-height: 100vh;
+        }
+        .fog-layer {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(212,175,55,0.04) 100%);
+        }
+
+        .events-header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 1;
+        }
+        .events-header h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 40px;
+            color: var(--gold);
+            text-shadow: 0 0 25px var(--gold-soft);
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+        }
+        .events-header p { color: var(--text-muted); font-style: italic; }
+
+        .toolbar {
+            display: flex; gap: 12px; margin-bottom: 30px;
+            flex-wrap: wrap; justify-content: center; position: relative; z-index: 1;
+        }
+        .toolbar button {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 10px 18px;
+            border-radius: 30px;
+            font-family: 'Marcellus', serif;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .toolbar button:hover { border-color: var(--gold); color: var(--gold); }
+        .toolbar button.primary {
+            background: linear-gradient(135deg, #d4af37, #aa8624);
+            color: #0a0b10;
+            border-color: transparent;
+            font-weight: bold;
+        }
+        .toolbar button.primary:hover { filter: brightness(1.1); color: #0a0b10; }
+
+        .events-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .event-card {
+            background: linear-gradient(160deg, rgba(20, 24, 32, 0.96), rgba(12, 14, 20, 0.98));
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 22px;
+            position: relative;
+            overflow: hidden;
+            transition: 0.25s;
+            display: flex;
+            flex-direction: column;
+            animation: fadeInUp 0.5s ease-out;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .event-card:hover {
+            border-color: rgba(212, 175, 55, 0.5);
+            box-shadow: 0 8px 30px rgba(212, 175, 55, 0.12);
+            transform: translateY(-2px);
+        }
+        .event-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+
+        .event-title {
+            font-family: 'Cinzel', serif;
+            font-size: 20px;
+            color: var(--gold);
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        .event-date {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .event-date.past { color: var(--danger); }
+        .event-desc {
+            font-size: 14px;
+            color: #c4bfae;
+            line-height: 1.5;
+            margin-bottom: 16px;
+            flex: 1;
+        }
+
+        .event-attendees {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .event-attendees b { color: var(--jade); }
+
+        .event-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-join, .btn-leave, .btn-delete {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-family: 'Marcellus', serif;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid transparent;
+            flex: 1;
+        }
+        .btn-join {
+            background: rgba(46, 204, 113, 0.15);
+            color: var(--jade);
+            border-color: rgba(46, 204, 113, 0.4);
+        }
+        .btn-join:hover { background: rgba(46, 204, 113, 0.3); }
+        .btn-leave {
+            background: rgba(231, 76, 60, 0.12);
+            color: var(--danger);
+            border-color: rgba(231, 76, 60, 0.4);
+        }
+        .btn-leave:hover { background: rgba(231, 76, 60, 0.3); }
+        .btn-delete {
+            background: rgba(0,0,0,0.4);
+            color: var(--text-muted);
+            border-color: var(--border);
+            flex: 0 0 auto;
+        }
+        .btn-delete:hover { color: var(--danger); border-color: var(--danger); }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            font-style: italic;
+            position: relative; z-index: 1;
+        }
+
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.92); backdrop-filter: blur(6px);
+            display: none; justify-content: center; align-items: center; z-index: 9999;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: linear-gradient(160deg, #12161c, #0a0c11);
+            width: 95%; max-width: 560px;
+            border-radius: 16px; border: 1px solid var(--gold);
+            box-shadow: 0 0 50px rgba(212, 175, 55, 0.25);
+            padding: 28px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h3 { color: var(--gold); font-family: 'Cinzel', serif; margin: 0; font-size: 20px; }
+        .modal-close { background: none; border: none; color: var(--danger); font-size: 28px; cursor: pointer; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-family: 'Marcellus', serif;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+        }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+        .modal-actions button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-family: 'Marcellus', serif;
+            font-size: 14px;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .btn-cancel {
+            background: rgba(0,0,0,0.4);
+            color: var(--text-muted);
+            border-color: var(--border);
+        }
+        .btn-save {
+            background: linear-gradient(135deg, #d4af37, #aa8624);
+            color: #0a0b10;
+            font-weight: bold;
+        }
+        .btn-save:hover { filter: brightness(1.1); }
+
+        @media (max-width: 600px) {
+            .events-header h1 { font-size: 30px; }
+            .events-grid { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
+    <div class="fog-layer"></div>
+
+    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
+
     <div class="main-container">
         <div class="sidebar">
             <h2 id="server-name">Загрузка...</h2>
             <a href="/dashboard"><div class="icon icon-home"></div> К списку серверов</a>
             <hr style="border-color: var(--border); margin: 15px 0;">
-            <a href="#" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
-            <a href="#" class="active"><div class="icon icon-alarm"></div> События</a>
+            <a href="/dashboard"><div class="icon icon-arrow-left"></div> Назад в панель</a>
         </div>
 
-        <div class="content">
-            <div class="header"><h1><div class="icon icon-alarm"></div> События гильдии</h1></div>
-            <div class="form-card">
-                <h3>Создать событие</h3>
-                <div class="form-group"><label>Название</label><input type="text" id="ev-title"></div>
-                <div class="form-group"><label>Описание</label><textarea id="ev-desc" style="height: 80px;"></textarea></div>
-                <div class="form-group"><label>Дата и время</label><input type="datetime-local" id="ev-date"></div>
-                <button class="btn" onclick="createEvent()">Создать</button>
+        <div class="content" style="max-width: 1100px; position: relative; z-index: 1;">
+            <div class="events-header">
+                <h1>📅 События</h1>
+                <p>☯ Соберитесь вместе на рейды и турниры</p>
             </div>
-            <div class="grid" id="events-list" style="margin-top: 20px;">
-                <p style="color: var(--text-muted);">Загрузка...</p>
+
+            <div class="toolbar">
+                <button id="btn-create" class="primary" onclick="openCreateModal()" style="display:none;">+ Создать событие</button>
+                <button onclick="loadEvents()">🔄 Обновить</button>
+            </div>
+
+            <div id="events-container" class="events-grid"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="create-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Новое событие</h3>
+                <button class="modal-close" onclick="closeCreateModal()">×</button>
+            </div>
+            <div class="form-group">
+                <label>Название</label>
+                <input type="text" id="ev-title" placeholder="Например: Рейд на Бамбуковый лес" maxlength="80">
+            </div>
+            <div class="form-group">
+                <label>Описание</label>
+                <textarea id="ev-desc" placeholder="Что будет на событии?" maxlength="400"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Дата и время</label>
+                <input type="datetime-local" id="ev-date">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeCreateModal()">Отмена</button>
+                <button class="btn-save" onclick="createEvent()">Создать</button>
             </div>
         </div>
     </div>
 
     <script>
-        const guildId = window.location.pathname.split('/')[2];
-        document.getElementById('nav-home').href = `/manage/${guildId}`;
-        fetch(`/api/guild/${guildId}`).then(res => res.json()).then(data => document.getElementById('server-name').innerText = data.name);
-        function loadEvents() {
-            fetch(`/api/guild/${guildId}/events`).then(res => res.json()).then(data => {
-                const list = document.getElementById('events-list');
-                if (data.length === 0) return list.innerHTML = '<p style="color: var(--text-muted);">Событий пока нет.</p>';
-                list.innerHTML = '';
-                data.forEach(ev => {
-                    const dateObj = new Date(ev.date);
-                    const isPast = ev.date < Date.now();
-                    list.innerHTML += `
-                        <div class="card" style="border-left: 4px solid ${isPast ? '#555' : 'var(--gold)'}; opacity: ${isPast ? '0.6' : '1'};">
-                            <h3 style="color: var(--gold);">${ev.title}</h3>
-                            <p style="color: var(--jade);">${dateObj.toLocaleString('ru-RU')}</p>
-                            <p style="color: var(--text-muted);">${ev.description || 'Без описания'}</p>
-                            <button class="btn btn-danger btn-small" onclick="deleteEvent('${ev._id}')">Удалить</button>
-                        </div>`;
+        const urlParams = new URLSearchParams(window.location.search);
+        const pathParts = window.location.pathname.split('/');
+        const guildId = (pathParts[2]) || urlParams.get('guild');
+        let currentUser = null;
+        let isModerator = false;
+        let allEvents = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUser();
+            loadEvents();
+        });
+
+        async function loadUser() {
+            try {
+                const res = await fetch('/api/user', { credentials: 'include' });
+                if (res.ok) {
+                    const data = await res.json();
+                    currentUser = data.user;
+                    const createBtn = document.getElementById('btn-create');
+                    if (createBtn) createBtn.style.display = 'inline-block';
+                    const serverName = document.getElementById('server-name');
+                    if (serverName) {
+                        const guild = (data.guilds || []).find(g => g.id === guildId);
+                        if (guild) serverName.textContent = guild.name;
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadEvents() {
+            const container = document.getElementById('events-container');
+            if (!container) return;
+            container.innerHTML = '<div class="empty-state">Загрузка событий...</div>';
+            try {
+                const res = await fetch('/api/guild/' + guildId + '/events', { credentials: 'include' });
+                if (!res.ok) {
+                    container.innerHTML = '<div class="empty-state">Не удалось загрузить события.<br>Возможно, нужны права модератора.</div>';
+                    return;
+                }
+                const events = await res.json();
+                allEvents = events;
+                renderEvents(events);
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = '<div class="empty-state">Ошибка загрузки событий.</div>';
+            }
+        }
+
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        }
+
+        function renderEvents(events) {
+            const container = document.getElementById('events-container');
+            if (!events || events.length === 0) {
+                container.innerHTML = '<div class="empty-state">Пока нет ни одного события.<br>Создайте первое — и оно появится здесь.</div>';
+                return;
+            }
+
+            const now = Date.now() / 1000;
+            const sorted = [...events].sort((a, b) => (a.date || 0) - (b.date || 0));
+
+            container.innerHTML = sorted.map(ev => {
+                const isPast = ev.date && ev.date < now;
+                const dateObj = ev.date ? new Date(ev.date * 1000) : null;
+                const dateStr = dateObj ? dateObj.toLocaleString('ru-RU', {
+                    day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit'
+                }) : 'Дата не указана';
+                const attendees = ev.attendees || [];
+                const joined = currentUser && attendees.includes(currentUser.id);
+
+                const joinBtn = isPast ? '' : (joined
+                    ? '<button class="btn-leave" onclick="toggleJoin(\'' + ev._id + '\')">Отписаться</button>'
+                    : '<button class="btn-join" onclick="toggleJoin(\'' + ev._id + '\')">Записаться</button>');
+
+                const deleteBtn = isModerator
+                    ? '<button class="btn-delete" onclick="deleteEvent(\'' + ev._id + '\')" title="Удалить">🗑</button>'
+                    : '';
+
+                return '<div class="event-card">' +
+                    '<div class="event-title">' + escapeHtml(ev.title || 'Без названия') + '</div>' +
+                    '<div class="event-date ' + (isPast ? 'past' : '') + '">' +
+                        (isPast ? '⛔ Прошло:' : '🕒') + ' ' + dateStr +
+                    '</div>' +
+                    '<div class="event-desc">' + escapeHtml(ev.description || 'Описание отсутствует.') + '</div>' +
+                    '<div class="event-attendees">👥 Записано: <b>' + attendees.length + '</b></div>' +
+                    '<div class="event-actions">' + joinBtn + deleteBtn + '</div>' +
+                '</div>';
+            }).join('');
+        }
+
+        async function toggleJoin(eventId) {
+            try {
+                const res = await fetch('/api/guild/' + guildId + '/events/' + eventId + '/join', {
+                    method: 'POST',
+                    credentials: 'include'
                 });
-            });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                await loadEvents();
+            } catch (e) {
+                console.error(e);
+                alert('Не удалось изменить запись: ' + e.message);
+            }
         }
-        loadEvents();
-        function createEvent() {
-            const title = document.getElementById('ev-title').value;
-            const desc = document.getElementById('ev-desc').value;
-            const dateStr = document.getElementById('ev-date').value;
-            if (!title || !dateStr) return alert('Заполните поля');
-            fetch(`/api/guild/${guildId}/events`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, description: desc, date: new Date(dateStr).getTime() })
-            }).then(res => res.json()).then(data => { if (data.success) { document.getElementById('ev-title').value = ''; loadEvents(); } });
+
+        async function deleteEvent(eventId) {
+            if (!confirm('Удалить это событие?')) return;
+            try {
+                const res = await fetch('/api/guild/' + guildId + '/events/' + eventId, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                await loadEvents();
+            } catch (e) {
+                console.error(e);
+                alert('Не удалось удалить: ' + e.message);
+            }
         }
-        function deleteEvent(id) {
-            if (!confirm('Удалить?')) return;
-            fetch(`/api/guild/${guildId}/events/${id}`, { method: 'DELETE' }).then(() => loadEvents());
+
+        function openCreateModal() {
+            document.getElementById('ev-title').value = '';
+            document.getElementById('ev-desc').value = '';
+            document.getElementById('ev-date').value = '';
+            document.getElementById('create-modal').classList.add('active');
+        }
+        function closeCreateModal() {
+            document.getElementById('create-modal').classList.remove('active');
+        }
+
+        async function createEvent() {
+            const title = document.getElementById('ev-title').value.trim();
+            const description = document.getElementById('ev-desc').value.trim();
+            const dateInput = document.getElementById('ev-date').value;
+
+            if (!title) { alert('Введите название события.'); return; }
+            if (!dateInput) { alert('Укажите дату и время.'); return; }
+
+            const dateUnix = Math.floor(new Date(dateInput).getTime() / 1000);
+
+            try {
+                const res = await fetch('/api/guild/' + guildId + '/events', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ title, description, date: dateUnix })
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                closeCreateModal();
+                await loadEvents();
+            } catch (e) {
+                console.error(e);
+                alert('Не удалось создать событие: ' + e.message);
+            }
         }
     </script>
 </body>
