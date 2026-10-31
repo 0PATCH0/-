@@ -410,10 +410,16 @@ function selectMartial(artId) {
 
         // ─── Старт ───
         document.addEventListener('DOMContentLoaded', () => {
-            loadMartialChips();
-            loadGuildChips();
-            loadProfiles();
-        });
+    document.querySelectorAll('#guild-chips .chip[data-guild="all"]').forEach(el => {
+        el.addEventListener('click', () => selectGuild('all'));
+    });
+    document.querySelectorAll('#martial-chips .chip[data-martial="all"]').forEach(el => {
+        el.addEventListener('click', () => selectMartial('all'));
+    });
+    loadMartialChips();
+    loadGuildChips();
+    loadProfiles();
+});
     </script>
 </body>
 </html>
