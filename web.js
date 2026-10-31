@@ -8,7 +8,7 @@ const {
     ReactionRole, Settings, Reminder, SentMessage, Roster, RosterConfig, RosterMessage, Log, Guide, PlayerProfile, Event 
 } = require('./models');
 
-const OWNER_ID = '439798786059927552'; // Твой ID
+const OWNER_ID = '439798786059927552';
 
 const app = express();
 app.use(express.json());
@@ -76,10 +76,7 @@ app.get('/api/guild/:id', isModerator, async (req, res) => {
     res.json({ name: guild.name, roles });
 });
 
-app.get('/api/profile/:guildId', async (req, res) => {
-    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
-    const targetUserId = req.query.user || req.user.id;
-    // ─── Профили персонажей ────────────────────────────────────────────────
+// ─── ПРОФИЛЬ ──────────────────────────────────────────────
 function normalizeProfileCharacters(input) {
     if (!Array.isArray(input)) return [];
     const LIMITS = { mysticSkills: 8, innerWays: 4 };
@@ -113,44 +110,40 @@ function resolveProfileGuildId(req) {
 
 app.get('/api/profile/:guildId', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
-    const targetUserId = req.query.user || req.user.id;
-    const guildId = resolveProfileGuildId(req);
-
-    let profile = await PlayerProfile.findOne({ userId: targetUserId, guildId });
-    if (!profile) profile = await PlayerProfile.findOne({ userId: targetUserId, isGlobal: true });
-
-    if (!profile) {
-        return res.json({
-            _id: null,
-            userId: targetUserId,
-            guildId,
-            isGlobal: false,
-            characters: [{
-                gameNickname: '', guildName: '', bio: '',
-                builds: { PvE: { mysticSkills: [], innerWays: [] }, PvP: { mysticSkills: [], innerWays: [] } }
-            }]
-        });
+    try {
+        const targetUserId = req.query.user || req.user.id;
+        const guildId = resolveProfileGuildId(req);
+        let profile = await PlayerProfile.findOne({ userId: targetUserId, guildId });
+        if (!profile) profile = await PlayerProfile.findOne({ userId: targetUserId, isGlobal: true });
+        if (!profile) {
+            return res.json({
+                _id: null, userId: targetUserId, guildId, isGlobal: false,
+                characters: [{
+                    gameNickname: '', guildName: '', bio: '',
+                    builds: { PvE: { mysticSkills: [], innerWays: [] }, PvP: { mysticSkills: [], innerWays: [] } }
+                }]
+            });
+        }
+        res.json(profile);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Ошибка базы данных' });
     }
-    res.json(profile);
 });
 
 app.post('/api/profile/:guildId', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
-    const guildId = resolveProfileGuildId(req);
-    const { characters, isGlobal, targetUser } = req.body || {};
-    const finalUserId = targetUser || req.user.id;
-
-    // Сохранять чужой профиль может только владелец бота
-    if (targetUser && targetUser !== req.user.id && req.user.id !== OWNER_ID) {
-        return res.status(403).json({ error: 'Нельзя изменить чужой профиль' });
-    }
-
-    const cleanCharacters = normalizeProfileCharacters(characters);
-    if (cleanCharacters.length === 0) {
-        return res.status(400).json({ error: 'Нужен хотя бы один персонаж с ником' });
-    }
-
     try {
+        const guildId = resolveProfileGuildId(req);
+        const { characters, isGlobal, targetUser } = req.body || {};
+        const finalUserId = targetUser || req.user.id;
+        if (targetUser && targetUser !== req.user.id && req.user.id !== OWNER_ID) {
+            return res.status(403).json({ error: 'Нельзя изменить чужой профиль' });
+        }
+        const cleanCharacters = normalizeProfileCharacters(characters);
+        if (cleanCharacters.length === 0) {
+            return res.status(400).json({ error: 'Нужен хотя бы один персонаж с ником' });
+        }
         const profile = await PlayerProfile.findOneAndUpdate(
             { userId: finalUserId, guildId },
             { characters: cleanCharacters, isGlobal: !!isGlobal },
@@ -165,30 +158,310 @@ app.post('/api/profile/:guildId', async (req, res) => {
 
 app.delete('/api/profile/:guildId', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
-    const guildId = resolveProfileGuildId(req);
-    await PlayerProfile.findOneAndDelete({ userId: req.user.id, guildId });
-    res.json({ success: true });
+    try {
+        const guildId = resolveProfileGuildId(req);
+        await PlayerProfile.findOneAndDelete({ userId: req.user.id, guildId });
+        res.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Ошибка базы данных' });
+    }
 });
-// ──────────────────────────────────────────────────────────────────────
-app.get('/api/guild/:id/profiles', isModerator, async (req, res) => { const client = req.app.get('botClient'); const discordGuild = client.guilds.cache.get(req.params.id); const profiles = await PlayerProfile.find({ $or: [ { guildId: req.params.id }, { isGlobal: true } ] }); const enriched = await Promise.all(profiles.map(async (p) => { const member = await discordGuild.members.fetch(p.userId).catch(() => null); return { ...p._doc, discordName: member ? member.user.username : 'Неизвестный', avatar: member && member.user.avatar ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png' }; })); res.json(enriched); });
-app.delete('/api/guild/:id/profiles/:userId', isModerator, async (req, res) => { await PlayerProfile.findOneAndDelete({ userId: req.params.userId, guildId: req.params.id }); res.json({ success: true }); });
 
-// ... (ОСТАЛЬНЫЕ API БЕЗ ИЗМЕНЕНИЙ) ...
-app.get('/api/guild/:id/events', isModerator, async (req, res) => { const events = await Event.find({ guildId: req.params.id }).sort({ date: 1 }); res.json(events); });
-app.post('/api/guild/:id/events', isModerator, async (req, res) => { try { const newEvent = await Event.create({ guildId: req.params.id, ...req.body, creatorId: req.user.id, attendees: [] }); res.json({ success: true, event: newEvent }); } catch (e) { res.status(500).json({ error: 'Ошибка' }); } });
-app.post('/api/guild/:id/events/:eventId/join', async (req, res) => { if (!req.user) return res.status(401).json({ error: 'Не авторизован' }); try { const event = await Event.findById(req.params.eventId); if (!event) return res.status(404).json({ error: 'Не найдено' }); const userId = req.user.id; if (event.attendees.includes(userId)) { event.attendees = event.attendees.filter(id => id !== userId); } else { event.attendees.push(userId); } await event.save(); res.json({ success: true }); } catch (e) { res.status(500).json({ error: 'Ошибка' }); } });
-app.delete('/api/guild/:id/events/:eventId', isModerator, async (req, res) => { await Event.findByIdAndDelete(req.params.eventId); res.json({ success: true }); });
+// ─── АДМИН ПРОФИЛЕЙ ───────────────────────────────────────
+app.get('/api/guild/:id/profiles', isModerator, async (req, res) => {
+    try {
+        const client = req.app.get('botClient');
+        const discordGuild = client.guilds.cache.get(req.params.id);
+        const profiles = await PlayerProfile.find({ $or: [ { guildId: req.params.id }, { isGlobal: true } ] });
+        const enriched = await Promise.all(profiles.map(async (p) => {
+            const member = await discordGuild.members.fetch(p.userId).catch(() => null);
+            return {
+                ...p._doc,
+                discordName: member ? member.user.username : 'Неизвестный',
+                avatar: member && member.user.avatar
+                    ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png`
+                    : 'https://cdn.discordapp.com/embed/avatars/0.png'
+            };
+        }));
+        res.json(enriched);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Ошибка' });
+    }
+});
 
-app.get('/api/guild/:id/guides', isModerator, async (req, res) => { res.json(await Guide.find({ guildId: req.params.id }).sort({ date: -1 })); });
-app.get('/api/guild/:id/guides/:guideId', isModerator, async (req, res) => { res.json(await Guide.findById(req.params.guideId)); });
-app.post('/api/guild/:id/guides', isModerator, async (req, res) => { await Guide.create({ guildId: req.params.id, ...req.body }); res.json({ success: true }); });
-app.put('/api/guild/:id/guides/:guideId', isModerator, async (req, res) => { await Guide.findByIdAndUpdate(req.params.guideId, req.body); res.json({ success: true }); });
-app.delete('/api/guild/:id/guides/:guideId', isModerator, async (req, res) => { await Guide.findByIdAndDelete(req.params.guideId); res.json({ success: true }); });
-app.get('/api/guild/:id/logs', isModerator, async (req, res) => { res.json(await Log.find({ guildId: req.params.id }).sort({ date: -1 }).limit(100)); });
-app.get('/api/guild/:id/moderation', isModerator, async (req, res) => { let s = await Settings.findOne({ guildId: req.params.id }) || await Settings.create({ guildId: req.params.id, modRoles: [] }); res.json(s); });
-app.post('/api/guild/:id/moderation', isModerator, async (req, res) => { await Settings.findOneAndUpdate({ guildId: req.params.id }, { modRoles: req.body.modRoles }, { upsert: true }); res.json({ success: true }); });
+app.delete('/api/guild/:id/profiles/:userId', isModerator, async (req, res) => {
+    try {
+        await PlayerProfile.findOneAndDelete({ userId: req.params.userId, guildId: req.params.id });
+        res.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Ошибка' });
+    }
+});
 
+// ─── СОБЫТИЯ ──────────────────────────────────────────────
+app.get('/api/guild/:id/events', isModerator, async (req, res) => {
+    try { res.json(await Event.find({ guildId: req.params.id }).sort({ date: 1 })); }
+    catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.post('/api/guild/:id/events', isModerator, async (req, res) => {
+    try {
+        const newEvent = await Event.create({ guildId: req.params.id, ...req.body, creatorId: req.user.id, attendees: [] });
+        res.json({ success: true, event: newEvent });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.post('/api/guild/:id/events/:eventId/join', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    try {
+        const event = await Event.findById(req.params.eventId);
+        if (!event) return res.status(404).json({ error: 'Не найдено' });
+        const userId = req.user.id;
+        if (event.attendees.includes(userId)) {
+            event.attendees = event.attendees.filter(id => id !== userId);
+        } else {
+            event.attendees.push(userId);
+        }
+        await event.save();
+        res.json({ success: true });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.delete('/api/guild/:id/events/:eventId', isModerator, async (req, res) => {
+    try { await Event.findByIdAndDelete(req.params.eventId); res.json({ success: true }); }
+    catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// ─── ГАЙДЫ ────────────────────────────────────────────────
+app.get('/api/guild/:id/guides', isModerator, async (req, res) => {
+    try { res.json(await Guide.find({ guildId: req.params.id }).sort({ date: -1 })); }
+    catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.get('/api/guild/:id/guides/:guideId', isModerator, async (req, res) => {
+    try { res.json(await Guide.findById(req.params.guideId)); }
+    catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.post('/api/guild/:id/guides', isModerator, async (req, res) => {
+    try { await Guide.create({ guildId: req.params.id, ...req.body }); res.json({ success: true }); }
+    catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.put('/api/guild/:id/guides/:guideId', isModerator, async (req, res) => {
+    try { await Guide.findByIdAndUpdate(req.params.guideId, req.body); res.json({ success: true }); }
+    catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.delete('/api/guild/:id/guides/:guideId', isModerator, async (req, res) => {
+    try { await Guide.findByIdAndDelete(req.params.guideId); res.json({ success: true }); }
+    catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// ─── ЛОГИ ─────────────────────────────────────────────────
+app.get('/api/guild/:id/logs', isModerator, async (req, res) => {
+    try { res.json(await Log.find({ guildId: req.params.id }).sort({ date: -1 }).limit(100)); }
+    catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// ─── НАСТРОЙКИ / МОДЕРАЦИЯ ────────────────────────────────
+app.get('/api/guild/:id/moderation', isModerator, async (req, res) => {
+    try {
+        let s = await Settings.findOne({ guildId: req.params.id }) || await Settings.create({ guildId: req.params.id, modRoles: [] });
+        res.json(s);
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.post('/api/guild/:id/moderation', isModerator, async (req, res) => {
+    try {
+        await Settings.findOneAndUpdate({ guildId: req.params.id }, { modRoles: req.body.modRoles }, { upsert: true });
+        res.json({ success: true });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// ─── НАПОМИНАНИЯ ──────────────────────────────────────────
+app.get('/api/guild/:id/reminders', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    try {
+        const reminders = await Reminder.find({ userId: req.user.id });
+        res.json(reminders);
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.post('/api/guild/:id/reminders', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    try {
+        const { text, channelId, targetId, targetType, repeat, nextTime, hour, minute, timezone } = req.body || {};
+        const id = `rem_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const reminder = await Reminder.create({
+            id, userId: req.user.id, channelId, text, targetId, targetType, repeat,
+            nextTime: Number(nextTime) || Date.now(), hour, minute, timezone: Number(timezone) || 0
+        });
+        res.json({ success: true, reminder });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.delete('/api/guild/:id/reminders/:reminderId', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    try {
+        await Reminder.findOneAndDelete({ id: req.params.reminderId, userId: req.user.id });
+        res.json({ success: true });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// ─── РЕАКЦИИ-РОЛИ ─────────────────────────────────────────
+app.get('/api/guild/:id/reactionroles', isModerator, async (req, res) => {
+    try { res.json(await ReactionRole.find({ guildId: req.params.id })); }
+    catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.post('/api/guild/:id/reactionroles', isModerator, async (req, res) => {
+    try {
+        const client = req.app.get('botClient');
+        const { channelId, title, desc, color, mode, roles } = req.body || {};
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+        if (!channel) return res.status(404).json({ error: 'Канал не найден' });
+
+        const embed = new EmbedBuilder()
+            .setTitle(title || 'Роли')
+            .setDescription(desc || 'Выберите роль')
+            .setColor(color || '#d4af37');
+        const buttons = (roles || []).map(r => new ButtonBuilder()
+            .setCustomId(`rr_${r.roleId}`)
+            .setLabel(r.label || 'Роль')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji(r.emoji || '🎭')
+        );
+        const rows = [];
+        for (let i = 0; i < buttons.length; i += 5) rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
+
+        const msg = await channel.send({ embeds: [embed], components: rows });
+        const rr = await ReactionRole.create({
+            guildId: req.params.id, channelId, messageId: msg.id,
+            title, desc, color, mode: mode || 'multiple', roles
+        });
+        res.json({ success: true, reactionRole: rr });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
+});
+
+app.delete('/api/guild/:id/reactionroles/:messageId', isModerator, async (req, res) => {
+    try {
+        await ReactionRole.findOneAndDelete({ messageId: req.params.messageId, guildId: req.params.id });
+        res.json({ success: true });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// ─── КАСТОМНЫЕ СООБЩЕНИЯ ──────────────────────────────────
+app.get('/api/guild/:id/custom', isModerator, async (req, res) => {
+    try { res.json(await SentMessage.find({ guildId: req.params.id })); }
+    catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.post('/api/guild/:id/custom', isModerator, async (req, res) => {
+    try {
+        const client = req.app.get('botClient');
+        const { channelId, title, description, color, image, footer, author } = req.body || {};
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+        if (!channel) return res.status(404).json({ error: 'Канал не найден' });
+
+        const embed = new EmbedBuilder()
+            .setTitle(title || 'Сообщение')
+            .setDescription(description || '')
+            .setColor(color || '#d4af37');
+        if (image) embed.setImage(image);
+        if (footer) embed.setFooter({ text: footer });
+        if (author) embed.setAuthor({ name: author });
+
+        const msg = await channel.send({ embeds: [embed] });
+        const sm = await SentMessage.create({
+            guildId: req.params.id, channelId, messageId: msg.id,
+            title, description, color, image, footer, author
+        });
+        res.json({ success: true, message: sm });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
+});
+
+app.delete('/api/guild/:id/custom/:messageId', isModerator, async (req, res) => {
+    try {
+        await SentMessage.findOneAndDelete({ messageId: req.params.messageId, guildId: req.params.id });
+        res.json({ success: true });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// ─── РОСТЕР ───────────────────────────────────────────────
+app.get('/api/guild/:id/roster', isModerator, async (req, res) => {
+    try {
+        const roster = await Roster.findOne({ guildId: req.params.id });
+        const config = await RosterConfig.findOne({ guildId: req.params.id });
+        const msg = await RosterMessage.findOne({ guildId: req.params.id });
+        res.json({ roster, config, message: msg });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.get('/api/guild/:id/roster-config', isModerator, async (req, res) => {
+    try {
+        let config = await RosterConfig.findOne({ guildId: req.params.id });
+        if (!config) config = { guildId: req.params.id, columns: [] };
+        res.json(config);
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.post('/api/guild/:id/roster-config', isModerator, async (req, res) => {
+    try {
+        const config = await RosterConfig.findOneAndUpdate(
+            { guildId: req.params.id },
+            { columns: req.body.columns || [] },
+            { upsert: true, new: true }
+        );
+        res.json({ success: true, config });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.post('/api/guild/:id/roster/setup', isModerator, async (req, res) => {
+    try {
+        const client = req.app.get('botClient');
+        const { channelId } = req.body || {};
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+        if (!channel) return res.status(404).json({ error: 'Канал не найден' });
+
+        const config = await RosterConfig.findOne({ guildId: req.params.id });
+        if (!config || !config.columns || config.columns.length === 0) {
+            return res.status(400).json({ error: 'Сначала настройте колонки' });
+        }
+
+        const existing = await RosterMessage.findOne({ guildId: req.params.id });
+        if (existing) {
+            const oldMsg = await channel.messages.fetch(existing.messageId).catch(() => null);
+            if (oldMsg) await oldMsg.delete().catch(() => {});
+        }
+
+        const embed = new EmbedBuilder().setTitle('🛡️ Состав гильдии').setColor('#2b2d31').setDescription('Обновляется...');
+        const msg = await channel.send({ embeds: [embed] });
+        await RosterMessage.findOneAndUpdate(
+            { guildId: req.params.id },
+            { channelId, messageId: msg.id },
+            { upsert: true }
+        );
+        res.json({ success: true, messageId: msg.id });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
+});
+
+app.delete('/api/guild/:id/roster/setup', isModerator, async (req, res) => {
+    try {
+        await RosterMessage.findOneAndDelete({ guildId: req.params.id });
+        res.json({ success: true });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// ─── 404 ──────────────────────────────────────────────────
 app.use((req, res) => { res.status(404).sendFile(path.join(__dirname, 'public', '404.html')); });
 
-function startWebServer(botClient) { app.set('botClient', botClient); app.listen(process.env.PORT || 8080, () => console.log(`🌐 Веб-панель запущена`)); }
+function startWebServer(botClient) {
+    app.set('botClient', botClient);
+    app.listen(process.env.PORT || 8080, () => console.log('🌐 Веб-панель запущена'));
+}
+
 module.exports = { startWebServer };
