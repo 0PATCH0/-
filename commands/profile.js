@@ -9,8 +9,7 @@ const { PlayerProfile } = require('../models');
 const path = require('path');
 const fs = require('fs');
 
-// Безопасно грузим gamedata.js в Node:
-// не через require (там window = ReferenceError), а в vm-контексте.
+// Безопасная загрузка gamedata.js в Node (без window)
 function loadGameDataSafe() {
     try {
         const vm = require('vm');
@@ -19,13 +18,12 @@ function loadGameDataSafe() {
         const sandbox = { window: {}, module: { exports: {} }, console };
         vm.createContext(sandbox);
         vm.runInContext(code, sandbox, { timeout: 1000 });
-        return sandbox.window.GAME_DATA || sandbox.module.exports || { mysticSkills: [], innerWays: [] };
+        return sandbox.window.GAME_DATA || sandbox.module.exports || { mysticSkills: [], innerWays: [], martialArts: [] };
     } catch (e) {
         console.error('[PROFILE] Не удалось загрузить gamedata.js:', e.message);
-        return { mysticSkills: [], innerWays: [] };
+        return { mysticSkills: [], innerWays: [], martialArts: [] };
     }
 }
-
 function loadGameMetaSafe() {
     try {
         const vm = require('vm');
@@ -45,13 +43,8 @@ const GAME_DATA = loadGameDataSafe();
 const GAME_META = loadGameMetaSafe();
 
 const RARITY_EMOJI = {
-    Legendary: '🌟',
-    Epic: '💜',
-    Rare: '💙',
-    Common: '⚪',
-    Offensive: '🔴',
-    General: '🟢',
-    Movement: '🔵'
+    Legendary: '🌟', Epic: '💜', Rare: '💙', Common: '⚪',
+    Offensive: '🔴', General: '🟢', Movement: '🔵'
 };
 
 function formatSkill(type, id) {
@@ -65,6 +58,15 @@ function formatSkill(type, id) {
     return `${emoji} **${name}**\n> *${desc}*`;
 }
 
+function formatMartialArts(ids) {
+    if (!ids || ids.length === 0) return '*Не выбраны*';
+    return ids.map(id => {
+        const art = (GAME_DATA.martialArts || []).find(a => a.id === id);
+        if (!art) return `\`${id}\``;
+        return `${art.emoji || '🥋'} **${art.nameRU}** *(${art.path})*`;
+    }).join('\n');
+}
+
 function buildBuildEmbed(char, buildType) {
     const build = (char.builds && char.builds[buildType]) || { mysticSkills: [], innerWays: [] };
     const embed = new EmbedBuilder()
@@ -75,17 +77,10 @@ function buildBuildEmbed(char, buildType) {
     const mysticList = (build.mysticSkills || []).slice(0, 8);
     const innerList = (build.innerWays || []).slice(0, 4);
 
-    embed.addFields({
-        name: '✨ Мистические Навыки',
-        value: mysticList.length > 0 ? mysticList.map(id => formatSkill('mystic', id)).join('\n\n') : '*Не выбраны*',
-        inline: false
-    });
-    embed.addFields({
-        name: '🧘 Внутренние Пути',
-        value: innerList.length > 0 ? innerList.map(id => formatSkill('inner', id)).join('\n\n') : '*Не выбраны*',
-        inline: false
-    });
-
+    embed.addFields(
+        { name: '✨ Мистические Навыки', value: mysticList.length ? mysticList.map(id => formatSkill('mystic', id)).join('\n\n') : '*Не выбраны*', inline: false },
+        { name: '🧘 Внутренние Пути', value: innerList.length ? innerList.map(id => formatSkill('inner', id)).join('\n\n') : '*Не выбраны*', inline: false }
+    );
     return embed;
 }
 
@@ -100,7 +95,6 @@ function buildBuildButtons(char, charIndex) {
         .setLabel('🌿 PvE')
         .setStyle(hasPvE ? ButtonStyle.Success : ButtonStyle.Secondary)
         .setDisabled(!hasPvE);
-
     const pvpBtn = new ButtonBuilder()
         .setCustomId(`build_PvP_${charIndex}`)
         .setLabel('⚔️ PvP')
@@ -147,22 +141,18 @@ module.exports = {
 
         profile.characters.forEach((char, index) => {
             const charTitle = `👤 Персонаж ${index + 1}: ${char.gameNickname || 'Без ника'}`;
-            const rolesStr = (char.roles && char.roles.length > 0)
-                ? char.roles.map(r => r === 'Танк' ? '🛡️ Танк' : (r === 'ДД (Урон)' ? '⚔️ ДД' : '💚 Хил')).join(' | ')
-                : 'Не указаны';
 
             const hasPvE = char.builds && char.builds.PvE &&
                 ((char.builds.PvE.mysticSkills || []).length > 0 || (char.builds.PvE.innerWays || []).length > 0);
             const hasPvP = char.builds && char.builds.PvP &&
                 ((char.builds.PvP.mysticSkills || []).length > 0 || (char.builds.PvP.innerWays || []).length > 0);
-
             let buildsText = [];
             if (hasPvE) buildsText.push('🌿 PvE');
             if (hasPvP) buildsText.push('⚔️ PvP');
-            const buildsStr = buildsText.length > 0 ? buildsText.join(' | ') : 'Билды не настроены';
+            const buildsStr = buildsText.length ? buildsText.join(' | ') : 'Билды не настроены';
 
             let charValue = `🏰 **Гильдия:** ${char.guildName || 'Не указана'}\n`;
-            charValue += `⚔️ **Роли:** ${rolesStr}\n`;
+            charValue += `🥋 **Боевые искусства:**\n${formatMartialArts(char.martialArts)}\n`;
             charValue += `🎯 **Доступные билды:** ${buildsStr}\n`;
             if (char.bio) charValue += `*"${char.bio}"*`;
 
@@ -171,20 +161,17 @@ module.exports = {
 
         if (profile.isGlobal) embed.setFooter({ text: '🌐 Глобальный профиль' });
 
-        // Если у пользователя 1 персонаж — кнопки для него, если несколько — ряд кнопок для каждого
         const rows = [];
         const maxChars = Math.min(profile.characters.length, 3);
         for (let i = 0; i < maxChars; i++) {
             const char = profile.characters[i];
-            const charLabel = char.gameNickname ? char.gameNickname.slice(0, 20) : `#${i + 1}`;
             const row = buildBuildButtons(char, i);
-            // Добавим метку персонажа к кнопкам, если персонажей >1
             if (maxChars > 1) {
-                row.components.forEach(c => c.setLabel(`[${charLabel}] ${c.data.label || ''}`.slice(0, 80)));
+                const label = (char.gameNickname || `#${i + 1}`).slice(0, 20);
+                row.components.forEach(c => c.setLabel(`[${label}] ${c.data.label || ''}`.slice(0, 80)));
             }
             rows.push(row);
         }
-
         if (rows.length === 0) rows.push(new ActionRowBuilder());
 
         const response = await interaction.reply({ embeds: [embed], components: rows, fetchReply: true });
@@ -194,53 +181,9 @@ module.exports = {
             if (i.user.id !== interaction.user.id) {
                 return i.reply({ content: 'Это меню не для вас.', ephemeral: true });
             }
-
-            const customId = i.customId;
-            const match = customId.match(/^build_(PvE|PvP)_(\d+)$/);
-            if (!match) return;
-
-            const buildType = match[1];
-            const charIndex = parseInt(match[2], 10);
-            const char = profile.characters[charIndex];
-            if (!char) return i.deferUpdate();
-
-            const hasBuild = char.builds && char.builds[buildType] &&
-                ((char.builds[buildType].mysticSkills || []).length > 0 || (char.builds[buildType].innerWays || []).length > 0);
-            if (!hasBuild) {
-                return i.reply({ content: `У этого персонажа нет сохранённого ${buildType} билда.`, ephemeral: true });
-            }
-
-            const buildEmbed = buildBuildEmbed(char, buildType);
-            const backRow = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId('back_to_profile')
-                    .setLabel('← Назад к профилю')
-                    .setStyle(ButtonStyle.Secondary)
-            );
-
-            await i.update({ embeds: [buildEmbed], components: [backRow] });
-        });
-
-        // Отдельный обработчик для кнопки "Назад"
-        // Перехватываем отдельно, чтобы вернуть основной профиль
-        const backHandler = async (i) => {
-            if (i.customId !== 'back_to_profile') return;
-            if (i.user.id !== interaction.user.id) return i.reply({ content: 'Не для вас.', ephemeral: true });
-            await i.update({ embeds: [embed], components: rows });
-        };
-        // Простейший подход: добавим обработчик на тот же коллектор через массив.
-        // (collector ловит всё, поэтому перехватываем в общем обработчике.)
-        // Перепишем collector, добавив обработку back_to_profile
-        collector.removeAllListeners('collect');
-        collector.on('collect', async i => {
-            if (i.user.id !== interaction.user.id) {
-                return i.reply({ content: 'Это меню не для вас.', ephemeral: true });
-            }
-
             if (i.customId === 'back_to_profile') {
                 return i.update({ embeds: [embed], components: rows });
             }
-
             const match = i.customId.match(/^build_(PvE|PvP)_(\d+)$/);
             if (!match) return;
 
@@ -257,10 +200,7 @@ module.exports = {
 
             const buildEmbed = buildBuildEmbed(char, buildType);
             const backRow = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId('back_to_profile')
-                    .setLabel('← Назад к профилю')
-                    .setStyle(ButtonStyle.Secondary)
+                new ButtonBuilder().setCustomId('back_to_profile').setLabel('← Назад к профилю').setStyle(ButtonStyle.Secondary)
             );
             await i.update({ embeds: [buildEmbed], components: [backRow] });
         });
