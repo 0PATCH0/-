@@ -196,7 +196,7 @@
         document.getElementById('tile-guides').href = '/manage/' + guildId + '/guides';
         document.getElementById('tile-global').href = '/global-profiles';
         document.getElementById('tile-manage').href = '/manage/' + guildId;
-        document.getElementById('tile-roster').href = '/manage/' + guildId + '/roster';
+        document.getElementById('tile-roster').href = '/guild/' + guildId + '/roster';
         document.getElementById('tile-profiles-admin').href = '/manage/' + guildId + '/profiles';
 
         fetch('/api/user', { credentials: 'include' })
