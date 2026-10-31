@@ -1,11 +1,9 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const { PlayerProfile } = require('../models');
-// Импортируем метаданные (файл должен лежать в корне проекта или в папке, доступной для require)
+
+// Импортируем данные игры и метаданные
+const GAME_DATA = require('../public/js/gamedata.js');
 const GAME_META = require('../public/js/gamedata_meta.js');
-// Импортируем основные данные (предполагается, что gamedata.js экспортирует GAME_DATA)
-// Если gamedata.js не экспортирует модуль, можно создать аналогичный файл для бота или использовать require
-// Пока предположим, что у нас есть доступ к GAME_DATA через require (нужно будет адаптировать)
-const GAME_DATA = require('../public/js/gamedata.js'); // Если это не сработает, нужно будет создать копию для бота
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -24,10 +22,25 @@ module.exports = {
         const targetClass = interaction.options.getString('класс');
         const guildId = interaction.guild.id;
 
+        // --- Логика вывода списка игроков по классу ---
         if (targetClass) {
-            // ... (оставляем без изменений)
+            const btn = new ButtonBuilder()
+                .setCustomId(`show_class_${targetClass}`)
+                .setLabel(`Показать всех: ${targetClass}`)
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('📋');
+            
+            const row = new ActionRowBuilder().addComponents(btn);
+            
+            const embed = new EmbedBuilder()
+                .setTitle(`🎭 Класс: ${targetClass}`)
+                .setDescription('Нажмите на кнопку ниже, чтобы получить список.')
+                .setColor('#d4af37');
+            
+            return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
         }
 
+        // --- Логика вывода профиля ---
         const targetUser = interaction.options.getUser('пользователь') || interaction.user;
         
         let profile = await PlayerProfile.findOne({ userId: targetUser.id, guildId });
@@ -45,7 +58,10 @@ module.exports = {
         }
 
         const avatarUrl = targetUser.avatar ? `https://cdn.discordapp.com/avatars/${targetUser.id}/${targetUser.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png';
-        const embed = new EmbedBuilder().setAuthor({ name: `Профиль ${targetUser.username}`, iconURL: avatarUrl }).setColor('#d4af37').setThumbnail(avatarUrl);
+        const embed = new EmbedBuilder()
+            .setAuthor({ name: `Профиль ${targetUser.username}`, iconURL: avatarUrl })
+            .setColor('#d4af37')
+            .setThumbnail(avatarUrl);
 
         profile.characters.forEach((char, index) => {
             const charTitle = `👤 Персонаж ${index + 1}: ${char.gameNickname || 'Без ника'}`;
@@ -100,6 +116,7 @@ module.exports = {
                     ]);
 
                 const menuRow = new ActionRowBuilder().addComponents(selectMenu);
+
                 await i.reply({ content: 'Выберите тип билда:', components: [menuRow], ephemeral: true });
 
                 const menuFilter = m => m.user.id === interaction.user.id && m.customId === 'select_build_type';
@@ -107,6 +124,8 @@ module.exports = {
                 if (!menuInteraction) return;
 
                 const selectedType = menuInteraction.values[0];
+                
+                // Берем первого персонажа, у которого есть этот билд
                 const charWithBuild = profile.characters.find(c => 
                     c.builds && c.builds[selectedType] && 
                     (c.builds[selectedType].mysticSkills?.length > 0 || c.builds[selectedType].innerWays?.length > 0)
@@ -117,26 +136,34 @@ module.exports = {
                 }
 
                 const buildData = charWithBuild.builds[selectedType];
+                
                 const buildEmbed = new EmbedBuilder()
                     .setTitle(`🎯 ${charWithBuild.gameNickname || 'Персонаж'} — ${selectedType} Билд`)
                     .setColor(selectedType === 'PvP' ? '#e74c3c' : '#2ecc71')
                     .setDescription(`Сборка для режима **${selectedType}**`);
 
-                // Функция для форматирования навыка с редкостью и описанием
+                // Функция для красивого форматирования навыков
                 const formatSkill = (type, id) => {
                     const meta = GAME_META[type === 'mystic' ? 'mysticSkills' : 'innerWays'][id] || { rarity: 'Common', desc: '' };
+                    
                     const data = type === 'mystic' 
                         ? GAME_DATA.mysticSkills.find(s => s.id === id) 
                         : GAME_DATA.innerWays.find(s => s.id === id);
+                    
                     const name = data ? data.nameRU : id;
+                    
                     const rarityEmoji = {
                         'Legendary': '🌟', 'Epic': '💜', 'Rare': '💙', 'Common': '⚪',
                         'Offensive': '🔴', 'General': '🟢', 'Movement': '🔵'
                     }[meta.rarity] || '⚪';
-                    return `${rarityEmoji} **${name}**\n> ${meta.desc || 'Описание отсутствует.'}`;
+
+                    // Обрезаем описание, если оно слишком длинное для Discord
+                    let desc = meta.desc || 'Описание отсутствует.';
+                    if (desc.length > 100) desc = desc.substring(0, 97) + '...';
+
+                    return `${rarityEmoji} **${name}**\n> *${desc}*`;
                 };
 
-                // Мистические навыки
                 if (buildData.mysticSkills && buildData.mysticSkills.length > 0) {
                     const skillList = buildData.mysticSkills.map(id => formatSkill('mystic', id)).join('\n\n');
                     buildEmbed.addFields({ name: '✨ Мистические Навыки', value: skillList, inline: false });
@@ -144,7 +171,6 @@ module.exports = {
                     buildEmbed.addFields({ name: '✨ Мистические Навыки', value: '*Не выбраны*', inline: false });
                 }
 
-                // Внутренние пути
                 if (buildData.innerWays && buildData.innerWays.length > 0) {
                     const wayList = buildData.innerWays.map(id => formatSkill('inner', id)).join('\n\n');
                     buildEmbed.addFields({ name: '🧘 Внутренние Пути', value: wayList, inline: false });
