@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Глобальные странники — Where Winds Meet</title>
+    <link rel="stylesheet" href="/css/style.css?v=25">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #d4af37;
+            --gold-soft: rgba(212, 175, 55, 0.35);
+            --jade: #2ecc71;
+            --purple: #c084fc;
+            --purple-soft: rgba(192, 132, 252, 0.35);
+            --danger: #e74c3c;
+            --border: rgba(212, 175, 55, 0.18);
+            --text-main: #e8e3d4;
+            --text-muted: #8a8578;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Marcellus', serif;
+            color: var(--text-main);
+            background: #06080a;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        .bg-ink {
+            position: fixed; inset: 0; z-index: 0;
+            background:
+                radial-gradient(ellipse at 20% 10%, rgba(212, 175, 55, 0.06) 0%, transparent 40%),
+                radial-gradient(ellipse at 80% 90%, rgba(192, 132, 252, 0.05) 0%, transparent 40%),
+                linear-gradient(180deg, #06080a 0%, #0b0e13 100%);
+            pointer-events: none;
+        }
+        .fog {
+            position: fixed; inset: 0; z-index: 1; pointer-events: none;
+            background: radial-gradient(ellipse at 50% 100%, rgba(212,175,55,0.05) 0%, transparent 50%);
+        }
+        .container {
+            position: relative; z-index: 2;
+            max-width: 1200px; margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+        .top-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 40px;
+            animation: fadeDown 0.8s ease-out;
+        }
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .logo {
+            font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700;
+            letter-spacing: 3px; color: var(--gold);
+            text-shadow: 0 0 15px var(--gold-soft);
+        }
+        .back-link {
+            color: var(--text-muted); text-decoration: none; font-size: 13px;
+            transition: color 0.3s;
+        }
+        .back-link:hover { color: var(--gold); }
+
+        .page-title {
+            text-align: center; margin-bottom: 30px;
+            animation: fadeUp 1s ease-out 0.2s both;
+        }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .page-title h1 {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(28px, 5vw, 42px);
+            background: linear-gradient(135deg, #c084fc, #f4e4a0, #d4af37, #c084fc);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 3px; margin-bottom: 10px;
+            filter: drop-shadow(0 0 20px rgba(192,132,252,0.3));
+        }
+        .page-title p {
+            color: var(--text-muted); letter-spacing: 5px;
+            text-transform: uppercase; font-size: 12px;
+        }
+
+        /* Фильтры-чипсы */
+        .filters {
+            background: linear-gradient(160deg, rgba(18, 22, 28, 0.85), rgba(10, 12, 16, 0.95));
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 1;
+        }
+        .filter-group { margin-bottom: 18px; }
+        .filter-group:last-child { margin-bottom: 0; }
+        .filter-label {
+            font-family: 'Cinzel', serif;
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .chip {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 7px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Marcellus', serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none;
+        }
+        .chip:hover { background: rgba(255,255,255,0.1); color: var(--text-main); }
+        .chip.active {
+            background: rgba(212,175,55,0.15);
+            border-color: rgba(212,175,55,0.5);
+            color: var(--gold);
+        }
+        .chip.active.purple {
+            background: rgba(192,132,252,0.15);
+            border-color: rgba(192,132,252,0.5);
+            color: var(--purple);
+        }
+        .chip-emoji { font-size: 14px; }
+
+        /* Сетка карточек */
+        .profiles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        .profile-card {
+            background: linear-gradient(160deg, rgba(18, 22, 28, 0.9), rgba(10, 12, 16, 0.95));
+            border: 1px solid rgba(192,132,252,0.2);
+            border-radius: 16px;
+            padding: 22px;
+            position: relative;
+            overflow: hidden;
+            transition: 0.25s;
+            animation: fadeUp 0.5s ease-out;
+            display: flex;
+            flex-direction: column;
+        }
+        .profile-card:hover {
+            border-color: rgba(192,132,252,0.5);
+            box-shadow: 0 8px 30px rgba(192,132,252,0.15);
+            transform: translateY(-2px);
+        }
+        .profile-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--purple), transparent);
+        }
+        .profile-header {
+            display: flex; align-items: center; gap: 14px;
+            margin-bottom: 16px;
+        }
+        .profile-avatar {
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            border: 2px solid rgba(192,132,252,0.5);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-user-info { min-width: 0; flex: 1; }
+        .profile-username {
+            font-family: 'Cinzel', serif;
+            font-size: 16px; color: var(--purple);
+            letter-spacing: 1px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .profile-guild {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .characters-list {
+            display: flex; flex-direction: column; gap: 8px;
+            margin-bottom: 16px; flex: 1;
+        }
+        .character-item {
+            background: rgba(0,0,0,0.35);
+            border: 1px solid rgba(212,175,55,0.1);
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+        .char-name {
+            font-family: 'Cinzel', serif;
+            font-size: 14px; color: var(--gold);
+            margin-bottom: 4px;
+        }
+        .char-arts {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+        }
+        .art-tag {
+            background: rgba(192,132,252,0.1);
+            border: 1px solid rgba(192,132,252,0.3);
+            border-radius: 10px;
+            padding: 1px 6px;
+            font-size: 10px;
+            color: var(--purple);
+        }
+
+        .card-actions { display: flex; gap: 10px; margin-top: 6px; }
+        .btn-view {
+            flex: 1; padding: 10px;
+            border-radius: 8px; font-family: 'Marcellus', serif;
+            font-size: 13px; cursor: pointer; transition: 0.2s;
+            border: 1px solid rgba(192,132,252,0.4);
+            background: rgba(192,132,252,0.1);
+            color: var(--purple);
+        }
+        .btn-view:hover { background: rgba(192,132,252,0.25); }
+
+        .empty-state {
+            text-align: center; padding: 60px 20px;
+            color: var(--text-muted); font-style: italic;
+            grid-column: 1 / -1;
+        }
+
+        @media (max-width: 600px) {
+            .top-nav { margin-bottom: 25px; }
+            .logo { font-size: 16px; letter-spacing: 2px; }
+            .profiles-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-ink"></div>
+    <div class="fog"></div>
+
+    <div class="container">
+        <nav class="top-nav">
+            <div class="logo">WHERE WINDS MEET</div>
+            <a href="/dashboard" class="back-link">← К выбору гильдии</a>
+        </nav>
+
+        <div class="page-title">
+            <h1>🌐 Глобальные странники</h1>
+            <p>☯ Профили, которые видны во всех гильдиях</p>
+        </div>
+
+        <div class="filters">
+            <div class="filter-group">
+                <div class="filter-label">🏰 Гильдия</div>
+                <div class="chips" id="guild-chips">
+                    <div class="chip active" data-guild="all">Все</div>
+                </div>
+            </div>
+            <div class="filter-group">
+                <div class="filter-label">🥋 Боевое искусство</div>
+                <div class="chips" id="martial-chips">
+                    <div class="chip active purple" data-martial="all">Все</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="profiles-grid" id="profiles-container">
+            <div class="empty-state">Загрузка странников...</div>
+        </div>
+    </div>
+
+    <script src="/js/gamedata.js"></script>
+    <script>
+        let currentGuildFilter = 'all';
+        let currentMartialFilter = 'all';
+
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        }
+
+        // ─── Загружаем список гильдий для чипсов ───
+        async function loadGuildChips() {
+            try {
+                const res = await fetch('/api/guilds-list', { credentials: 'include' });
+                if (!res.ok) return;
+                const guilds = await res.json();
+                const wrap = document.getElementById('guild-chips');
+                guilds.forEach(g => {
+                    const chip = document.createElement('div');
+                    chip.className = 'chip';
+                    chip.dataset.guild = g.id;
+                    chip.textContent = '🏰 ' + g.name;
+                    chip.addEventListener('click', () => selectGuild(g.id));
+                    wrap.appendChild(chip);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        // ─── Чипсы боевых искусств ───
+        function loadMartialChips() {
+            const arts = (window.GAME_DATA && window.GAME_DATA.martialArts) || [];
+            const wrap = document.getElementById('martial-chips');
+            arts.forEach(a => {
+                const chip = document.createElement('div');
+                chip.className = 'chip';
+                chip.dataset.martial = a.id;
+                chip.innerHTML = `<span class="chip-emoji">${a.emoji || '🥋'}</span>${escapeHtml(a.nameRU)}`;
+                chip.addEventListener('click', () => selectMartial(a.id));
+                wrap.appendChild(chip);
+            });
+        }
+
+        function selectGuild(guildId) {
+            currentGuildFilter = guildId;
+            document.querySelectorAll('#guild-chips .chip').forEach(c => {
+                c.classList.toggle('active', c.dataset.guild === guildId);
+            });
+            loadProfiles();
+        }
+        function selectMartial(artId) {
+            currentMartialFilter = artId;
+            document.querySelectorAll('#martial-chips .chip').forEach(c => {
+                c.classList.toggle('active', c.dataset.martial === artId);
+            });
+            loadProfiles();
+        }
+
+        // ─── Загружаем профили ───
+        async function loadProfiles() {
+            const container = document.getElementById('profiles-container');
+            container.innerHTML = '<div class="empty-state">Загрузка странников...</div>';
+            try {
+                const params = new URLSearchParams();
+                params.set('guild', currentGuildFilter);
+                params.set('martial', currentMartialFilter);
+                const res = await fetch('/api/profiles-global?' + params.toString(), { credentials: 'include' });
+                if (!res.ok) {
+                    container.innerHTML = '<div class="empty-state">Не удалось загрузить профили.</div>';
+                    return;
+                }
+                const profiles = await res.json();
+                renderProfiles(profiles);
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = '<div class="empty-state">Ошибка загрузки.</div>';
+            }
+        }
+
+        function findArtName(id) {
+            const a = ((window.GAME_DATA && window.GAME_DATA.martialArts) || []).find(x => x.id === id);
+            return a ? a.nameRU : id;
+        }
+
+        function renderProfiles(profiles) {
+            const container = document.getElementById('profiles-container');
+            if (!profiles || profiles.length === 0) {
+                container.innerHTML = '<div class="empty-state">Пока нет глобальных странников по этим фильтрам.</div>';
+                return;
+            }
+            container.innerHTML = profiles.map(p => {
+                const characters = p.characters || [];
+                const charCards = characters.slice(0, 2).map(c => {
+                    const pveArts = (c.builds && c.builds.PvE && c.builds.PvE.martialArts) || [];
+                    const pvpArts = (c.builds && c.builds.PvP && c.builds.PvP.martialArts) || [];
+                    const allArts = [...new Set([...pveArts, ...pvpArts])];
+                    const artTags = allArts.length
+                        ? allArts.map(id => `<span class="art-tag">${escapeHtml(findArtName(id))}</span>`).join('')
+                        : '<span style="font-size:11px;color:var(--text-muted);">Искусства не выбраны</span>';
+                    return `
+                        <div class="character-item">
+                            <div class="char-name">${escapeHtml(c.gameNickname || 'Без имени')}</div>
+                            <div class="char-arts">${artTags}</div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="profile-card">
+                        <div class="profile-header">
+                            <div class="profile-avatar"><img src="${p.avatar}" alt=""></div>
+                            <div class="profile-user-info">
+                                <div class="profile-username">@${escapeHtml(p.discordName)}</div>
+                                <div class="profile-guild">🏰 ${escapeHtml(p.guildName)}</div>
+                            </div>
+                        </div>
+                        <div class="characters-list">${charCards || '<div class="empty-state" style="padding:14px;font-size:12px;">Нет персонажей</div>'}</div>
+                        <div class="card-actions">
+                            <button class="btn-view" onclick="viewProfile('${p.userId}', '${p.guildId}')">👁 Открыть профиль</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function viewProfile(userId, guildId) {
+            window.location.href = '/view-profile/' + userId + '?guild=' + guildId;
+        }
+
+        // ─── Старт ───
+        document.addEventListener('DOMContentLoaded', () => {
+            loadMartialChips();
+            loadGuildChips();
+            loadProfiles();
+        });
+    </script>
+</body>
+</html>
