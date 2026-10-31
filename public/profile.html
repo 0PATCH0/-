@@ -831,6 +831,124 @@
                 console.error(e);
                 alert('❌ Ошибка удаления: ' + e.message);
             }
+
+            
+// ══════════ БОЕВЫЕ ИСКУССТВА ══════════
+
+function renderMartialSlots(blockId) {
+    const data = charDataCache[blockId];
+    if (!data) return;
+    ['PvE', 'PvP'].forEach(tab => {
+        const arr = (data.builds[tab] && data.builds[tab].martialArts) || [];
+        for (let i = 0; i < 2; i++) {
+            const slot = document.getElementById(`martial-slot-${tab}-${blockId}-${i}`);
+            if (!slot) continue;
+            const id = arr[i];
+            if (id) {
+                const art = (window.GAME_DATA.martialArts || []).find(a => a.id === id);
+                slot.className = 'equip-slot filled';
+                slot.innerHTML = `
+                    <div style="font-size:28px; line-height:1;">${art ? (art.emoji || '🥋') : '🥋'}</div>
+                    <span class="slot-name">${art ? escapeHtml(art.nameRU) : id}</span>
+                    <span class="remove-icon" onclick="removeMartial(event,'${blockId}','${tab}',${i})">×</span>
+                `;
+            } else {
+                slot.className = 'equip-slot';
+                slot.innerHTML = `<span class="empty-icon">+</span>`;
+            }
+        }
+        const counter = document.getElementById(`martial-counter-${tab}-${blockId}`);
+        if (counter) {
+            const filled = arr.filter(Boolean).length;
+            counter.textContent = `${filled} / 2`;
+        }
+    });
+}
+
+function removeMartial(ev, blockId, tab, index) {
+    ev.stopPropagation();
+    const arr = (charDataCache[blockId].builds[tab].martialArts) || [];
+    arr[index] = null;
+    charDataCache[blockId].builds[tab].martialArts = arr.filter(x => x !== null);
+    renderMartialSlots(blockId);
+}
+
+let martialModalCtx = { blockId: null, tab: 'PvE', slotIndex: 0 };
+let martialFilter = 'all';
+
+function openMartialModal(blockId, tab, slotIndex) {
+    martialModalCtx = { blockId, tab, slotIndex };
+    martialFilter = 'all';
+    const title = document.getElementById('modal-title');
+    if (title) title.textContent = '🥋 Боевые искусства — ' + tab;
+
+    const filtersWrap = document.getElementById('modal-filters');
+    if (filtersWrap) {
+        const arts = (window.GAME_DATA && window.GAME_DATA.martialArts) || [];
+        const paths = [...new Set(arts.map(a => a.path))];
+        filtersWrap.innerHTML = `<button class="filter-btn active" onclick="filterMartial('all', this)">Все</button>` +
+            paths.map(p => `<button class="filter-btn" onclick="filterMartial('${p.replace(/'/g, "\\'")}', this)">${p}</button>`).join('');
+    }
+
+    renderMartialBody();
+
+    const footer = document.querySelector('#modal .modal-footer');
+    if (footer) {
+        // Кнопка "Применить" не нужна — выбор делается кликом. Прячем её.
+        footer.style.display = 'none';
+    }
+    const modal = document.getElementById('modal');
+    if (modal) modal.classList.add('active');
+}
+
+function filterMartial(path, btn) {
+    martialFilter = path;
+    document.querySelectorAll('#modal-filters .filter-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderMartialBody();
+}
+
+function renderMartialBody() {
+    const body = document.getElementById('modal-body');
+    if (!body) return;
+    const arts = ((window.GAME_DATA && window.GAME_DATA.martialArts) || [])
+        .filter(a => martialFilter === 'all' || a.path === martialFilter);
+    if (arts.length === 0) {
+        body.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:30px;">Ничего не найдено</div>`;
+        return;
+    }
+    body.innerHTML = arts.map(a => `
+        <div class="skill-card" onclick="pickMartial('${a.id}')" title="${escapeHtml(a.desc || '')}">
+            <div style="font-size:36px; line-height:1;">${a.emoji || '🥋'}</div>
+            <span>${escapeHtml(a.nameRU)}</span>
+            <div style="font-size:9px; color:var(--text-muted); margin-top:2px;">${a.path}</div>
+        </div>
+    `).join('');
+}
+
+function pickMartial(id) {
+    const { blockId, tab, slotIndex } = martialModalCtx;
+    const build = charDataCache[blockId].builds[tab];
+    if (!build.martialArts) build.martialArts = [];
+    const arr = build.martialArts;
+    const existing = arr.indexOf(id);
+    if (existing !== -1 && existing !== slotIndex) arr[existing] = null;
+    arr[slotIndex] = id;
+    build.martialArts = arr.filter(Boolean);
+    renderMartialSlots(blockId);
+    // Возвращаем футер модалки на место (для следующего открытия мистики/путей)
+    const footer = document.querySelector('#modal .modal-footer');
+    if (footer) footer.style.display = '';
+    closeModal();
+}
+
+// Обёртка: возвращаем футер при закрытии обычной модалки тоже
+const _origCloseModal = closeModal;
+closeModal = function() {
+    const footer = document.querySelector('#modal .modal-footer');
+    if (footer) footer.style.display = '';
+    _origCloseModal();
+};
         }
     </script>
 </body>
