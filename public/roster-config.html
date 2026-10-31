@@ -560,19 +560,21 @@
 
         // ─── РУЧНЫЕ НАЗНАЧЕНИЯ ───
         async function loadMembers() {
-            try {
-                const res = await fetch('/api/guild/' + guildId + '/roster', { credentials: 'include' });
-                if (!res.ok) {
-                    document.getElementById('manual-list').innerHTML =
-                        '<div style="color:var(--text-muted);font-size:13px;">Не удалось загрузить участников.</div>';
-                    return;
-                }
-                const data = await res.json();
-                members = data.members || [];
-                renderManual();
-            } catch (e) {
-                console.error(e);
-            }
+    try {
+        const res = await fetch('/api/guild/' + guildId + '/roster', { credentials: 'include' });
+        if (!res.ok) {
+            document.getElementById('manual-list').innerHTML =
+                '<div style="color:var(--text-muted);font-size:13px;">Не удалось загрузить участников (нет прав или профилей).</div>';
+            return;
+        }
+        const data = await res.json();
+        members = data.members || [];
+        renderManual();
+    } catch (e) {
+        console.error(e);
+        document.getElementById('manual-list').innerHTML =
+            '<div style="color:var(--text-muted);font-size:13px;">Ошибка загрузки.</div>';
+    }
         }
 
         function renderManual() {
@@ -633,8 +635,18 @@
         }
 
         // ─── СТАРТ ───
-        loadAccess();
-        loadColumns().then(() => loadMembers());
+        async function init() {
+    try {
+        await loadAccess();
+    } catch (e) { console.error('loadAccess', e); }
+    try {
+        await loadColumns();
+    } catch (e) { console.error('loadColumns', e); }
+    try {
+        await loadMembers();
+    } catch (e) { console.error('loadMembers', e); }
+}
+init();
     </script>
 </body>
 </html>
