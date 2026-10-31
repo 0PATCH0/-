@@ -320,20 +320,23 @@
         }
 
         function selectGuild(guildId) {
-            currentGuildFilter = guildId;
-            document.querySelectorAll('#guild-chips .chip').forEach(c => {
-                c.classList.toggle('active', c.dataset.guild === guildId);
-            });
-            loadProfiles();
+    currentGuildFilter = guildId;
+    document.querySelectorAll('#guild-chips .chip').forEach(c => {
+        c.classList.toggle('active', c.dataset.guild === guildId);
+    });
+    loadProfiles();
+}
+function selectMartial(artId) {
+    currentMartialFilter = artId;
+    document.querySelectorAll('#martial-chips .chip').forEach(c => {
+        const isActive = c.dataset.martial === artId;
+        c.classList.toggle('active', isActive);
+        if (c.dataset.martial === 'all') {
+            c.classList.toggle('purple', isActive);
         }
-        function selectMartial(artId) {
-            currentMartialFilter = artId;
-            document.querySelectorAll('#martial-chips .chip').forEach(c => {
-                c.classList.toggle('active', c.dataset.martial === artId);
-            });
-            loadProfiles();
-        }
-
+    });
+    loadProfiles();
+}
         // ─── Загружаем профили ───
         async function loadProfiles() {
             const container = document.getElementById('profiles-container');
