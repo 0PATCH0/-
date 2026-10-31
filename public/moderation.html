@@ -22,16 +22,22 @@
             <p>☯ Кто может управлять порядком</p>
         </div>
 
+        <div class="panel" id="error-panel" style="display:none;">
+            <div class="empty-state" id="error-msg"></div>
+        </div>
+
         <div class="panel">
             <div class="panel-title">
                 <span>Роли модераторов</span>
-                <button class="btn btn-primary btn-small" onclick="saveModeration()">💾 Сохранить</button>
+                <button class="btn btn-primary btn-small" onclick="saveModeration()" id="save-btn" disabled>💾 Сохранить</button>
             </div>
             <div class="panel-desc">
                 Выберите роли Discord, которым разрешено использовать команды модерации
                 (/мут, /очистить, /сказать, /настройки и т.д.).
             </div>
-            <div id="roles-list" style="max-height: 500px; overflow-y: auto;"></div>
+            <div id="roles-list">
+                <div class="empty-state">Загрузка...</div>
+            </div>
             <div class="status-msg" id="status"></div>
         </div>
     </div>
@@ -51,8 +57,7 @@
         }
         .role-item:hover { border-color: rgba(212,175,55,0.4); }
         .role-item input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
+            width: 20px; height: 20px;
             accent-color: var(--jade);
             cursor: pointer;
         }
@@ -67,16 +72,44 @@
         let serverRoles = [];
         let selectedRoles = new Set();
 
-        Promise.all([
-            fetch('/api/guild/' + guildId, { credentials: 'include' }).then(r => r.json()),
-            fetch('/api/guild/' + guildId + '/moderation', { credentials: 'include' }).then(r => r.json())
-        ]).then(([guildData, modData]) => {
-            serverRoles = guildData.roles || [];
-            selectedRoles = new Set(modData.modRoles || []);
-            renderRoles();
-        }).catch(err => {
-            document.getElementById('roles-list').innerHTML = '<div class="empty-state">Ошибка загрузки.</div>';
-        });
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
+        }
+
+        function showError(msg) {
+            document.getElementById('error-panel').style.display = 'block';
+            document.getElementById('error-msg').textContent = msg;
+            document.getElementById('roles-list').innerHTML = '';
+        }
+
+        async function loadData() {
+            try {
+                const guildRes = await fetch('/api/guild/' + guildId, { credentials: 'include' });
+                if (guildRes.status === 403) {
+                    return showError('❌ У вас нет прав модератора на этом сервере.');
+                }
+                if (!guildRes.ok) {
+                    return showError('❌ Ошибка загрузки гильдии: HTTP ' + guildRes.status);
+                }
+                const guildData = await guildRes.json();
+                serverRoles = guildData.roles || [];
+
+                const modRes = await fetch('/api/guild/' + guildId + '/moderation', { credentials: 'include' });
+                if (modRes.status === 403) {
+                    return showError('❌ У вас нет прав модератора на этом сервере.');
+                }
+                if (!modRes.ok) {
+                    return showError('❌ Ошибка загрузки прав модерации: HTTP ' + modRes.status);
+                }
+                const modData = await modRes.json();
+                selectedRoles = new Set(modData.modRoles || []);
+
+                renderRoles();
+                document.getElementById('save-btn').disabled = false;
+            } catch (e) {
+                showError('❌ Ошибка: ' + e.message);
+            }
+        }
 
         function renderRoles() {
             const list = document.getElementById('roles-list');
@@ -97,10 +130,6 @@
             else selectedRoles.delete(id);
         }
 
-        function escapeHtml(s) {
-            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
-        }
-
         function setStatus(msg, type) {
             const el = document.getElementById('status');
             el.textContent = msg;
@@ -119,6 +148,8 @@
                 else setStatus('❌ Ошибка сохранения', 'err');
             }).catch(() => setStatus('❌ Ошибка сети', 'err'));
         }
+
+        loadData();
     </script>
 </body>
 </html>
