@@ -93,3 +93,8 @@ window.GAME_DATA = {
         { id: "wind_beneath_wings", nameEN: "Wind Beneath Wings", nameRU: "Ветер под Крыльями", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/7/79/Wind-beneath-wings-internal-arts-wherewindsmeet-wiki-guide.webp" }
     ]
 };
+
+// Экспорт для Node.js (Discord-бота)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = window.GAME_DATA;
+}
