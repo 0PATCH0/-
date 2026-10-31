@@ -213,9 +213,12 @@
 
     <script src="/js/gamedata.js"></script>
     <script>
-        if (typeof window.GAME_DATA === 'undefined') {
-            alert('Ошибка: файл gamedata.js не загрузился. Проверьте, что он лежит в public/js/');
-        }
+        // Безопасная проверка после полной загрузки страницы
+        window.addEventListener('load', () => {
+            if (typeof window.GAME_DATA === 'undefined') {
+                console.warn('ВНИМАНИЕ: gamedata.js не загружен или содержит синтаксическую ошибку!');
+            }
+        });
 
         const urlParams = new URLSearchParams(window.location.search);
         let guildId = urlParams.get('guild') || window.location.pathname.split('/').pop();
@@ -289,15 +292,18 @@
             const pvpSkills = data.builds?.PvP?.mysticSkills || [];
             
             const renderGrid = (skillsArray) => {
-                if (!window.GAME_DATA) return '';
+                if (!window.GAME_DATA || !window.GAME_DATA.mysticSkills) return '';
                 return window.GAME_DATA.mysticSkills.map(s => {
                     if (!skillsArray.includes(s.id)) return '';
                     return `<div class="skill-card selected"><img src="${s.img}" onerror="this.src='https://via.placeholder.com/50x50/0a0b10/2ecc71?text=?'"><span>${s.nameRU}</span></div>`;
                 }).join('');
             };
             
-            document.getElementById(`pve-skills-${blockId}`).innerHTML = renderGrid(pveSkills) || '<span style="color: var(--text-muted);">Не выбрано</span>';
-            document.getElementById(`pvp-skills-${blockId}`).innerHTML = renderGrid(pvpSkills) || '<span style="color: var(--text-muted);">Не выбрано</span>';
+            const pveEl = document.getElementById(`pve-skills-${blockId}`);
+            const pvpEl = document.getElementById(`pvp-skills-${blockId}`);
+            
+            if (pveEl) pveEl.innerHTML = renderGrid(pveSkills) || '<span style="color: var(--text-muted);">Не выбрано</span>';
+            if (pvpEl) pvpEl.innerHTML = renderGrid(pvpSkills) || '<span style="color: var(--text-muted);">Не выбрано</span>';
         }
 
         function openModal(blockId, type, activeTab) {
@@ -311,8 +317,8 @@
 
         function renderModalGrid() {
             const body = document.getElementById('modal-body');
-            if (!window.GAME_DATA) {
-                body.innerHTML = '<p style="color: red;">Ошибка загрузки данных</p>';
+            if (!window.GAME_DATA || !window.GAME_DATA.mysticSkills) {
+                body.innerHTML = '<p style="color: red; font-weight: bold; grid-column: 1 / -1; text-align: center; margin-top: 50px;">Ошибка загрузки данных.<br><br>Убедитесь, что файл gamedata.js дописан до конца и не содержит синтаксических ошибок.</p>';
                 return;
             }
             
