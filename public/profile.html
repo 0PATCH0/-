@@ -831,8 +831,8 @@
                 console.error(e);
                 alert('❌ Ошибка удаления: ' + e.message);
             }
-
-            
+        }
+        
 // ══════════ БОЕВЫЕ ИСКУССТВА ══════════
 
 function renderMartialSlots(blockId) {
@@ -893,10 +893,7 @@ function openMartialModal(blockId, tab, slotIndex) {
     renderMartialBody();
 
     const footer = document.querySelector('#modal .modal-footer');
-    if (footer) {
-        // Кнопка "Применить" не нужна — выбор делается кликом. Прячем её.
-        footer.style.display = 'none';
-    }
+    if (footer) footer.style.display = 'none';
     const modal = document.getElementById('modal');
     if (modal) modal.classList.add('active');
 }
@@ -936,20 +933,10 @@ function pickMartial(id) {
     arr[slotIndex] = id;
     build.martialArts = arr.filter(Boolean);
     renderMartialSlots(blockId);
-    // Возвращаем футер модалки на место (для следующего открытия мистики/путей)
     const footer = document.querySelector('#modal .modal-footer');
     if (footer) footer.style.display = '';
     closeModal();
 }
-
-// Обёртка: возвращаем футер при закрытии обычной модалки тоже
-const _origCloseModal = closeModal;
-closeModal = function() {
-    const footer = document.querySelector('#modal .modal-footer');
-    if (footer) footer.style.display = '';
-    _origCloseModal();
-};
-        }
     </script>
 </body>
 </html>
