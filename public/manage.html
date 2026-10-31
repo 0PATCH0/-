@@ -22,6 +22,10 @@
             <p>☯ Выберите роль — получите доступ</p>
         </div>
 
+        <div id="error-panel" class="panel" style="display:none;">
+            <div class="empty-state" id="error-msg"></div>
+        </div>
+
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;" id="rr-layout">
             <div class="panel">
                 <div class="panel-title">
@@ -30,16 +34,16 @@
 
                 <div class="form-group">
                     <label>Заголовок</label>
-                    <input type="text" id="rr-title" placeholder="Например: Выберите свои роли">
+                    <input type="text" id="rr-title" placeholder="Например: Выберите свои роли" oninput="updatePreview()">
                 </div>
                 <div class="form-group">
                     <label>Описание</label>
-                    <textarea id="rr-desc" placeholder="Выберите роли..." style="height: 80px;"></textarea>
+                    <textarea id="rr-desc" placeholder="Выберите роли..." style="height: 80px;" oninput="updatePreview()"></textarea>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Цвет</label>
-                        <input type="color" id="rr-color" value="#d4af37" style="height: 45px; padding: 5px;">
+                        <input type="color" id="rr-color" value="#d4af37" style="height: 45px; padding: 5px;" oninput="updatePreview()">
                     </div>
                     <div class="form-group" id="channel-group">
                         <label>ID канала</label>
@@ -104,7 +108,7 @@
             padding: 14px;
             margin-bottom: 10px;
         }
-        .rr-card h4 { color: var(--gold); font-family: 'Cinzel', serif; margin-bottom: 6px; }
+        .rr-card h4 { color: var(--gold); font-family: 'Cinzel', serif; margin-bottom: 6px; font-size: 15px; }
         .rr-card p { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
     </style>
 
@@ -116,13 +120,28 @@
         let serverRoles = [];
         let currentEditId = null;
 
-        fetch('/api/guild/' + guildId, { credentials: 'include' })
-            .then(res => res.json())
-            .then(data => {
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
+        }
+
+        async function init() {
+            try {
+                const res = await fetch('/api/guild/' + guildId, { credentials: 'include' });
+                if (res.status === 403) {
+                    document.getElementById('error-panel').style.display = 'block';
+                    document.getElementById('error-msg').textContent = '❌ У вас нет прав модератора на этом сервере.';
+                    return;
+                }
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
                 serverRoles = data.roles || [];
                 addRoleRow();
                 loadExisting();
-            });
+            } catch (e) {
+                document.getElementById('error-panel').style.display = 'block';
+                document.getElementById('error-msg').textContent = '❌ Ошибка загрузки: ' + e.message;
+            }
+        }
 
         function addRoleRow(data = { roleId: '', emoji: '', label: '' }) {
             const container = document.getElementById('roles-container');
@@ -131,8 +150,8 @@
             let options = serverRoles.map(r => `<option value="${r.id}" ${r.id === data.roleId ? 'selected' : ''}>${r.name}</option>`).join('');
             row.innerHTML = `
                 <select class="rr-role">${options}</select>
-                <input type="text" class="rr-emoji" placeholder="🎭" value="${data.emoji || ''}">
-                <input type="text" class="rr-label" placeholder="Текст" value="${data.label || ''}">
+                <input type="text" class="rr-emoji" placeholder="🎭" value="${escapeHtml(data.emoji || '')}">
+                <input type="text" class="rr-label" placeholder="Текст" value="${escapeHtml(data.label || '')}">
                 <button class="btn btn-danger btn-small" onclick="this.parentElement.remove()">×</button>
             `;
             container.appendChild(row);
@@ -140,10 +159,13 @@
 
         function loadExisting() {
             fetch('/api/guild/' + guildId + '/reactionroles', { credentials: 'include' })
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    return res.json();
+                })
                 .then(data => {
                     const list = document.getElementById('rr-list');
-                    if (data.length === 0) {
+                    if (!data || data.length === 0) {
                         list.innerHTML = '<div class="empty-state">Сообщений пока нет.</div>';
                         return;
                     }
@@ -153,7 +175,7 @@
                         card.className = 'rr-card';
                         card.innerHTML = `
                             <h4>${escapeHtml(rr.title)}</h4>
-                            <p>Канал: #${rr.channelId} • Ролей: ${rr.roles.length}</p>
+                            <p>Канал: ${escapeHtml(rr.channelId)} • Ролей: ${rr.roles.length}</p>
                             <div style="display: flex; gap: 10px;">
                                 <button class="btn btn-secondary btn-small" style="flex: 1;">✏ Ред.</button>
                                 <button class="btn btn-danger btn-small" style="flex: 1;">🗑 Удалить</button>
@@ -163,12 +185,14 @@
                         card.querySelector('.btn-danger').onclick = () => deleteMessage(rr.messageId);
                         list.appendChild(card);
                     });
+                })
+                .catch(err => {
+                    document.getElementById('rr-list').innerHTML =
+                        '<div class="empty-state">Ошибка загрузки: ' + escapeHtml(err.message) + '</div>';
                 });
         }
 
-        function escapeHtml(s) {
-            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
-        }
+        function updatePreview() { /* без превью пока, добавим отдельно */ }
 
         function saveReactionRoles() {
             const roles = [];
@@ -254,6 +278,8 @@
                     }
                 });
         }
+
+        init();
     </script>
 </body>
 </html>
