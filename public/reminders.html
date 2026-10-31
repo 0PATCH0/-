@@ -32,8 +32,15 @@
         const backLink = document.getElementById('back-link');
         if (backLink) backLink.href = '/manage/' + guildId;
 
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
+        }
+
         fetch('/api/guild/' + guildId + '/reminders', { credentials: 'include' })
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            })
             .then(data => {
                 const grid = document.getElementById('reminders-grid');
                 if (!data || data.length === 0) {
@@ -60,12 +67,9 @@
                 });
             })
             .catch(err => {
-                document.getElementById('reminders-grid').innerHTML = '<div class="empty-state">Ошибка загрузки.</div>';
+                document.getElementById('reminders-grid').innerHTML =
+                    '<div class="empty-state">Ошибка загрузки: ' + escapeHtml(err.message) + '</div>';
             });
-
-        function escapeHtml(s) {
-            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
-        }
 
         function deleteReminder(id) {
             if (!confirm('Удалить напоминание?')) return;
