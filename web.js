@@ -99,8 +99,8 @@ function detectClassFromMartialArts(martialArts) {
 
 function getDefaultRosterColumns() {
     return [
-        { key: 'tank', name: 'Танк', icon: 'tank', color: '#2ecc71', order: 0, isClass: true },
-        { key: 'dps', name: 'ДД', icon: 'dps', color: '#e74c3c', order: 1, isClass: true },
+        { key: 'dps', name: 'ДД', icon: 'dps', color: '#e74c3c', order: 0, isClass: true },
+        { key: 'tank', name: 'Танк', icon: 'tank', color: '#2ecc71', order: 1, isClass: true },
         { key: 'healer', name: 'Хил', icon: 'healer', color: '#9b59b6', order: 2, isClass: true }
     ];
 }
