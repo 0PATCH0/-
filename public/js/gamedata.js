@@ -93,6 +93,22 @@
           { id: "wind_beneath_wings", nameEN: "Wind Beneath Wings", nameRU: "Ветер под Крыльями", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/7/79/Wind-beneath-wings-internal-arts-wherewindsmeet-wiki-guide.webp" }
     ]
 };
+    ],
+    martialArts: [
+        { id: "nameless_sword", nameEN: "Nameless Sword", nameRU: "Безымянный меч", path: "Bellstrike - Splendor", emoji: "🗡️", desc: "Быстрый и чистый стиль ближнего боя, ориентированный на быстрые удары и мобильность." },
+        { id: "nameless_spear", nameEN: "Nameless Spear", nameRU: "Безымянное копьё", path: "Bellstrike - Splendor", emoji: "🔱", desc: "Ближний бой с высокой мобильностью. Обездвиживает цель и наносит мощный удар по прямой." },
+        { id: "strategic_sword", nameEN: "Strategic Sword", nameRU: "Меч стратега", path: "Bellstrike - Umbra", emoji: "🗡️", desc: "Агрессивный ближний бой. При нанесении серии ударов вызывает у врага кровотечение." },
+        { id: "heavenquaker_spear", nameEN: "Heavenquaker Spear", nameRU: "Копьё дрожащих небес", path: "Bellstrike - Umbra", emoji: "🔱", desc: "Ближний бой с удержанием врагов на расстоянии. Комбо с вращением и кровотечением." },
+        { id: "stormbreaker_spear", nameEN: "Stormbreaker Spear", nameRU: "Копьё-громобой", path: "Stonesplit - Might", emoji: "🔱", desc: "Высокий урон и способность отвлекать врагов, снижая наносимый ими урон. Сбивает с ног." },
+        { id: "thundercry_blade", nameEN: "Thundercry Blade", nameRU: "Клинок раската грома", path: "Stonesplit - Might", emoji: "⚔️", desc: "Тяжёлое оружие. Создаёт щит на 25% здоровья, притягивает врагов и сокрушает их по площади." },
+        { id: "infernal_twinblades", nameEN: "Infernal Twinblades", nameRU: "Клинки преисподней", path: "Bamboocut - Wind", emoji: "⚔️", desc: "Динамичный ближний бой. Накапливает кармическое пламя, даёт неуязвимость и повышает урон." },
+        { id: "mortal_rope_dart", nameEN: "Mortal Rope Dart", nameRU: "Шэнбяо бренности", path: "Bamboocut - Wind", emoji: "🪢", desc: "Быстрая техника ближнего боя. Притягивает врагов и призывает агрессивных крыс." },
+        { id: "inkwell_fan", nameEN: "Inkwell Fan", nameRU: "Чернильный веер", path: "Silkbind - Jade", emoji: "🪭", desc: "Ближний бой на отдалении. Подбрасывает врагов и сдувает порывами ветра, даёт бонус к уклонению." },
+        { id: "vernal_umbrella", nameEN: "Vernal Umbrella", nameRU: "Зонт юности", path: "Silkbind - Jade", emoji: "☂️", desc: "Дальний бой. Превращает зонт в турель, обездвиживает врагов (кроме боссов)." },
+        { id: "panacea_fan", nameEN: "Panacea Fan", nameRU: "Веер панацеи", path: "Silkbind - Deluge", emoji: "🪭", desc: "Поддержка и дальний бой. Лечит союзников по площади и восстанавливает здоровье." },
+        { id: "soulshade_umbrella", nameEN: "Soulshade Umbrella", nameRU: "Зонт прикрытой души", path: "Silkbind - Deluge", emoji: "☂️", desc: "Лечение и дальний бой. Подсвечивает раненых союзников и превращает зонт в турель поддержки." }
+    ]
+};
 
 // Экспорт для Node.js (Discord-бота)
 if (typeof module !== 'undefined' && module.exports) {
