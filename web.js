@@ -204,6 +204,51 @@ app.delete('/api/guild/:id/profiles/:userId', isModerator, async (req, res) => {
     }
 });
 
+// ─── ПУБЛИЧНЫЙ СПИСОК ПРОФИЛЕЙ (участники + их глобальные) ─
+app.get('/api/guild/:id/profiles-public', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    try {
+        const client = req.app.get('botClient');
+        const discordGuild = client.guilds.cache.get(req.params.id);
+        if (!discordGuild) return res.status(404).json({ error: 'Бот не на сервере' });
+
+        // Все профили этого сервера + глобальные тех, кто состоит в этой гильдии
+        const raw = await PlayerProfile.find({
+            $or: [
+                { guildId: req.params.id },
+                { isGlobal: true }
+            ]
+        });
+
+        const local = raw.filter(p => {
+            if (p.guildId === req.params.id) return true;
+            // глобальный — показываем только если человек в этой Discord-гильдии
+            return discordGuild.members.cache.has(p.userId);
+        });
+
+        const enriched = await Promise.all(local.map(async (p) => {
+            const member = await discordGuild.members.fetch(p.userId).catch(() => null);
+            return {
+                _id: p._id,
+                userId: p.userId,
+                guildId: p.guildId,
+                isGlobal: p.isGlobal,
+                characters: p.characters,
+                discordName: member ? member.user.username : 'Неизвестный',
+                avatar: member && member.user.avatar
+                    ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png`
+                    : 'https://cdn.discordapp.com/embed/avatars/0.png'
+            };
+        }));
+
+        // Возвращаем объект { local, global } — фронт ждёт именно его
+        res.json({ local: enriched, global: [] });
+    } catch (e) {
+        console.error('PROFILES PUBLIC:', e);
+        res.status(500).json({ error: 'Ошибка: ' + e.message });
+    }
+});
+
 // ─── СПИСОК ВСЕХ ГИЛЬДИЙ БОТА (для фильтра) ─────────────
 app.get('/api/guilds-list', (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
