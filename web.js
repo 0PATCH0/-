@@ -7,6 +7,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 const { 
     ReactionRole, Settings, Reminder, SentMessage, Roster, RosterConfig, RosterMessage, Log, Guide, PlayerProfile, Event 
 } = require('./models');
+const { refreshRosterMessage } = require('./roster-refresh');
 
 const OWNER_ID = '439798786059927552';
 
@@ -219,10 +220,12 @@ app.post('/api/profile/:guildId', async (req, res) => {
             { upsert: true, new: true, setDefaultsOnInsert: true }
         );
         res.json({ success: true, profile });
+        try { refreshRosterMessage(req.app.get('botClient'), guildId); } catch (e) {}
     } catch (e) {
         console.error('ОШИБКА БАЗЫ:', e);
         res.status(500).json({ error: 'Ошибка базы данных' });
     }
+
 });
 
 app.delete('/api/profile/:guildId', async (req, res) => {
@@ -231,6 +234,7 @@ app.delete('/api/profile/:guildId', async (req, res) => {
         const guildId = resolveProfileGuildId(req);
         await PlayerProfile.findOneAndDelete({ userId: req.user.id, guildId });
         res.json({ success: true });
+        try { refreshRosterMessage(req.app.get('botClient'), guildId); } catch (e) {}
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Ошибка базы данных' });
@@ -762,6 +766,7 @@ app.post('/api/guild/:id/roster-config', isModerator, async (req, res) => {
             { upsert: true, new: true }
         );
         res.json({ success: true, config });
+        try { refreshRosterMessage(req.app.get('botClient'), guildId); } catch (e) {}
     } catch (e) {
         console.error('ROSTER CONFIG POST:', e);
         res.status(500).json({ error: 'Ошибка: ' + e.message });
@@ -781,92 +786,25 @@ app.post('/api/guild/:id/roster-manual', isModerator, async (req, res) => {
         config.markModified('manualAssignments');
         await config.save();
         res.json({ success: true, manualAssignments: config.manualAssignments });
+        try { refreshRosterMessage(req.app.get('botClient'), guildId); } catch (e) {}
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
 app.get('/api/guild/:id/roster', canViewRoster, async (req, res) => {
+app.get('/api/guild/:id/roster', canViewRoster, async (req, res) => {
     try {
-        const client = req.app.get('botClient');
-        const discordGuild = client.guilds.cache.get(req.params.id);
-        if (!discordGuild) return res.status(404).json({ error: 'Бот не на сервере' });
-
-        let config = await RosterConfig.findOne({ guildId: req.params.id });
-        let columns;
-        if (!config || !config.columns || config.columns.length === 0) {
-            columns = getDefaultRosterColumns();
-        } else {
-            columns = [...config.columns].sort((a, b) => (a.order || 0) - (b.order || 0));
-        }
-        const manual = (config && config.manualAssignments) || {};
-
-        // Только те, у кого есть профиль: на этом сервере ИЛИ глобальный
-        const profiles = await PlayerProfile.find({
-            $or: [ { guildId: req.params.id }, { isGlobal: true } ]
-        });
-
-        const profileMap = {};
-        profiles.forEach(p => {
-            // не перезаписываем, если уже есть локальный (локальный приоритетнее)
-            if (!profileMap[p.userId] || p.guildId === req.params.id) {
-                profileMap[p.userId] = p;
-            }
-        });
-
-        // Тянем только нужных участников из Discord
-        const memberIds = Object.keys(profileMap);
-        const fetchedMembers = await Promise.all(
-            memberIds.map(id => discordGuild.members.fetch(id).catch(() => null))
-        );
-
-        const members = [];
-        let classifiedCount = 0;
-
-        fetchedMembers.forEach(m => {
-            if (!m || m.user.bot) return;
-            const p = profileMap[m.id];
-            if (!p) return;
-
-            let detectedClass = null;
-            if (p.characters && p.characters.length > 0) {
-                const c = p.characters[0];
-                const arts = [
-                    ...((c.builds?.PvE?.martialArts) || []),
-                    ...((c.builds?.PvP?.martialArts) || [])
-                ];
-                detectedClass = detectClassFromMartialArts(arts);
-            }
-            if (detectedClass && detectedClass !== 'none') classifiedCount++;
-
-            members.push({
-                userId: m.id,
-                displayName: m.displayName,
-                username: m.user.username,
-                avatar: m.user.avatar
-                    ? `https://cdn.discordapp.com/avatars/${m.id}/${m.user.avatar}.png`
-                    : `https://cdn.discordapp.com/embed/avatars/0.png`,
-                roles: m.roles.cache.filter(r => r.id !== discordGuild.id).map(r => r.id),
-                detectedClass: detectedClass || 'none',
-                manualColumnKey: manual[m.id] || null,
-                isGlobal: p.isGlobal
-            });
-        });
-
-        // Сортируем: сначала классифицированные, потом без класса; внутри — по алфавиту
-        members.sort((a, b) => {
-            const rank = (m) => m.detectedClass === 'none' && !m.manualColumnKey ? 1 : 0;
-            const r = rank(a) - rank(b);
-            if (r !== 0) return r;
-            return a.displayName.localeCompare(b.displayName);
-        });
-
+        const botClient = req.app.get('botClient');
+        const { buildClassifiedRoster } = require('./roster-refresh');
+        const roster = await buildClassifiedRoster(botClient, req.params.id);
+        const stats = {
+            total: roster.members.length,
+            classified: roster.members.filter(m => m.detectedClass !== 'none' || m.manualColumnKey).length
+        };
         res.json({
             configured: true,
-            columns,
-            members,
+            columns: roster.columns,
+            members: roster.members,
             isMod: !!req.isRosterMod,
-            stats: {
-                total: members.length,
-                classified: classifiedCount
-            }
+            stats
         });
     } catch (e) {
         console.error('ROSTER GET:', e);
