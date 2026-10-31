@@ -1,4 +1,4 @@
-window.GAME_DATA = {
+(typeof window !== 'undefined' ? window : globalThis).GAME_DATA = {
     mysticSkills: [
         { id: "tai_chi", nameEN: "Tai Chi", nameRU: "Тай-цзи", category: "Offensive", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/d/d8/Tai-chi-mystic-art-where-winds-meet-wiki-guide-min.png" },
         { id: "meridian_touch", nameEN: "Meridian Touch", nameRU: "Касание Меридиана", category: "Offensive", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/f/fc/Meridian-touch-mystic-art-where-winds-meet-wiki-guide-min.png" },
