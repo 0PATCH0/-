@@ -22,7 +22,12 @@
             <p>☯ Сообщения от имени бота</p>
         </div>
 
+        <div class="panel" id="error-panel" style="display:none;">
+            <div class="empty-state" id="error-msg"></div>
+        </div>
+
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;" id="custom-layout">
+            <!-- ЛЕВАЯ: ФОРМА -->
             <div class="panel">
                 <div class="panel-title">
                     <span id="form-title">Создать сообщение</span>
@@ -30,31 +35,33 @@
 
                 <div class="form-group">
                     <label>ID канала</label>
-                    <input type="text" id="channel-id" placeholder="123456789...">
+                    <input type="text" id="channel-id" placeholder="123456789..." oninput="updatePreview()">
                 </div>
                 <div class="form-group">
                     <label>Заголовок</label>
-                    <input type="text" id="cmd-title" placeholder="Заголовок сообщения">
+                    <input type="text" id="cmd-title" placeholder="Заголовок сообщения" oninput="updatePreview()">
                 </div>
                 <div class="form-group">
                     <label>Описание</label>
-                    <textarea id="cmd-desc" placeholder="Текст сообщения..." style="min-height: 100px;"></textarea>
+                    <textarea id="cmd-desc" placeholder="Текст сообщения..." style="min-height: 100px;" oninput="updatePreview()"></textarea>
                 </div>
-                <div class="form-group">
-                    <label>Цвет полоски</label>
-                    <input type="color" id="cmd-color" value="#d4af37" style="height: 45px; padding: 5px;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Цвет полоски</label>
+                        <input type="color" id="cmd-color" value="#d4af37" style="height: 45px; padding: 5px;" oninput="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Автор (опционально)</label>
+                        <input type="text" id="cmd-author" placeholder="Имя автора" oninput="updatePreview()">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Картинка (URL, опционально)</label>
-                    <input type="url" id="cmd-image" placeholder="https://...">
-                </div>
-                <div class="form-group">
-                    <label>Автор (опционально)</label>
-                    <input type="text" id="cmd-author" placeholder="Имя автора">
+                    <input type="url" id="cmd-image" placeholder="https://..." oninput="updatePreview()">
                 </div>
                 <div class="form-group">
                     <label>Подвал (опционально)</label>
-                    <input type="text" id="cmd-footer" placeholder="Footer текст">
+                    <input type="text" id="cmd-footer" placeholder="Footer текст" oninput="updatePreview()">
                 </div>
 
                 <div style="display: flex; gap: 10px; margin-top: 20px;">
@@ -63,12 +70,21 @@
                 </div>
             </div>
 
-            <div class="panel">
-                <div class="panel-title">
-                    <span>Отправленные</span>
+            <!-- ПРАВАЯ: ПРЕВЬЮ И СПИСОК -->
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                <div class="panel">
+                    <div class="panel-title">
+                        <span>Превью</span>
+                    </div>
+                    <div id="embed-preview"></div>
                 </div>
-                <div id="messages-list">
-                    <div class="empty-state">Загрузка...</div>
+                <div class="panel">
+                    <div class="panel-title">
+                        <span>Отправленные</span>
+                    </div>
+                    <div id="messages-list">
+                        <div class="empty-state">Загрузка...</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -87,6 +103,51 @@
         }
         .msg-card h4 { color: var(--gold); font-family: 'Cinzel', serif; margin-bottom: 6px; font-size: 15px; }
         .msg-card p { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+        .embed-preview-box {
+            background: #2f3136;
+            border-left: 4px solid #d4af37;
+            border-radius: 4px;
+            padding: 14px 16px;
+            font-family: 'Segoe UI', 'Marcellus', sans-serif;
+            color: #dcddde;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .embed-preview-author {
+            font-size: 13px;
+            color: #ffffff;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .embed-preview-title {
+            font-size: 16px;
+            color: #ffffff;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .embed-preview-desc {
+            color: #dcddde;
+            font-size: 14px;
+            margin-bottom: 10px;
+            white-space: pre-wrap;
+        }
+        .embed-preview-image {
+            max-width: 100%;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+        .embed-preview-footer {
+            font-size: 12px;
+            color: #72767d;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .embed-preview-empty {
+            color: #72767d;
+            font-style: italic;
+            font-size: 13px;
+        }
     </style>
 
     <script>
@@ -98,44 +159,70 @@
             return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
         }
 
-        function loadMessages() {
-            fetch('/api/guild/' + guildId + '/custom', { credentials: 'include' })
-                .then(res => res.json())
-                .then(data => {
-                    const list = document.getElementById('messages-list');
-                    if (!data || data.length === 0) {
-                        list.innerHTML = '<div class="empty-state">Сообщений нет.</div>';
-                        return;
-                    }
-                    list.innerHTML = '';
-                    data.forEach(msg => {
-                        const card = document.createElement('div');
-                        card.className = 'msg-card';
-                        card.style.borderLeft = '3px solid ' + (msg.color || '#d4af37');
-                        card.innerHTML = `
-                            <h4>${escapeHtml(msg.title || 'Без заголовка')}</h4>
-                            <p>${msg.description ? escapeHtml(msg.description.substring(0, 80)) + '...' : 'Без описания'}</p>
-                            <div style="display: flex; gap: 10px;">
-                                <button class="btn btn-secondary btn-small" style="flex: 1;">✏ Ред.</button>
-                                <button class="btn btn-danger btn-small" style="flex: 1;">🗑 Удалить</button>
-                            </div>
-                        `;
-                        card.querySelector('.btn-secondary').onclick = () => editMessage(msg);
-                        card.querySelector('.btn-danger').onclick = () => deleteMessage(msg.messageId);
-                        list.appendChild(card);
-                    });
-                })
-                .catch(() => {
-                    document.getElementById('messages-list').innerHTML = '<div class="empty-state">Ошибка загрузки.</div>';
-                });
+        function updatePreview() {
+            const title = document.getElementById('cmd-title').value;
+            const desc = document.getElementById('cmd-desc').value;
+            const color = document.getElementById('cmd-color').value;
+            const image = document.getElementById('cmd-image').value;
+            const author = document.getElementById('cmd-author').value;
+            const footer = document.getElementById('cmd-footer').value;
+
+            const preview = document.getElementById('embed-preview');
+            if (!title && !desc && !image && !author) {
+                preview.innerHTML = '<div class="embed-preview-empty">Начните заполнять поля слева — превью появится здесь.</div>';
+                return;
+            }
+            let html = `<div class="embed-preview-box" style="border-left-color: ${color};">`;
+            if (author) html += `<div class="embed-preview-author">${escapeHtml(author)}</div>`;
+            if (title) html += `<div class="embed-preview-title">${escapeHtml(title)}</div>`;
+            if (desc) html += `<div class="embed-preview-desc">${escapeHtml(desc)}</div>`;
+            if (image) html += `<img class="embed-preview-image" src="${escapeHtml(image)}" onerror="this.style.display='none'">`;
+            if (footer) html += `<div class="embed-preview-footer">${escapeHtml(footer)}</div>`;
+            html += `</div>`;
+            preview.innerHTML = html;
         }
 
-        loadMessages();
+        async function loadMessages() {
+            try {
+                const res = await fetch('/api/guild/' + guildId + '/custom', { credentials: 'include' });
+                if (res.status === 403) {
+                    document.getElementById('error-panel').style.display = 'block';
+                    document.getElementById('error-msg').textContent = '❌ У вас нет прав модератора.';
+                    return;
+                }
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                const list = document.getElementById('messages-list');
+                if (!data || data.length === 0) {
+                    list.innerHTML = '<div class="empty-state">Сообщений нет.</div>';
+                    return;
+                }
+                list.innerHTML = '';
+                data.forEach(msg => {
+                    const card = document.createElement('div');
+                    card.className = 'msg-card';
+                    card.style.borderLeft = '3px solid ' + (msg.color || '#d4af37');
+                    card.innerHTML = `
+                        <h4>${escapeHtml(msg.title || 'Без заголовка')}</h4>
+                        <p>${msg.description ? escapeHtml(msg.description.substring(0, 80)) + '...' : 'Без описания'}</p>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-secondary btn-small" style="flex: 1;">✏ Ред.</button>
+                            <button class="btn btn-danger btn-small" style="flex: 1;">🗑 Удалить</button>
+                        </div>
+                    `;
+                    card.querySelector('.btn-secondary').onclick = () => editMessage(msg);
+                    card.querySelector('.btn-danger').onclick = () => deleteMessage(msg.messageId);
+                    list.appendChild(card);
+                });
+            } catch (err) {
+                document.getElementById('messages-list').innerHTML =
+                    '<div class="empty-state">Ошибка загрузки: ' + escapeHtml(err.message) + '</div>';
+            }
+        }
 
         function saveMessage() {
-            const messageId = document.getElementById('btn-cancel').style.display === 'block';
             const payload = {
-                channelId: document.getElementById('channel-id').value,
+                channelId: document.getElementById('channel-id').value.trim(),
                 title: document.getElementById('cmd-title').value,
                 description: document.getElementById('cmd-desc').value,
                 color: document.getElementById('cmd-color').value,
@@ -143,14 +230,13 @@
                 author: document.getElementById('cmd-author').value,
                 footer: document.getElementById('cmd-footer').value
             };
+            if (!payload.channelId) return alert('Укажите ID канала!');
 
-            if (!messageId && !payload.channelId) return alert('Укажите ID канала!');
+            const btn = document.getElementById('btn-save');
+            btn.innerHTML = 'Отправка...'; btn.disabled = true;
 
-            const method = messageId ? 'POST' : 'POST'; // web.js не имеет PUT — только POST/DELETE
-            const url = '/api/guild/' + guildId + '/custom';
-
-            fetch(url, {
-                method,
+            fetch('/api/guild/' + guildId + '/custom', {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify(payload)
@@ -160,13 +246,14 @@
                     cancelEdit();
                     loadMessages();
                 } else alert('❌ Ошибка: ' + (data.error || 'неизвестно'));
-            }).catch(() => alert('❌ Ошибка сети'));
+            }).catch(() => alert('❌ Ошибка сети'))
+              .finally(() => { btn.innerHTML = '📤 Отправить'; btn.disabled = false; });
         }
 
         function editMessage(msg) {
-            document.getElementById('form-title').innerText = 'Редактировать (только текст)';
+            if (!confirm('В web.js нет редактирования кастомных сообщений. Форма заполнится, но при отправке создастся НОВОЕ сообщение. Продолжить?')) return;
+            document.getElementById('form-title').innerText = 'Редактировать (создаст новое)';
             document.getElementById('channel-id').value = msg.channelId;
-            document.getElementById('channel-id').disabled = true;
             document.getElementById('cmd-title').value = msg.title || '';
             document.getElementById('cmd-desc').value = msg.description || '';
             document.getElementById('cmd-color').value = msg.color || '#d4af37';
@@ -174,13 +261,13 @@
             document.getElementById('cmd-author').value = msg.author || '';
             document.getElementById('cmd-footer').value = msg.footer || '';
             document.getElementById('btn-cancel').style.display = 'block';
+            updatePreview();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function cancelEdit() {
             document.getElementById('form-title').innerText = 'Создать сообщение';
             document.getElementById('channel-id').value = '';
-            document.getElementById('channel-id').disabled = false;
             document.getElementById('cmd-title').value = '';
             document.getElementById('cmd-desc').value = '';
             document.getElementById('cmd-color').value = '#d4af37';
@@ -188,6 +275,7 @@
             document.getElementById('cmd-author').value = '';
             document.getElementById('cmd-footer').value = '';
             document.getElementById('btn-cancel').style.display = 'none';
+            updatePreview();
         }
 
         function deleteMessage(id) {
@@ -195,6 +283,9 @@
             fetch('/api/guild/' + guildId + '/custom/' + id, { method: 'DELETE', credentials: 'include' })
                 .then(() => loadMessages());
         }
+
+        updatePreview();
+        loadMessages();
     </script>
 </body>
 </html>
