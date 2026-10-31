@@ -731,10 +731,10 @@ app.post('/api/guild/:id/roster-config', isModerator, async (req, res) => {
 
         // Гарантируем, что три базовых класса всегда есть и всегда сверху
         const BASE_CLASSES = [
-            { key: 'tank',   name: 'Танк', icon: 'tank',   color: '#2ecc71', isClass: true },
-            { key: 'dps',    name: 'ДД',   icon: 'dps',    color: '#e74c3c', isClass: true },
-            { key: 'healer', name: 'Хил',  icon: 'healer', color: '#9b59b6', isClass: true }
-        ];
+    { key: 'dps', name: 'ДД', icon: 'dps', color: '#e74c3c', isClass: true },
+    { key: 'tank', name: 'Танк', icon: 'tank', color: '#2ecc71', isClass: true },
+    { key: 'healer', name: 'Хил', icon: 'healer', color: '#9b59b6', isClass: true }
+];
         // Сохраняем только кастомные колонки, но при этом восстанавливаем базовые из дефолта
         // (или из существующих, если они есть — чтобы не сбрасывать переименование, если кто-то его сделал)
         const existing = await RosterConfig.findOne({ guildId: req.params.id });
