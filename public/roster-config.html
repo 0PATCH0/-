@@ -492,8 +492,9 @@
                     if (!dragged || dragged === item) return;
                     const draggingClass = dragged.classList.contains('class-locked');
                     const targetClass = item.classList.contains('class-locked');
-                    // Кастомные нельзя ставить выше классов
-                    if (!draggingClass && targetClass) return;
+                    // Кастомные (draggingClass=false) можно тащить куда угодно.
+// Классы (draggingClass=true) нельзя тащить выше кастомных.
+if (draggingClass && !targetClass) return;
                     const parent = item.parentNode;
                     const items = [...parent.querySelectorAll('.column-item')];
                     const draggedIdx = items.indexOf(dragged);
@@ -539,7 +540,7 @@
             // Пересчитываем порядок: классы всегда первые
             const classes = columns.filter(c => c.isClass);
             const custom = columns.filter(c => !c.isClass);
-            const finalColumns = [...classes, ...custom];
+            const finalColumns = [...custom, ...classes];
             finalColumns.forEach((c, i) => { c.order = i; });
 
             try {
