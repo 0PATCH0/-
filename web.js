@@ -76,16 +76,13 @@ app.get('/api/guild/:id', isModerator, async (req, res) => {
     res.json({ name: guild.name, roles });
 });
 
-// === ПРИЕМ И ОТПРАВКА ПРОФИЛЯ В БАЗУ ===
 app.get('/api/profile/:guildId', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     const targetUserId = req.query.user || req.user.id;
     
-    // Ищем профиль в базе
     let profile = await PlayerProfile.findOne({ userId: targetUserId, guildId: req.params.guildId });
     if (!profile) profile = await PlayerProfile.findOne({ userId: targetUserId, isGlobal: true });
     
-    // Если профиля нет, отдаем пустой шаблон (чтобы форма не падала)
     if (!profile) {
         profile = { 
             userId: targetUserId, guildId: req.params.guildId, isGlobal: false, 
@@ -101,7 +98,6 @@ app.post('/api/profile/:guildId', async (req, res) => {
     const finalUserId = targetUser || req.user.id;
 
     try {
-        // СОХРАНЯЕМ В БАЗУ (upsert: true создает запись, если ее нет, или обновляет)
         await PlayerProfile.findOneAndUpdate(
             { userId: finalUserId, guildId: req.params.guildId }, 
             { characters, isGlobal }, 
@@ -109,7 +105,7 @@ app.post('/api/profile/:guildId', async (req, res) => {
         );
         res.json({ success: true });
     } catch (e) {
-        console.error('Ошибка сохранения профиля:', e);
+        console.error('ОШИБКА БАЗЫ:', e);
         res.status(500).json({ error: 'Ошибка базы данных' });
     }
 });
