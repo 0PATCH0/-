@@ -3,126 +3,446 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Состав гильдии</title>
-    <link rel="stylesheet" href="/css/style.css?v=3">
+    <title>Состав гильдии — Where Winds Meet</title>
+    <link rel="stylesheet" href="/css/style.css?v=25">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #d4af37;
+            --gold-soft: rgba(212, 175, 55, 0.35);
+            --jade: #2ecc71;
+            --danger: #e74c3c;
+            --purple: #c084fc;
+            --border: rgba(212, 175, 55, 0.18);
+            --text-main: #e8e3d4;
+            --text-muted: #8a8578;
+            --icon-tank: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzJlY2M3MSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBhdGggZD0iTTMyIDE0IEwxOCAyMiBMMTggMzQgUTE4IDQ2IDMyIDUyIFE0NiA0NiA0NiAzNCBMNDYgMjIgWiIgZmlsbD0iIzJlY2M3MSIgb3BhY2l0eT0iMC4yIiBzdHJva2U9IiMyZWNjNzEiIHN0cm9rZS13aWR0aD0iMiIvPjwvc3ZnPg==");
+            --icon-dps: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2U3NGMzYyIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBhdGggZD0iTTMyIDE0IEw0MCAzMiBMMzIgNTAgTDI0IDMyIFoiIGZpbGw9IiNlNzRjM2MiIG9wYWNpdHk9IjAuMyIgc3Ryb2tlPSIjZTc0YzNjIiBzdHJva2Utd2lkdGg9IjIiLz48L3N2Zz4=");
+            --icon-healer: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzliNTliNiIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBhdGggZD0iTTMyIDE2IEw0MCAyOCBMMzYgMjggTDM2IDQwIEwyOCA0MCBMMjggMjggTDI0IDI4IFoiIGZpbGw9IiM5YjU5YjYiIG9wYWNpdHk9IjAuMyIgc3Ryb2tlPSIjOWI1OWI2IiBzdHJva2Utd2lkdGg9IjIiLz48L3N2Zz4=");
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Marcellus', serif;
+            color: var(--text-main);
+            background: #06080a;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        .bg-ink {
+            position: fixed; inset: 0; z-index: 0;
+            background:
+                radial-gradient(ellipse at 20% 10%, rgba(212, 175, 55, 0.06) 0%, transparent 40%),
+                radial-gradient(ellipse at 80% 90%, rgba(46, 204, 113, 0.04) 0%, transparent 40%),
+                linear-gradient(180deg, #06080a 0%, #0b0e13 100%);
+            pointer-events: none;
+        }
+        .fog {
+            position: fixed; inset: 0; z-index: 1; pointer-events: none;
+            background: radial-gradient(ellipse at 50% 100%, rgba(212,175,55,0.05) 0%, transparent 50%);
+        }
+        .container {
+            position: relative; z-index: 2;
+            max-width: 1200px; margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+        .top-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 30px;
+            animation: fadeDown 0.8s ease-out;
+        }
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .logo {
+            font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700;
+            letter-spacing: 3px; color: var(--gold);
+            text-shadow: 0 0 15px var(--gold-soft);
+        }
+        .back-link {
+            color: var(--text-muted); text-decoration: none; font-size: 13px;
+            transition: color 0.3s;
+        }
+        .back-link:hover { color: var(--gold); }
+
+        .hero {
+            text-align: center; margin-bottom: 30px;
+            animation: fadeUp 1s ease-out 0.2s both;
+        }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .hero-icon {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            border: 2px solid rgba(212,175,55,0.4);
+            margin: 0 auto 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Cinzel', serif; font-size: 32px; color: var(--gold);
+            background: #1a1e26;
+            box-shadow: 0 0 25px rgba(212,175,55,0.15);
+            overflow: hidden;
+        }
+        .hero-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .hero h1 {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(26px, 5vw, 40px);
+            background: linear-gradient(135deg, #d4af37, #f4e4a0, #aa8624, #d4af37);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 3px; margin-bottom: 8px;
+            filter: drop-shadow(0 0 20px rgba(212,175,55,0.3));
+        }
+        .hero p {
+            color: var(--text-muted); letter-spacing: 5px;
+            text-transform: uppercase; font-size: 12px;
+        }
+
+        /* Фильтры-чипсы */
+        .filters {
+            display: flex; flex-wrap: wrap; gap: 8px;
+            justify-content: center;
+            margin-bottom: 30px;
+            position: relative; z-index: 1;
+        }
+        .chip {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Marcellus', serif;
+            display: inline-flex; align-items: center; gap: 6px;
+            user-select: none;
+        }
+        .chip:hover { background: rgba(255,255,255,0.1); color: var(--text-main); }
+        .chip.active {
+            background: rgba(212,175,55,0.15);
+            border-color: rgba(212,175,55,0.5);
+            color: var(--gold);
+        }
+        .chip-icon {
+            width: 18px; height: 18px;
+            background-size: contain; background-repeat: no-repeat;
+            background-position: center;
+        }
+        .chip-icon.tank { background-image: var(--icon-tank); }
+        .chip-icon.dps { background-image: var(--icon-dps); }
+        .chip-icon.healer { background-image: var(--icon-healer); }
+
+        /* Сетка */
+        .roster-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            position: relative; z-index: 1;
+        }
+        .member-card {
+            background: linear-gradient(160deg, rgba(18, 22, 28, 0.9), rgba(10, 12, 16, 0.95));
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+            animation: fadeUp 0.4s ease-out;
+            transition: 0.25s;
+        }
+        .member-card:hover {
+            border-color: rgba(212,175,55,0.4);
+            box-shadow: 0 8px 25px rgba(212,175,55,0.1);
+            transform: translateY(-2px);
+        }
+        .member-card.class-tank { border-left: 3px solid #2ecc71; }
+        .member-card.class-dps { border-left: 3px solid #e74c3c; }
+        .member-card.class-healer { border-left: 3px solid #9b59b6; }
+        .member-card.class-hybrid { border-left: 3px solid #c084fc; }
+
+        .member-header {
+            display: flex; align-items: center; gap: 12px;
+        }
+        .member-avatar {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            border: 2px solid rgba(212,175,55,0.4);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .member-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .member-info { flex: 1; min-width: 0; }
+        .member-name {
+            font-family: 'Cinzel', serif;
+            font-size: 15px;
+            color: var(--gold);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .member-class-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 11px;
+            margin-top: 3px;
+        }
+        .badge-icon {
+            width: 16px; height: 16px;
+            background-size: contain; background-repeat: no-repeat;
+            display: inline-block;
+        }
+        .badge-icon.tank { background-image: var(--icon-tank); }
+        .badge-icon.dps { background-image: var(--icon-dps); }
+        .badge-icon.healer { background-image: var(--icon-healer); }
+        .badge-icon.hybrid {
+            background: linear-gradient(135deg, #e74c3c, #9b59b6);
+            border-radius: 50%;
+        }
+
+        .btn-profile {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: 'Marcellus', serif;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid rgba(212,175,55,0.4);
+            background: rgba(212,175,55,0.1);
+            color: var(--gold);
+        }
+        .btn-profile:hover { background: rgba(212,175,55,0.25); }
+
+        .empty-state, .error-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            font-style: italic;
+            position: relative; z-index: 1;
+        }
+        .error-state {
+            background: linear-gradient(160deg, rgba(231,76,60,0.05), rgba(10,12,16,0.95));
+            border: 1px solid rgba(231,76,60,0.2);
+            border-radius: 16px;
+            color: #c4bfae;
+        }
+        .error-state h3 {
+            font-family: 'Cinzel', serif;
+            color: var(--danger);
+            margin-bottom: 12px;
+            font-size: 18px;
+        }
+
+        @media (max-width: 600px) {
+            .top-nav { margin-bottom: 20px; }
+            .logo { font-size: 16px; letter-spacing: 2px; }
+            .roster-grid { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
+    <div class="bg-ink"></div>
+    <div class="fog"></div>
 
-    <video class="bg-video" autoplay loop muted playsinline poster="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2070&auto=format&fit=crop">
-        <source src="https://assets.mixkit.co/videos/preview/mixkit-clouds-and-blue-sky-2408-large.mp4" type="video/mp4">
-    </video>
-    <div class="bg-overlay"></div>
-    <div class="bg-particles"></div>
-    <!-- КОНЕЦ БЛОКА С ФОНОМ -->
+    <div class="container">
+        <nav class="top-nav">
+            <div class="logo">WHERE WINDS MEET</div>
+            <a href="#" class="back-link" id="back-link">← Назад в гильдию</a>
+        </nav>
 
-    <!-- Кнопка-печать "Главная" -->
-    <a href="#" id="top-banner-link" class="top-banner"></a>
-    
-    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
-    
-    <div class="main-container">
-
-    <a href="#" id="top-banner-link" class="top-banner"></a>
-
-    <div class="main-container">
-        <div class="sidebar">
-            <h2 id="server-name">Загрузка...</h2>
-            <a href="/dashboard" style="color: var(--text-muted); margin-bottom: 20px;"><div class="icon icon-arrow-left"></div> К списку серверов</a>
-            <hr style="border-color: var(--border-color); margin-bottom: 20px;">
-            <a href="#" id="nav-home"><div class="icon icon-home"></div> Обзор</a>
-            <a href="#" class="active"><div class="icon icon-shield"></div> Состав гильдии</a>
-            <a href="#" id="nav-guild"><div class="icon icon-users"></div> Гильдия</a>
-            <a href="#" id="nav-guides"><div class="icon icon-book"></div> Гайды</a>
-            <a href="#" id="nav-rr"><div class="icon icon-masks"></div> Роли по кнопкам</a>
-            <a href="#" id="nav-rem"><div class="icon icon-alarm"></div> Напоминания</a>
-            <a href="#" id="nav-mod"><div class="icon icon-gear"></div> Модерация</a>
-            <a href="#" id="nav-logs"><div class="icon icon-scroll"></div> Логи действий</a>
-            <a href="#" id="nav-emb"><div class="icon icon-envelope"></div> Эмбеды</a>
+        <div class="hero">
+            <div class="hero-icon" id="guild-icon">🛡️</div>
+            <h1 id="guild-name">Состав гильдии</h1>
+            <p id="guild-counter">Загрузка...</p>
         </div>
 
-        <div class="content">
-            <div class="header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <div>
-                    <h1><div class="icon icon-shield"></div> Состав гильдии</h1>
-                    <p id="last-updated" style="color: var(--text-muted); margin-top: 5px;">Загрузка...</p>
-                </div>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <a href="#" id="btn-config" class="btn btn-small"><div class="icon icon-gear"></div> Настроить</a>
-                    <button class="btn btn-danger btn-small" onclick="deleteMessage()"><div class="icon icon-trash"></div> Удалить</button>
-                    <button class="btn btn-small" onclick="forceUpdate()" id="btn-update"><div class="icon icon-arrow-right"></div> Обновить</button>
-                </div>
-            </div>
-            <div class="grid" id="roster-grid"></div>
+        <div id="content">
+            <div class="empty-state">Загрузка состава...</div>
         </div>
     </div>
 
     <script>
-        const guildId = window.location.pathname.split('/')[2];
-        const banner = document.getElementById('top-banner-link');
-        if (banner) banner.href = `/manage/${guildId}`;
+        const pathParts = window.location.pathname.split('/');
+        // путь /guild/:id/roster или /manage/:id/roster
+        const guildId = pathParts[1] === 'guild' ? pathParts[2] : pathParts[2];
+        const backLink = document.getElementById('back-link');
+        if (backLink) backLink.href = '/guild/' + guildId;
 
-        const navs = {'nav-home': '', 'nav-guild': '/profiles', 'nav-guides': '/guides', 'nav-rr': '/reactionroles', 'nav-rem': '/reminders', 'nav-mod': '/moderation', 'nav-logs': '/logs', 'nav-emb': '/custom'};
-        for (const [id, path] of Object.entries(navs)) document.getElementById(id).href = `/manage/${guildId}${path}`;
-        document.getElementById('btn-config').href = `/manage/${guildId}/roster-config`;
+        let allMembers = [];
+        let allColumns = [];
+        let currentFilter = 'all';
 
-        fetch(`/api/guild/${guildId}`).then(res => res.json()).then(data => document.getElementById('server-name').innerText = data.name);
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        }
 
-        function loadRoster() {
-            Promise.all([
-                fetch(`/api/guild/${guildId}/roster`, { cache: 'no-store' }).then(res => res.json()),
-                fetch(`/api/guild/${guildId}/roster-config`, { cache: 'no-store' }).then(res => res.json())
-            ]).then(([rosterData, configData]) => {
-                const grid = document.getElementById('roster-grid');
-                const lastUpdatedEl = document.getElementById('last-updated');
+        // Загрузка имени гильдии
+        fetch('/api/user', { credentials: 'include' })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return;
+                const guild = (data.guilds || []).find(g => g.id === guildId);
+                if (guild) {
+                    document.getElementById('guild-name').textContent = guild.name;
+                    const iconEl = document.getElementById('guild-icon');
+                    if (guild.icon) {
+                        iconEl.innerHTML = `<img src="https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png" alt="">`;
+                    } else {
+                        iconEl.textContent = guild.name.charAt(0).toUpperCase();
+                    }
+                }
+            })
+            .catch(() => {});
 
-                if (!rosterData.lastUpdated || !rosterData.data) {
-                    grid.innerHTML = '<p style="color: var(--text-muted);">Список пуст. Нажмите "Обновить".</p>';
+        // Проверка доступа
+        async function init() {
+            try {
+                const check = await fetch('/api/guild/' + guildId + '/roster-check', { credentials: 'include' });
+                const checkData = await check.json();
+
+                if (!checkData.canView) {
+                    if (!checkData.configured) {
+                        document.getElementById('content').innerHTML = `
+                            <div class="error-state">
+                                <h3>🔒 Доступ не настроен</h3>
+                                <p>Модератор сервера должен настроить роль доступа в панели управления гильдией, чтобы состав был виден участникам.</p>
+                            </div>
+                        `;
+                    } else {
+                        document.getElementById('content').innerHTML = `
+                            <div class="error-state">
+                                <h3>🔒 Доступ закрыт</h3>
+                                <p>У вас нет роли, необходимой для просмотра состава гильдии.</p>
+                            </div>
+                        `;
+                    }
                     return;
                 }
 
-                lastUpdatedEl.innerText = `Последнее обновление: ${new Date(rosterData.lastUpdated).toLocaleString('ru-RU')}`;
+                await loadRoster();
+            } catch (e) {
+                document.getElementById('content').innerHTML = '<div class="empty-state">Ошибка загрузки.</div>';
+            }
+        }
 
-                if (!configData.columns || configData.columns.length === 0) {
-                    grid.innerHTML = '<p style="color: var(--text-muted);">Колонки не настроены. Нажмите "Настроить".</p>';
+        async function loadRoster() {
+            try {
+                const res = await fetch('/api/guild/' + guildId + '/roster', { credentials: 'include' });
+                if (!res.ok) {
+                    document.getElementById('content').innerHTML = '<div class="empty-state">Не удалось загрузить состав.</div>';
                     return;
                 }
+                const data = await res.json();
+                allColumns = data.columns || [];
+                allMembers = data.members || [];
+                renderFilters();
+                renderMembers();
+            } catch (e) {
+                console.error(e);
+                document.getElementById('content').innerHTML = '<div class="empty-state">Ошибка загрузки.</div>';
+            }
+        }
 
-                grid.innerHTML = '';
-                let totalUnique = new Set();
+        function renderFilters() {
+            const wrap = document.getElementById('filters');
+            if (wrap) wrap.remove();
 
-                configData.columns.forEach(col => {
-                    const members = rosterData.data[col.roleId] || [];
-                    members.forEach(m => totalUnique.add(m.id));
-                    let membersHtml = members.length > 0 ? members.map(m => `<div style="margin-bottom: 6px; font-size: 14px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 4px;"><div class="icon icon-user" style="display:inline-block; vertical-align:middle; margin-right:5px;"></div> ${m.name}</div>`).join('') : '<div style="color: var(--text-muted); font-style: italic;">Никого нет</div>';
-                    
-                    grid.innerHTML += `
-                        <div class="card" style="border-top: 3px solid ${col.color || 'var(--accent-jade)'};">
-                            <h3>${col.name} <span style="font-size: 14px; color: var(--text-muted); font-weight: normal;">(${members.length})</span></h3>
-                            <div style="margin-top: 15px;">${membersHtml}</div>
+            const filtersHtml = `<div class="filters" id="filters">
+                <div class="chip active" data-filter="all" onclick="selectFilter('all')">👥 Все <span style="color:var(--text-muted);font-size:11px;">(${allMembers.length})</span></div>
+                ${allColumns.map(col => {
+                    const count = allMembers.filter(m => m.manualColumnKey === col.key || (col.isClass && (m.detectedClass === col.key || m.detectedClass === 'hybrid'))).length;
+                    const iconHtml = col.icon === 'tank'
+                        ? '<span class="chip-icon tank"></span>'
+                        : col.icon === 'dps'
+                            ? '<span class="chip-icon dps"></span>'
+                            : col.icon === 'healer'
+                                ? '<span class="chip-icon healer"></span>'
+                                : '◆';
+                    return `<div class="chip" data-filter="${col.key}" onclick="selectFilter('${col.key}')">${iconHtml} ${escapeHtml(col.name)} <span style="color:var(--text-muted);font-size:11px;">(${count})</span></div>`;
+                }).join('')}
+            </div>`;
+
+            const header = document.querySelector('.hero');
+            header.insertAdjacentHTML('afterend', filtersHtml);
+
+            const counter = document.getElementById('guild-counter');
+            if (counter) counter.textContent = `Всего участников: ${allMembers.length}`;
+        }
+
+        function selectFilter(key) {
+            currentFilter = key;
+            document.querySelectorAll('#filters .chip').forEach(c => {
+                c.classList.toggle('active', c.dataset.filter === key);
+            });
+            renderMembers();
+        }
+
+        function getMemberClass(m) {
+            if (m.manualColumnKey) {
+                const col = allColumns.find(c => c.key === m.manualColumnKey);
+                if (col) return { key: m.manualColumnKey, name: col.name, icon: col.icon, isCustom: !col.isClass };
+            }
+            if (m.detectedClass === 'hybrid') return { key: 'hybrid', name: 'Гибрид', icon: 'hybrid' };
+            if (m.detectedClass === 'tank') return { key: 'tank', name: 'Танк', icon: 'tank' };
+            if (m.detectedClass === 'dps') return { key: 'dps', name: 'ДД', icon: 'dps' };
+            if (m.detectedClass === 'healer') return { key: 'healer', name: 'Хил', icon: 'healer' };
+            return { key: 'none', name: 'Без класса', icon: 'none' };
+        }
+
+        function renderMembers() {
+            const content = document.getElementById('content');
+            let filtered = allMembers.slice();
+
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(m => {
+                    const mc = getMemberClass(m);
+                    if (currentFilter === mc.key) return true;
+                    if (mc.key === 'hybrid' && (currentFilter === 'tank' || currentFilter === 'dps' || currentFilter === 'healer')) return true;
+                    return false;
+                });
+            }
+
+            if (filtered.length === 0) {
+                content.innerHTML = '<div class="empty-state">В этой категории пока никого нет.</div>';
+                return;
+            }
+
+            const grid = `<div class="roster-grid" id="roster-grid">
+                ${filtered.map(m => {
+                    const mc = getMemberClass(m);
+                    const iconHtml = mc.icon === 'tank'
+                        ? '<span class="badge-icon tank"></span>'
+                        : mc.icon === 'dps'
+                            ? '<span class="badge-icon dps"></span>'
+                            : mc.icon === 'healer'
+                                ? '<span class="badge-icon healer"></span>'
+                                : mc.icon === 'hybrid'
+                                    ? '<span class="badge-icon hybrid"></span>'
+                                    : '◆';
+                    const cardClass = mc.key === 'tank' ? 'class-tank'
+                        : mc.key === 'dps' ? 'class-dps'
+                        : mc.key === 'healer' ? 'class-healer'
+                        : mc.key === 'hybrid' ? 'class-hybrid'
+                        : '';
+                    return `
+                        <div class="member-card ${cardClass}">
+                            <div class="member-header">
+                                <div class="member-avatar"><img src="${m.avatar}" alt=""></div>
+                                <div class="member-info">
+                                    <div class="member-name">${escapeHtml(m.displayName)}</div>
+                                    <div class="member-class-badge">${iconHtml} ${escapeHtml(mc.name)}</div>
+                                </div>
+                            </div>
+                            <button class="btn-profile" onclick="openProfile('${m.userId}')">👁 Профиль</button>
                         </div>
                     `;
-                });
+                }).join('')}
+            </div>`;
 
-                grid.innerHTML = `<div class="card" style="grid-column: 1 / -1; background: transparent; border: none; box-shadow: none; padding: 0;">
-                        <p style="color: var(--text-main); font-size: 18px;">Всего участников: <b style="color: var(--accent-jade);">${totalUnique.size}</b></p>
-                    </div>` + grid.innerHTML;
-            });
+            content.innerHTML = grid;
         }
 
-        function forceUpdate() {
-            const btn = document.getElementById('btn-update');
-            btn.innerHTML = '...'; btn.disabled = true;
-            fetch(`/api/guild/${guildId}/roster/update`, { method: 'POST' })
-                .then(res => res.json()).then(data => { if (data.error) alert(data.error); loadRoster(); })
-                .finally(() => { btn.innerHTML = '<div class="icon icon-arrow-right"></div> Обновить'; btn.disabled = false; });
+        function openProfile(userId) {
+            window.location.href = '/view-profile/' + userId + '?guild=' + guildId;
         }
 
-        function deleteMessage() {
-            if (!confirm('Удалить ВСЕ сообщения со списком из Discord?')) return;
-            fetch(`/api/guild/${guildId}/roster/message`, { method: 'DELETE' }).then(() => alert('Удалено!'));
-        }
-
-        loadRoster();
+        init();
     </script>
 </body>
 </html>
