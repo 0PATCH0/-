@@ -1,13 +1,14 @@
 const { EmbedBuilder } = require('discord.js');
 const { PlayerProfile, RosterConfig, RosterMessage, Settings } = require('./models');
 
+// ⚠️ ЕСЛИ ЭМОДЗИ НЕ ОТОБРАЖАЮТСЯ В DISCORD — замени <:dd:...>, <:tank:...>, <:heal:...>
+// на стандартные "⚔️", "🛡️", "💚" (тогда emoji будет работать везде).
 const BASE_CLASSES = [
     { key: 'dps',    name: 'ДД',   icon: 'dps',    color: '#e74c3c', order: 0, isClass: true, emoji: '<:dd:1564320122708037692>' },
     { key: 'tank',   name: 'Танк', icon: 'tank',   color: '#2ecc71', order: 1, isClass: true, emoji: '<:tank:1564320623507935334>' },
     { key: 'healer', name: 'Хил',  icon: 'healer', color: '#9b59b6', order: 2, isClass: true, emoji: '<:heal:1564320644496363702>' }
 ];
 
-// Определение класса по боевым искусствам
 function detectClassFromMartialArts(martialArts) {
     const map = {
         nameless_sword: 'dps', nameless_spear: 'dps', strategic_sword: 'dps',
@@ -27,7 +28,6 @@ function getDefaultRosterColumns() {
     return BASE_CLASSES.map(c => ({ ...c }));
 }
 
-// Сбор классифицированного состава
 async function buildClassifiedRoster(botClient, guildId) {
     const discordGuild = botClient.guilds.cache.get(guildId);
     if (!discordGuild) return { columns: [], members: [], guildName: null };
@@ -86,11 +86,10 @@ async function buildClassifiedRoster(botClient, guildId) {
     return { columns, members, guildName: discordGuild.name };
 }
 
-// Сборка Embed для Discord
 function buildRosterEmbeds(roster, guildId) {
     const { columns, members, guildName } = roster;
 
-    // Группировка: сначала кастомные (по колонкам), потом базовые классы
+    // Группировка
     const byColumn = {};
     columns.forEach(c => { byColumn[c.key] = []; });
 
@@ -122,32 +121,30 @@ function buildRosterEmbeds(roster, guildId) {
     let currentFieldCount = 0;
     const MAX_FIELDS = 25;
 
-    // Сортируем колонки: кастомные — по order, потом базовые — по order
+    // Порядок: кастомные сверху, потом базовые классы
     const orderedColumns = columns
         .map((c, i) => ({ ...c, __idx: i }))
         .sort((a, b) => {
             const aIsClass = a.isClass ? 1 : 0;
             const bIsClass = b.isClass ? 1 : 0;
-            if (aIsClass !== bIsClass) return aIsClass - bIsClass; // кастомные сверху
+            if (aIsClass !== bIsClass) return aIsClass - bIsClass;
             return (a.order || 0) - (b.order || 0);
         });
 
     for (const col of orderedColumns) {
         const list = byColumn[col.key] || [];
-        if (list.length === 0) continue; // не показываем пустые
+        if (list.length === 0) continue;
 
         let emoji;
-if (col.isClass) {
-    const base = BASE_CLASSES.find(b => b.key === col.key);
-    emoji = base ? base.emoji : '◆';
-} else {
-    emoji = col.emoji || '⚙️';
-}
+        if (col.isClass) {
+            const base = BASE_CLASSES.find(b => b.key === col.key);
+            emoji = base ? base.emoji : '◆';
+        } else {
+            emoji = col.emoji || '⚙️';
+        }
 
         let value = list.map(m => `• <@${m.userId}> — [👁 Профиль](${profileUrl(m.userId)})`).join('\n');
-        if (value.length > 1020) {
-            value = value.substring(0, 1017) + '...';
-        }
+        if (value.length > 1020) value = value.substring(0, 1017) + '...';
 
         if (currentFieldCount >= MAX_FIELDS) {
             embeds.push(currentEmbed);
@@ -163,6 +160,34 @@ if (col.isClass) {
         currentFieldCount++;
     }
 
+    // Участники, не попавшие ни в одну колонку (нет класса / нет должности)
+    const orphans = members.filter(m => {
+        if (m.manualColumnKey && byColumn[m.manualColumnKey] && byColumn[m.manualColumnKey].includes(m)) return false;
+        if (m.detectedClass === 'hybrid' && (
+            (byColumn.dps && byColumn.dps.includes(m)) ||
+            (byColumn.tank && byColumn.tank.includes(m)) ||
+            (byColumn.healer && byColumn.healer.includes(m))
+        )) return false;
+        if (byColumn[m.detectedClass] && byColumn[m.detectedClass].includes(m)) return false;
+        return true;
+    });
+
+    if (orphans.length > 0) {
+        let value = orphans.map(m => `• <@${m.userId}> — [👁 Профиль](${profileUrl(m.userId)})`).join('\n');
+        if (value.length > 1020) value = value.substring(0, 1017) + '...';
+        if (currentFieldCount >= MAX_FIELDS) {
+            embeds.push(currentEmbed);
+            currentEmbed = new EmbedBuilder().setColor('#d4af37');
+            currentFieldCount = 0;
+        }
+        currentEmbed.addFields({
+            name: `◆ Без класса (${orphans.length})`,
+            value,
+            inline: false
+        });
+        currentFieldCount++;
+    }
+
     if (currentFieldCount > 0 || embeds.length === 0) {
         if (members.length === 0) {
             currentEmbed.setDescription('*Пока нет участников с профилями.*');
@@ -170,10 +195,10 @@ if (col.isClass) {
         embeds.push(currentEmbed);
     }
 
-    return embeds.slice(0, 10); // Discord: до 10 embeds в сообщении
+    return embeds.slice(0, 10);
 }
 
-// Троттлинг: обновляем раз в 5 сек после последнего запроса
+// Троттлинг: 5 секунд
 const pendingRefreshes = new Map();
 
 function refreshRosterMessage(botClient, guildId) {
