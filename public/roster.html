@@ -322,21 +322,22 @@
         }
 
         async function loadRoster() {
-            try {
-                const res = await fetch('/api/guild/' + guildId + '/roster', { credentials: 'include' });
-                if (!res.ok) {
-                    document.getElementById('content').innerHTML = '<div class="empty-state">Не удалось загрузить состав.</div>';
-                    return;
-                }
-                const data = await res.json();
-                allColumns = data.columns || [];
-                allMembers = data.members || [];
-                renderFilters();
-                renderMembers();
-            } catch (e) {
-                console.error(e);
-                document.getElementById('content').innerHTML = '<div class="empty-state">Ошибка загрузки.</div>';
-            }
+    try {
+        const res = await fetch('/api/guild/' + guildId + '/roster', { credentials: 'include' });
+        if (!res.ok) {
+            document.getElementById('content').innerHTML = '<div class="empty-state">Не удалось загрузить состав.</div>';
+            return;
+        }
+        const data = await res.json();
+        allColumns = data.columns || [];
+        allMembers = data.members || [];
+        window.__rosterStats = data.stats || { total: allMembers.length, classified: 0 };
+        renderFilters();
+        renderMembers();
+    } catch (e) {
+        console.error(e);
+        document.getElementById('content').innerHTML = '<div class="empty-state">Ошибка загрузки.</div>';
+    }
         }
 
         function renderFilters() {
