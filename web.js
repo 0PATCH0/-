@@ -539,7 +539,7 @@ app.get('/api/duel/:id', ensureAuth, async (req, res) => {
         const client = req.app.get('botClient');
         const challengerGuild = client.guilds.cache.get(challenge.challengerGuildId);
         const opponentGuild = client.guilds.cache.get(challenge.opponentGuildId);
-        
+
         const isChallengerMod = await (async () => {
             if (req.user.id === OWNER_ID) return true;
             const g = req.user.guilds.find(gi => gi.id === challenge.challengerGuildId);
@@ -551,7 +551,7 @@ app.get('/api/duel/:id', ensureAuth, async (req, res) => {
             }
             return false;
         })();
-        
+
         const isOpponentMod = await (async () => {
             if (req.user.id === OWNER_ID) return true;
             const g = req.user.guilds.find(gi => gi.id === challenge.opponentGuildId);
@@ -563,7 +563,7 @@ app.get('/api/duel/:id', ensureAuth, async (req, res) => {
             }
             return false;
         })();
-        
+
         res.json({ 
             challenge, 
             challengerGuild: { id: challengerGuild?.id, name: challengerGuild?.name || 'Неизвестно', icon: challengerGuild?.icon }, 
