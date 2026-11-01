@@ -449,9 +449,8 @@ app.post('/api/guild/:id/challenge', isModerator, async (req, res) => {
 
         // Формируем Embed для Discord
         const challGuild = client.guilds.cache.get(challengerGuildId);
-        const timeUnix = Math.floor(Number(time) / 1000);
-        
-        const embed = new EmbedBuilder()
+        const timeUnix = Number(time);
+const embed = new EmbedBuilder()
             .setTitle('⚔️ Вызов на Дуэль!')
             .setColor('#e74c3c')
             .setDescription(`Гильдия **${challGuild.name}** бросает вызов вашей гильдии!`)
