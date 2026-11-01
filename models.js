@@ -48,12 +48,10 @@ const ChallengeSchema = new mongoose.Schema({
     challengerGuildId: { type: String, required: true },
     opponentGuildId: { type: String, required: true },
     status: { type: String, enum: ['pending', 'accepted', 'in_progress', 'completed', 'declined'], default: 'pending' },
-    time: { type: Number, required: true }, // Unix timestamp
-    format: { type: String, default: 'Bo1' }, // Bo1, Bo3, Bo5
-    channelId: { type: String }, // Канал, куда бот отправил сообщение
-    messageId: { type: String }, // ID сообщения бота
-    challengerRoster: [{ userId: String, name: String }],
-    opponentRoster: [{ userId: String, name: String }],
+    time: { type: Number, required: true }, // Unix timestamp в секундах
+    format: { type: Number, default: 1 }, // 1, 2, 3, 5
+    channelId: { type: String },
+    messageId: { type: String },
     matches: [{
         matchIndex: Number,
         challengerPlayer: { userId: String, name: String },
@@ -62,7 +60,6 @@ const ChallengeSchema = new mongoose.Schema({
     }],
     winnerGuildId: { type: String, default: null }
 });
-
 module.exports = {
     Settings: mongoose.model('Settings', SettingsSchema),
     Reminder: mongoose.model('Reminder', ReminderSchema),
