@@ -11,7 +11,9 @@
     <div class="bg-ink"></div>
     <div class="fog"></div>
 
-    <div class="container">
+    <pre id="debug" style="position:fixed; top:0; left:0; right:0; color:#e74c3c; background:#000; padding:6px 10px; font-size:11px; z-index:99999; margin:0; white-space:pre-wrap; display:none;"></pre>
+
+    <div class="container" style="margin-top: 40px;">
         <nav class="top-nav">
             <div class="logo">WHERE WINDS MEET</div>
             <a href="#" class="back-link" id="back-link">← Назад в управление</a>
@@ -66,14 +68,22 @@
     </style>
 
     <script>
+        const params = new URLSearchParams(window.location.search);
+        const showDebug = params.get('debug') === '1';
+        const dbg = document.getElementById('debug');
+        if (showDebug) { dbg.style.display = 'block'; }
+        function log(msg) { if (showDebug) dbg.textContent += msg + '\n'; }
+
+        log('JS запущен');
         const guildId = window.location.pathname.split('/')[2];
+        log('guildId: ' + guildId);
+
         const backLink = document.getElementById('back-link');
         if (backLink) backLink.href = '/manage/' + guildId;
-
         document.getElementById('btn-create').href = '/manage/' + guildId + '/guides/edit/new';
 
         function escapeHtml(s) {
-            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
         }
 
         function findCover(guide) {
@@ -86,68 +96,81 @@
             return null;
         }
 
-        fetch('/api/guild/' + guildId + '/guides', { credentials: 'include' })
-            .then(res => {
-                if (res.status === 403) {
-                    document.getElementById('error-panel').style.display = 'block';
-                    document.getElementById('error-msg').textContent = '❌ У вас нет прав модератора на этом сервере.';
-                    document.getElementById('guides-grid').innerHTML = '';
-                    throw new Error('forbidden');
-                }
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                return res.json();
-            })
-            .then(data => {
-                const grid = document.getElementById('guides-grid');
-                if (!data || data.length === 0) {
-                    grid.innerHTML = '<div class="empty-state">Гайдов пока нет. Создайте первый!</div>';
-                    return;
-                }
-                grid.innerHTML = '';
-                data.forEach(guide => {
-                    const chaptersCount = (guide.chapters || []).length;
-                    const date = guide.date ? new Date(guide.date).toLocaleDateString('ru-RU') : '—';
-                    const cover = findCover(guide);
-                    const preview = (guide.description || '').length > 120
-                        ? guide.description.substring(0, 120) + '...'
-                        : (guide.description || 'Без описания');
+        function showError(msg) {
+            document.getElementById('error-panel').style.display = 'block';
+            document.getElementById('error-msg').textContent = msg;
+            document.getElementById('guides-grid').innerHTML = '';
+            log('ERROR: ' + msg);
+        }
 
-                    const card = document.createElement('div');
-                    card.className = 'tile guide-tile' + (cover ? ' has-cover' : '');
-                    if (cover) {
-                        card.style.backgroundImage = `url("${cover.replace(/"/g, '\\"')}")`;
-                    }
-                    card.innerHTML = `
-                        ${cover ? '<span class="guide-cover-tag">📸 с обложкой</span>' : ''}
-                        <span class="tile-icon">📖</span>
-                        <span class="tile-title">${escapeHtml(guide.name || 'Без названия')}</span>
-                        <span class="tile-desc">
-                            ${escapeHtml(preview)}<br>
-                            <span style="color:var(--text-muted);font-size:12px;">Глав: ${chaptersCount} • ${date}</span>
-                        </span>
-                        <div style="display:flex;gap:8px;margin-top:10px;">
-                            <a href="/manage/${guildId}/guides/edit/${guide._id}" class="btn btn-secondary btn-small" style="flex:1;">✏ Ред.</a>
-                            <button class="btn btn-danger btn-small">🗑</button>
-                        </div>
-                    `;
-                    card.querySelector('.btn-danger').onclick = (e) => {
-                        e.preventDefault();
-                        deleteGuide(guide._id);
-                    };
-                    grid.appendChild(card);
-                });
-            })
-            .catch(err => {
-                if (err.message === 'forbidden') return;
-                document.getElementById('guides-grid').innerHTML =
-                    '<div class="empty-state">Ошибка загрузки: ' + escapeHtml(err.message) + '</div>';
+        async function loadGuides() {
+            log('fetch /api/guild/.../guides');
+            try {
+                const res = await fetch('/api/guild/' + guildId + '/guides', { credentials: 'include' });
+                log('  status: ' + res.status);
+                if (res.status === 403) {
+                    return showError('❌ У вас нет прав модератора на этом сервере.');
+                }
+                if (!res.ok) {
+                    return showError('❌ Ошибка загрузки: HTTP ' + res.status);
+                }
+                const data = await res.json();
+                log('  гайдов: ' + (data || []).length);
+                render(data);
+            } catch (e) {
+                showError('❌ Ошибка: ' + e.message);
+            }
+        }
+
+        function render(data) {
+            const grid = document.getElementById('guides-grid');
+            if (!data || data.length === 0) {
+                grid.innerHTML = '<div class="empty-state">Гайдов пока нет. Создайте первый!</div>';
+                return;
+            }
+            grid.innerHTML = '';
+            data.forEach(guide => {
+                const chaptersCount = (guide.chapters || []).length;
+                const date = guide.date ? new Date(guide.date).toLocaleDateString('ru-RU') : '—';
+                const cover = findCover(guide);
+                const preview = (guide.description || '').length > 120
+                    ? guide.description.substring(0, 120) + '...'
+                    : (guide.description || 'Без описания');
+
+                const card = document.createElement('div');
+                card.className = 'tile guide-tile' + (cover ? ' has-cover' : '');
+                if (cover) {
+                    card.style.backgroundImage = `url("${cover.replace(/"/g, '\\"')}")`;
+                }
+                card.innerHTML = `
+                    ${cover ? '<span class="guide-cover-tag">📸 с обложкой</span>' : ''}
+                    <span class="tile-icon">📖</span>
+                    <span class="tile-title">${escapeHtml(guide.name || 'Без названия')}</span>
+                    <span class="tile-desc">
+                        ${escapeHtml(preview)}<br>
+                        <span style="color:var(--text-muted);font-size:12px;">Глав: ${chaptersCount} • ${date}</span>
+                    </span>
+                    <div style="display:flex;gap:8px;margin-top:10px;">
+                        <a href="/manage/${guildId}/guides/edit/${guide._id}" class="btn btn-secondary btn-small" style="flex:1;">✏ Ред.</a>
+                        <button class="btn btn-danger btn-small">🗑</button>
+                    </div>
+                `;
+                card.querySelector('.btn-danger').onclick = (e) => {
+                    e.preventDefault();
+                    deleteGuide(guide._id);
+                };
+                grid.appendChild(card);
             });
+            log('render: отрисовано ' + data.length);
+        }
 
         function deleteGuide(id) {
             if (!confirm('Удалить этот гайд?')) return;
             fetch('/api/guild/' + guildId + '/guides/' + id, { method: 'DELETE', credentials: 'include' })
                 .then(() => window.location.reload());
         }
+
+        loadGuides();
     </script>
 </body>
 </html>
