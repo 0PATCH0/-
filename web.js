@@ -87,37 +87,24 @@ function ensureAuth(req, res, next) {
 // ─── ХЕЛПЕРЫ ──────────────────────────────────────────────
 function detectClassFromMartialArts(martialArts) {
     const map = {
-        // DPS
         nameless_sword: 'dps', nameless_spear: 'dps', strategic_sword: 'dps',
         heavenquaker_spear: 'dps', infernal_twinblades: 'dps', mortal_rope_dart: 'dps',
         unfettered_rope_dart: 'dps', everspring_umbrella: 'dps',
         inkwell_fan: 'dps', vernal_umbrella: 'dps', ninefold_umbrella: 'dps',
         willowbend_fan: 'dps', riven_twinblades: 'dps', skystrike_gauntlets: 'dps',
-        // TANK
         stormbreaker_spear: 'tank', thundercry_blade: 'tank',
         snowparting_blade: 'tank', phalanxbane_blade: 'tank',
         heavenwill_gauntlets: 'tank', skygrasp_rope_dart: 'tank',
-        // HEALER
-        panacea_fan: 'healer', soulshade_umbrella: 'healer'
+        panacea_fan: 'healer', soulshade_umbrella: 'healer', musical_drum: 'healer'
     };
-
     const arts = (martialArts || []).filter(Boolean);
     if (arts.length === 0) return null;
-
-    // ─── Особая логика для барабана (Musical Drum) ───
     const hasDrum = arts.includes('musical_drum');
     if (hasDrum) {
-        // Ищем парное искусство (не барабан)
         const other = arts.find(a => a !== 'musical_drum');
-        if (!other) {
-            // Только барабан — по умолчанию хил
-            return 'healer';
-        }
-        // Класс берём от парного искусства
+        if (!other) return 'healer';
         return map[other] || 'healer';
     }
-
-    // ─── Обычная логика для остальных ───
     const classes = arts.map(id => map[id]).filter(Boolean);
     if (classes.length === 0) return null;
     const unique = [...new Set(classes)];
@@ -164,6 +151,50 @@ function resolveProfileGuildId(req) {
     return 'global';
 }
 
+async function updateDuelMessage(client, challengeId) {
+    try {
+        const challenge = await Challenge.findById(challengeId);
+        if (!challenge || !challenge.channelId || !challenge.messageId) return;
+
+        const channel = await client.channels.fetch(challenge.channelId).catch(() => null);
+        if (!channel) return;
+        const message = await channel.messages.fetch(challenge.messageId).catch(() => null);
+        if (!message) return;
+
+        const challGuild = client.guilds.cache.get(challenge.challengerGuildId);
+        const oppGuild = client.guilds.cache.get(challenge.opponentGuildId);
+        const timeUnix = Math.floor(Number(challenge.time));
+
+        let statusText = '⏳ Ожидает ответа';
+        let color = '#f1c40f';
+        if (challenge.status === 'accepted') { statusText = '✅ Вызов принят!'; color = '#2ecc71'; }
+        if (challenge.status === 'declined') { statusText = '❌ Вызов отклонен'; color = '#e74c3c'; }
+        if (challenge.status === 'in_progress') { statusText = '⚔️ Бои идут!'; color = '#e67e22'; }
+        if (challenge.status === 'completed') { statusText = '🏆 Дуэль завершена!'; color = '#d4af37'; }
+
+        const embed = new EmbedBuilder()
+            .setTitle('⚔️ Вызов на Дуэль!')
+            .setColor(color)
+            .setDescription(`Гильдия **${challGuild?.name || '?'}** вызывает гильдию **${oppGuild?.name || '?'}**!`)
+            .addFields(
+                { name: '🏰 Вызывающий', value: challGuild?.name || '?', inline: true },
+                { name: '🛡️ Оппонент', value: oppGuild?.name || '?', inline: true },
+                { name: '🕒 Время', value: `<t:${timeUnix}:F> (<t:${timeUnix}:R>)`, inline: false },
+                { name: '⚔️ Формат', value: `${challenge.format} ${challenge.format == 1 ? 'бой' : 'боёв'}`, inline: true },
+                { name: '📜 Статус', value: statusText, inline: true }
+            )
+            .setFooter({ text: 'Открыть страницу дуэли для деталей' });
+
+        const button = new ButtonBuilder()
+            .setLabel('Открыть страницу дуэли')
+            .setURL('https://patchitos1234.fly.dev/duel/' + challenge._id)
+            .setStyle(ButtonStyle.Link);
+        const row = new ActionRowBuilder().addComponents(button);
+
+        await message.edit({ embeds: [embed], components: [row] });
+    } catch (e) { console.error('UPDATE DUEL MSG:', e); }
+}
+
 // ─── AUTH ─────────────────────────────────────────────────
 app.get('/auth/discord', (req, res, next) => {
     if (req.query.returnTo) req.session.returnTo = req.query.returnTo;
@@ -183,6 +214,7 @@ app.get('/guild/:id', (req, res) => { if (!req.user) return res.redirect('/'); r
 app.get('/guild/:id/roster', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'roster.html')); });
 app.get('/global-profiles', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'global-profiles.html')); });
 app.get('/view-profile/:userId', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'view-profile.html')); });
+app.get('/duel/:id', ensureAuth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'duel.html')));
 app.get('/manage/:id/events', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'events.html')); });
 app.get('/manage/:id/guides', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'guides.html')); });
 app.get('/manage/:id/guides/edit/:guideId', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'guide-edit.html')); });
@@ -194,7 +226,6 @@ app.get('/manage/:id/roster', (req, res) => { if (!req.user) return res.redirect
 app.get('/manage/:id/roster-config', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'roster-config.html')); });
 app.get('/manage/:id/logs', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'logs.html')); });
 app.get('/manage/:id/profiles', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'profiles-admin.html')); });
-app.get('/duel/:id', ensureAuth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'duel.html')));
 app.get('/profile', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'profile.html')); });
 
 // ─── API ПОЛЬЗОВАТЕЛЯ ─────────────────────────────────────
@@ -207,12 +238,9 @@ app.get('/api/user', (req, res) => {
 });
 
 app.get('/api/guild/:id', isModerator, async (req, res) => {
-    const client = req.app.get('botClient');
-    const guild = client.guilds.cache.get(req.params.id);
+    const client = req.app.get('botClient'); const guild = client.guilds.cache.get(req.params.id);
     if (!guild) return res.status(404).json({ error: 'Бот не на сервере' });
-    const roles = guild.roles.cache
-        .filter(r => r.id !== guild.id && !r.managed)
-        .map(r => ({ id: r.id, name: r.name }));
+    const roles = guild.roles.cache.filter(r => r.id !== guild.id && !r.managed).map(r => ({ id: r.id, name: r.name }));
     res.json({ name: guild.name, roles });
 });
 
@@ -234,10 +262,7 @@ app.get('/api/profile/:guildId', async (req, res) => {
             });
         }
         res.json(profile);
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({ error: 'Ошибка базы данных' });
-    }
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка базы данных' }); }
 });
 
 app.post('/api/profile/:guildId', async (req, res) => {
@@ -260,10 +285,7 @@ app.post('/api/profile/:guildId', async (req, res) => {
         );
         res.json({ success: true, profile });
         try { refreshRosterMessage(req.app.get('botClient'), guildId); } catch (e) {}
-    } catch (e) {
-        console.error('ОШИБКА БАЗЫ:', e);
-        res.status(500).json({ error: 'Ошибка базы данных' });
-    }
+    } catch (e) { console.error('ОШИБКА БАЗЫ:', e); res.status(500).json({ error: 'Ошибка базы данных' }); }
 });
 
 app.delete('/api/profile/:guildId', async (req, res) => {
@@ -273,10 +295,7 @@ app.delete('/api/profile/:guildId', async (req, res) => {
         await PlayerProfile.findOneAndDelete({ userId: req.user.id, guildId });
         res.json({ success: true });
         try { refreshRosterMessage(req.app.get('botClient'), guildId); } catch (e) {}
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({ error: 'Ошибка базы данных' });
-    }
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка базы данных' }); }
 });
 
 // ─── АДМИН ПРОФИЛЕЙ ───────────────────────────────────────
@@ -292,7 +311,7 @@ app.get('/api/guild/:id/profiles', isModerator, async (req, res) => {
                 discordName: member ? member.user.username : 'Неизвестный',
                 avatar: member && member.user.avatar
                     ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png`
-                    : 'https://cdn.discordapp.com/embed/avatars/0.png'
+                    : `https://cdn.discordapp.com/embed/avatars/0.png`
             };
         }));
         res.json(enriched);
@@ -326,23 +345,15 @@ app.get('/api/guild/:id/profiles-public', async (req, res) => {
         const enriched = await Promise.all(local.map(async (p) => {
             const member = await discordGuild.members.fetch(p.userId).catch(() => null);
             return {
-                _id: p._id,
-                userId: p.userId,
-                guildId: p.guildId,
-                isGlobal: p.isGlobal,
+                _id: p._id, userId: p.userId, guildId: p.guildId, isGlobal: p.isGlobal,
                 characters: p.characters,
                 discordName: member ? member.user.username : 'Неизвестный',
-                avatar: member && member.user.avatar
-                    ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png`
-                    : 'https://cdn.discordapp.com/embed/avatars/0.png'
+                avatar: member && member.user.avatar ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png` : `https://cdn.discordapp.com/embed/avatars/0.png`
             };
         }));
 
         res.json({ local: enriched, global: [] });
-    } catch (e) {
-        console.error('PROFILES PUBLIC:', e);
-        res.status(500).json({ error: 'Ошибка: ' + e.message });
-    }
+    } catch (e) { console.error('PROFILES PUBLIC:', e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
 });
 
 // ─── СПИСОК ГИЛЬДИЙ БОТА ──────────────────────────────────
@@ -351,9 +362,7 @@ app.get('/api/guilds-list', (req, res) => {
     try {
         const client = req.app.get('botClient');
         const list = client.guilds.cache.map(g => ({
-            id: g.id,
-            name: g.name,
-            icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : null
+            id: g.id, name: g.name, icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : null
         }));
         res.json(list);
     } catch (e) { console.error('GUILDS LIST:', e); res.status(500).json({ error: 'Ошибка' }); }
@@ -366,53 +375,181 @@ app.get('/api/profiles-global', async (req, res) => {
         const client = req.app.get('botClient');
         const filterGuild = req.query.guild || 'all';
         const filterMartial = req.query.martial || 'all';
-
         const allGlobal = await PlayerProfile.find({ isGlobal: true });
         const botGuildIds = client.guilds.cache.map(g => g.id);
         const relevant = allGlobal.filter(p => botGuildIds.includes(p.guildId));
-
         const enriched = await Promise.all(relevant.map(async (p) => {
             const discordGuild = client.guilds.cache.get(p.guildId);
-            const member = discordGuild
-                ? await discordGuild.members.fetch(p.userId).catch(() => null)
-                : null;
+            const member = discordGuild ? await discordGuild.members.fetch(p.userId).catch(() => null) : null;
             return {
-                _id: p._id,
-                userId: p.userId,
-                guildId: p.guildId,
+                _id: p._id, userId: p.userId, guildId: p.guildId,
                 guildName: discordGuild ? discordGuild.name : 'Неизвестная гильдия',
-                isGlobal: p.isGlobal,
-                characters: p.characters,
+                isGlobal: p.isGlobal, characters: p.characters,
                 discordName: member ? member.user.username : 'Неизвестный',
-                avatar: member && member.user.avatar
-                    ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png`
-                    : 'https://cdn.discordapp.com/embed/avatars/0.png',
+                avatar: member && member.user.avatar ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png` : `https://cdn.discordapp.com/embed/avatars/0.png`,
                 inGuild: !!member
             };
         }));
-
         let filtered = enriched;
-        if (filterGuild && filterGuild !== 'all') {
-            filtered = filtered.filter(p => p.guildId === filterGuild);
-        }
+        if (filterGuild && filterGuild !== 'all') filtered = filtered.filter(p => p.guildId === filterGuild);
         if (filterMartial && filterMartial !== 'all') {
-            filtered = filtered.filter(p =>
-                (p.characters || []).some(c => {
-                    const pve = (c.builds && c.builds.PvE && c.builds.PvE.martialArts) || [];
-                    const pvp = (c.builds && c.builds.PvP && c.builds.PvP.martialArts) || [];
-                    return pve.includes(filterMartial) || pvp.includes(filterMartial);
-                })
-            );
+            filtered = filtered.filter(p => (p.characters || []).some(c => {
+                const pve = (c.builds && c.builds.PvE && c.builds.PvE.martialArts) || [];
+                const pvp = (c.builds && c.builds.PvP && c.builds.PvP.martialArts) || [];
+                return pve.includes(filterMartial) || pvp.includes(filterMartial);
+            }));
         }
         filtered.sort((a, b) => a.discordName.localeCompare(b.discordName));
         res.json(filtered);
-    } catch (e) {
-        console.error('PROFILES GLOBAL:', e);
-        res.status(500).json({ error: 'Ошибка: ' + e.message });
-    }
+    } catch (e) { console.error('PROFILES GLOBAL:', e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
 });
 
-// ─── ВЫЗОВЫ (ДУЭЛИ) ──────────────────────────────────────
+// ─── СОБЫТИЯ ──────────────────────────────────────────────
+app.get('/api/events/:guildId', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    try { res.json(await Event.find({ guildId: req.params.guildId }).sort({ date: 1 })); }
+    catch (e) { console.error('EVENTS LIST:', e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.post('/api/events/:guildId', isModerator, async (req, res) => {
+    try {
+        const { title, description, date, channelId, pingRoleId, imageUrl } = req.body || {};
+        if (!title || !date) return res.status(400).json({ error: 'title и date обязательны' });
+        const event = await Event.create({ guildId: req.params.guildId, title, description: description || '', date: Number(date), creatorId: req.user.id, attendees: [] });
+        let discordMessageId = null;
+        if (channelId) {
+            const client = req.app.get('botClient');
+            const channel = await client.channels.fetch(channelId).catch(() => null);
+            if (channel && channel.isTextBased && channel.isTextBased()) {
+                const dateUnix = Math.floor(Number(date) / 1000);
+                const embed = new EmbedBuilder()
+                    .setTitle('📅 ' + title)
+                    .setColor('#d4af37')
+                    .setDescription((description || 'Событие создано.') + '\n\n🕒 **Начало:** <t:' + dateUnix + ':F> (<t:' + dateUnix + ':R>)')
+                    .addFields({ name: '✍️ Записаться', value: 'Открой сайт → События → «Записаться»', inline: false })
+                    .setFooter({ text: 'Where Winds Meet • События' })
+                    .setTimestamp();
+                if (imageUrl) embed.setImage(imageUrl);
+                const button = new ButtonBuilder().setLabel('Открыть события на сайте').setURL('https://patchitos1234.fly.dev/manage/' + req.params.guildId + '/events').setStyle(ButtonStyle.Link);
+                const row = new ActionRowBuilder().addComponents(button);
+                const content = pingRoleId ? '<@&' + pingRoleId + '>' : undefined;
+                const msg = await channel.send({ content, embeds: [embed], components: [row] }).catch(() => null);
+                if (msg) discordMessageId = msg.id;
+            }
+        }
+        res.json({ success: true, event, discordMessageId });
+    } catch (e) { console.error('EVENT CREATE:', e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
+});
+
+app.post('/api/guild/:id/events/:eventId/join', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    try {
+        const event = await Event.findById(req.params.eventId);
+        if (!event) return res.status(404).json({ error: 'Не найдено' });
+        const userId = req.user.id;
+        if (event.attendees.includes(userId)) event.attendees = event.attendees.filter(id => id !== userId);
+        else event.attendees.push(userId);
+        await event.save();
+        res.json({ success: true });
+    } catch (e) { console.error('EVENT JOIN:', e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.delete('/api/events/:guildId/:eventId', isModerator, async (req, res) => {
+    try { await Event.findByIdAndDelete(req.params.eventId); res.json({ success: true }); }
+    catch (e) { console.error('EVENT DELETE:', e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.get('/api/guild/:id/channels', isModerator, async (req, res) => {
+    try {
+        const client = req.app.get('botClient');
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Бот не на сервере' });
+        const channels = guild.channels.cache.filter(ch => ch.isTextBased && ch.isTextBased() && !ch.isThread() && ch.type !== 4).map(ch => ({ id: ch.id, name: ch.name }));
+        const roles = guild.roles.cache.filter(r => r.id !== guild.id && !r.managed && !r.name.startsWith('@')).map(r => ({ id: r.id, name: r.name }));
+        res.json({ channels, roles });
+    } catch (e) { console.error('GUILD CHANNELS:', e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// ─── ДУЭЛИ ────────────────────────────────────────────────
+app.get('/api/duel/:id', ensureAuth, async (req, res) => {
+    try {
+        const challenge = await Challenge.findById(req.params.id);
+        if (!challenge) return res.status(404).json({ error: 'Вызов не найден' });
+        const client = req.app.get('botClient');
+        const challengerGuild = client.guilds.cache.get(challenge.challengerGuildId);
+        const opponentGuild = client.guilds.cache.get(challenge.opponentGuildId);
+        const isChallengerMod = await (async () => {
+            if (req.user.id === OWNER_ID) return true;
+            const g = req.user.guilds.find(gi => gi.id === challenge.challengerGuildId);
+            if (g && (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8)) return true;
+            const s = await Settings.findOne({ guildId: challenge.challengerGuildId });
+            if (s && s.modRoles) {
+                const m = await challengerGuild.members.fetch(req.user.id).catch(() => null);
+                if (m && m.roles.cache.some(r => s.modRoles.includes(r.id))) return true;
+            }
+            return false;
+        })();
+        const isOpponentMod = await (async () => {
+            if (req.user.id === OWNER_ID) return true;
+            const g = req.user.guilds.find(gi => gi.id === challenge.opponentGuildId);
+            if (g && (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8)) return true;
+            const s = await Settings.findOne({ guildId: challenge.opponentGuildId });
+            if (s && s.modRoles) {
+                const m = await opponentGuild.members.fetch(req.user.id).catch(() => null);
+                if (m && m.roles.cache.some(r => s.modRoles.includes(r.id))) return true;
+            }
+            return false;
+        })();
+        res.json({ challenge, challengerGuild: { id: challengerGuild?.id, name: challengerGuild?.name || 'Неизвестно', icon: challengerGuild?.icon }, opponentGuild: { id: opponentGuild?.id, name: opponentGuild?.name || 'Неизвестно', icon: opponentGuild?.icon }, canManageChallenger: isChallengerMod, canManageOpponent: isOpponentMod });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка сервера' }); }
+});
+
+app.post('/api/duel/:id/accept', ensureAuth, async (req, res) => {
+    try {
+        const challenge = await Challenge.findById(req.params.id);
+                if (!challenge) return res.status(404).json({ error: 'Не найдено' });
+        
+        challenge.status = 'accepted';
+        await challenge.save();
+        try { await updateDuelMessage(req.app.get('botClient'), challenge._id); } catch (e) {}
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.post('/api/duel/:id/decline', ensureAuth, async (req, res) => {
+    try {
+        const challenge = await Challenge.findById(req.params.id);
+        if (!challenge) return res.status(404).json({ error: 'Не найдено' });
+        
+        challenge.status = 'declined';
+        await challenge.save();
+        try { await updateDuelMessage(req.app.get('botClient'), challenge._id); } catch (e) {}
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.post('/api/duel/:id/set-player', ensureAuth, async (req, res) => {
+    try {
+        const { matchIndex, side, userId, name } = req.body;
+        const challenge = await Challenge.findById(req.params.id);
+        if (!challenge) return res.status(404).json({ error: 'Не найдено' });
+        if (challenge.status !== 'accepted' && challenge.status !== 'in_progress') {
+            return res.status(400).json({ error: 'Сначала примите вызов' });
+        }
+
+        const match = challenge.matches.find(m => m.matchIndex === Number(matchIndex));
+        if (!match) return res.status(400).json({ error: 'Матч не найден' });
+
+        if (side === 'challenger') match.challengerPlayer = { userId, name };
+        else if (side === 'opponent') match.opponentPlayer = { userId, name };
+        
+        challenge.markModified('matches');
+        await challenge.save();
+        res.json({ success: true, matches: challenge.matches });
+    } catch (e) { console.error('SET PLAYER:', e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// ─── ВЫЗОВЫ (СОЗДАНИЕ) ────────────────────────────────────
 app.post('/api/guild/:id/challenge', isModerator, async (req, res) => {
     try {
         const { opponentGuildId, time, format } = req.body || {};
@@ -437,29 +574,28 @@ app.post('/api/guild/:id/challenge', isModerator, async (req, res) => {
         const channel = await client.channels.fetch(oppSettings.challengeChannelId).catch(() => null);
         if (!channel) return res.status(404).json({ error: 'Канал оппонента не найден' });
 
-        // Создаем вызов в БД
         const numMatches = parseInt(format) || 1;
-const matches = Array.from({ length: numMatches }).map((_, i) => ({
-    matchIndex: i + 1,
-    challengerPlayer: null,
-    opponentPlayer: null,
-    winner: null
-}));
+        const matches = Array.from({ length: numMatches }).map((_, i) => ({
+            matchIndex: i + 1,
+            challengerPlayer: null,
+            opponentPlayer: null,
+            winner: null
+        }));
 
-const challenge = await Challenge.create({
-    challengerGuildId,
-    opponentGuildId,
-    time: Number(time),
-    format: numMatches,
-    status: 'pending',
-    channelId: oppSettings.challengeChannelId,
-    matches: matches
-});
+        const challenge = await Challenge.create({
+            challengerGuildId,
+            opponentGuildId,
+            time: Number(time),
+            format: numMatches,
+            status: 'pending',
+            channelId: oppSettings.challengeChannelId,
+            matches: matches
+        });
 
-        // Формируем Embed для Discord
         const challGuild = client.guilds.cache.get(challengerGuildId);
         const timeUnix = Math.floor(Number(time));
-const embed = new EmbedBuilder()
+        
+        const embed = new EmbedBuilder()
             .setTitle('⚔️ Вызов на Дуэль!')
             .setColor('#e74c3c')
             .setDescription(`Гильдия **${challGuild.name}** бросает вызов вашей гильдии!`)
@@ -467,7 +603,7 @@ const embed = new EmbedBuilder()
                 { name: '🏰 Вызывающий', value: challGuild.name, inline: true },
                 { name: '🛡️ Оппонент', value: opponentGuild.name, inline: true },
                 { name: '🕒 Время', value: `<t:${timeUnix}:F> (<t:${timeUnix}:R>)`, inline: false },
-                { name: '⚔️ Формат', value: format, inline: true }
+                { name: '⚔️ Формат', value: `${numMatches} ${numMatches == 1 ? 'бой' : 'боёв'}`, inline: true }
             )
             .setFooter({ text: 'Нажмите кнопку ниже, чтобы перейти на сайт' });
 
@@ -477,7 +613,6 @@ const embed = new EmbedBuilder()
             .setStyle(ButtonStyle.Link);
         const row = new ActionRowBuilder().addComponents(button);
 
-        // Тег модераторов оппонента
         const modPings = (oppSettings.modRoles || []).map(id => `<@&${id}>`).join(' ');
         const content = modPings ? modPings + ', вам вызов!' : 'Вам вызов!';
 
@@ -491,193 +626,6 @@ const embed = new EmbedBuilder()
         console.error('CHALLENGE CREATE:', e);
         res.status(500).json({ error: 'Ошибка сервера: ' + e.message });
     }
-});
-
-// ─── API ДУЭЛЕЙ ───
-app.get('/api/duel/:id', ensureAuth, async (req, res) => {
-    try {
-        const challenge = await Challenge.findById(req.params.id);
-        if (!challenge) return res.status(404).json({ error: 'Вызов не найден' });
-
-        const client = req.app.get('botClient');
-        const challengerGuild = client.guilds.cache.get(challenge.challengerGuildId);
-        const opponentGuild = client.guilds.cache.get(challenge.opponentGuildId);
-
-        // Проверка прав: может ли текущий пользователь управлять гильдиями
-        const isChallengerMod = await (async () => {
-            if (req.user.id === OWNER_ID) return true;
-            const g = req.user.guilds.find(gi => gi.id === challenge.challengerGuildId);
-            if (g && (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8)) return true;
-            const s = await Settings.findOne({ guildId: challenge.challengerGuildId });
-            if (s && s.modRoles) {
-                const m = await challengerGuild.members.fetch(req.user.id).catch(() => null);
-                if (m && m.roles.cache.some(r => s.modRoles.includes(r.id))) return true;
-            }
-            return false;
-        })();
-
-        const isOpponentMod = await (async () => {
-            if (req.user.id === OWNER_ID) return true;
-            const g = req.user.guilds.find(gi => gi.id === challenge.opponentGuildId);
-            if (g && (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8)) return true;
-            const s = await Settings.findOne({ guildId: challenge.opponentGuildId });
-            if (s && s.modRoles) {
-                const m = await opponentGuild.members.fetch(req.user.id).catch(() => null);
-                if (m && m.roles.cache.some(r => s.modRoles.includes(r.id))) return true;
-            }
-            return false;
-        })();
-
-        res.json({
-            challenge,
-            challengerGuild: { id: challengerGuild?.id, name: challengerGuild?.name || 'Неизвестно', icon: challengerGuild?.icon },
-            opponentGuild: { id: opponentGuild?.id, name: opponentGuild?.name || 'Неизвестно', icon: opponentGuild?.icon },
-            canManageChallenger: isChallengerMod,
-            canManageOpponent: isOpponentMod
-        });
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({ error: 'Ошибка сервера' });
-    }
-});
-
-// Принять вызов (только оппонент)
-app.post('/api/duel/:id/accept', ensureAuth, async (req, res) => {
-    try {
-        const challenge = await Challenge.findById(req.params.id);
-        if (!challenge) return res.status(404).json({ error: 'Не найдено' });
-        
-        // Проверка прав оппонента (упрощенно, полагаемся на UI, но лучше проверить)
-        // В реальном проекте вынести проверку в middleware
-        challenge.status = 'accepted';
-await challenge.save();
-try { await updateDuelMessage(req.app.get('botClient'), challenge._id); } catch(e) {}
-res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
-});
-
-// Отклонить вызов
-app.post('/api/duel/:id/decline', ensureAuth, async (req, res) => {
-    try {
-        const challenge = await Challenge.findById(req.params.id);
-        if (!challenge) return res.status(404).json({ error: 'Не найдено' });
-        challenge.status = 'declined';
-await challenge.save();
-try { await updateDuelMessage(req.app.get('botClient'), challenge._id); } catch(e) {}
-res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
-});
-
-// Выбрать игрока на матч
-app.post('/api/duel/:id/set-player', ensureAuth, async (req, res) => {
-    try {
-        const { matchIndex, side, userId, name } = req.body; // side: 'challenger' | 'opponent'
-        const challenge = await Challenge.findById(req.params.id);
-        if (!challenge) return res.status(404).json({ error: 'Не найдено' });
-        if (challenge.status !== 'accepted' && challenge.status !== 'in_progress') {
-            return res.status(400).json({ error: 'Сначала примите вызов' });
-        }
-        
-        // Проверяем, что это модератор нужной стороны (упрощенно для API, в идеале middleware)
-        // ... проверка прав ...
-
-        const match = challenge.matches.find(m => m.matchIndex === Number(matchIndex));
-        if (!match) return res.status(400).json({ error: 'Матч не найден' });
-
-        if (side === 'challenger') match.challengerPlayer = { userId, name };
-        else if (side === 'opponent') match.opponentPlayer = { userId, name };
-        
-        challenge.markModified('matches');
-        await challenge.save();
-        res.json({ success: true, matches: challenge.matches });
-    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
-});
-
-// ─── СОБЫТИЯ ──────────────────────────────────────────────
-app.get('/api/events/:guildId', async (req, res) => {
-    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
-    try {
-        const events = await Event.find({ guildId: req.params.guildId }).sort({ date: 1 });
-        res.json(events);
-    } catch (e) { console.error('EVENTS LIST:', e); res.status(500).json({ error: 'Ошибка' }); }
-});
-
-app.post('/api/events/:guildId', isModerator, async (req, res) => {
-    try {
-        const { title, description, date, channelId, pingRoleId, imageUrl } = req.body || {};
-        if (!title || !date) return res.status(400).json({ error: 'title и date обязательны' });
-
-        const event = await Event.create({
-            guildId: req.params.guildId,
-            title,
-            description: description || '',
-            date: Number(date),
-            creatorId: req.user.id,
-            attendees: []
-        });
-
-        let discordMessageId = null;
-        if (channelId) {
-            const client = req.app.get('botClient');
-            const channel = await client.channels.fetch(channelId).catch(() => null);
-            if (channel && channel.isTextBased && channel.isTextBased()) {
-                const dateUnix = Math.floor(Number(date) / 1000);
-                const embed = new EmbedBuilder()
-                    .setTitle('📅 ' + title)
-                    .setColor('#d4af37')
-                    .setDescription((description || 'Событие создано.') + '\n\n🕒 **Начало:** <t:' + dateUnix + ':F> (<t:' + dateUnix + ':R>)')
-                    .addFields({ name: '✍️ Записаться', value: 'Открой сайт → События → «Записаться»', inline: false })
-                    .setFooter({ text: 'Where Winds Meet • События' })
-                    .setTimestamp();
-                if (imageUrl) embed.setImage(imageUrl);
-                const button = new ButtonBuilder()
-                    .setLabel('Открыть события на сайте')
-                    .setURL('https://patchitos1234.fly.dev/manage/' + req.params.guildId + '/events')
-                    .setStyle(ButtonStyle.Link);
-                const row = new ActionRowBuilder().addComponents(button);
-                const content = pingRoleId ? '<@&' + pingRoleId + '>' : undefined;
-                const msg = await channel.send({ content, embeds: [embed], components: [row] }).catch(() => null);
-                if (msg) discordMessageId = msg.id;
-            }
-        }
-        res.json({ success: true, event, discordMessageId });
-    } catch (e) { console.error('EVENT CREATE:', e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
-});
-
-app.post('/api/guild/:id/events/:eventId/join', async (req, res) => {
-    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
-    try {
-        const event = await Event.findById(req.params.eventId);
-        if (!event) return res.status(404).json({ error: 'Не найдено' });
-        const userId = req.user.id;
-        if (event.attendees.includes(userId)) {
-            event.attendees = event.attendees.filter(id => id !== userId);
-        } else {
-            event.attendees.push(userId);
-        }
-        await event.save();
-        res.json({ success: true });
-    } catch (e) { console.error('EVENT JOIN:', e); res.status(500).json({ error: 'Ошибка' }); }
-});
-
-app.delete('/api/events/:guildId/:eventId', isModerator, async (req, res) => {
-    try { await Event.findByIdAndDelete(req.params.eventId); res.json({ success: true }); }
-    catch (e) { console.error('EVENT DELETE:', e); res.status(500).json({ error: 'Ошибка' }); }
-});
-
-app.get('/api/guild/:id/channels', isModerator, async (req, res) => {
-    try {
-        const client = req.app.get('botClient');
-        const guild = client.guilds.cache.get(req.params.id);
-        if (!guild) return res.status(404).json({ error: 'Бот не на сервере' });
-        const channels = guild.channels.cache
-            .filter(ch => ch.isTextBased && ch.isTextBased() && !ch.isThread() && ch.type !== 4)
-            .map(ch => ({ id: ch.id, name: ch.name }));
-        const roles = guild.roles.cache
-            .filter(r => r.id !== guild.id && !r.managed && !r.name.startsWith('@'))
-            .map(r => ({ id: r.id, name: r.name }));
-        res.json({ channels, roles });
-    } catch (e) { console.error('GUILD CHANNELS:', e); res.status(500).json({ error: 'Ошибка' }); }
 });
 
 // ─── ГАЙДЫ ────────────────────────────────────────────────
@@ -717,26 +665,18 @@ app.get('/api/guild/:id/moderation', isModerator, async (req, res) => {
         const channels = guild ? guild.channels.cache
             .filter(ch => ch.isTextBased && ch.isTextBased() && !ch.isThread() && ch.type !== 4)
             .map(ch => ({ id: ch.id, name: ch.name })) : [];
-        
-        res.json({
-            modRoles: s.modRoles || [],
-            challengeChannelId: s.challengeChannelId || null,
-            channels
-        });
+        res.json({ modRoles: s.modRoles || [], challengeChannelId: s.challengeChannelId || null, channels });
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
 
 app.post('/api/guild/:id/moderation', isModerator, async (req, res) => {
     try {
         const { modRoles, challengeChannelId } = req.body;
-        await Settings.findOneAndUpdate(
-            { guildId: req.params.id }, 
-            { modRoles, challengeChannelId }, 
-            { upsert: true }
-        );
+        await Settings.findOneAndUpdate({ guildId: req.params.id }, { modRoles, challengeChannelId }, { upsert: true });
         res.json({ success: true });
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
+
 // ─── НАПОМИНАНИЯ ──────────────────────────────────────────
 app.get('/api/guild/:id/reminders', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
@@ -748,10 +688,7 @@ app.post('/api/guild/:id/reminders', async (req, res) => {
     try {
         const { text, channelId, targetId, targetType, repeat, nextTime, hour, minute, timezone } = req.body || {};
         const id = `rem_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        const reminder = await Reminder.create({
-            id, userId: req.user.id, channelId, text, targetId, targetType, repeat,
-            nextTime: Number(nextTime) || Date.now(), hour, minute, timezone: Number(timezone) || 0
-        });
+        const reminder = await Reminder.create({ id, userId: req.user.id, channelId, text, targetId, targetType, repeat, nextTime: Number(nextTime) || Date.now(), hour, minute, timezone: Number(timezone) || 0 });
         res.json({ success: true, reminder });
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
@@ -774,23 +711,12 @@ app.post('/api/guild/:id/reactionroles', isModerator, async (req, res) => {
         const { channelId, title, desc, color, mode, roles } = req.body || {};
         const channel = await client.channels.fetch(channelId).catch(() => null);
         if (!channel) return res.status(404).json({ error: 'Канал не найден' });
-        const embed = new EmbedBuilder()
-            .setTitle(title || 'Роли')
-            .setDescription(desc || 'Выберите роль')
-            .setColor(color || '#d4af37');
-        const buttons = (roles || []).map(r => new ButtonBuilder()
-            .setCustomId(`rr_${r.roleId}`)
-            .setLabel(r.label || 'Роль')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji(r.emoji || '🎭')
-        );
+        const embed = new EmbedBuilder().setTitle(title || 'Роли').setDescription(desc || 'Выберите роль').setColor(color || '#d4af37');
+        const buttons = (roles || []).map(r => new ButtonBuilder().setCustomId(`rr_${r.roleId}`).setLabel(r.label || 'Роль').setStyle(ButtonStyle.Secondary).setEmoji(r.emoji || '🎭'));
         const rows = [];
         for (let i = 0; i < buttons.length; i += 5) rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
         const msg = await channel.send({ embeds: [embed], components: rows });
-        const rr = await ReactionRole.create({
-            guildId: req.params.id, channelId, messageId: msg.id,
-            title, desc, color, mode: mode || 'multiple', roles
-        });
+        const rr = await ReactionRole.create({ guildId: req.params.id, channelId, messageId: msg.id, title, desc, color, mode: mode || 'multiple', roles });
         res.json({ success: true, reactionRole: rr });
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
 });
@@ -806,29 +732,21 @@ app.get('/api/guild/:id/custom', isModerator, async (req, res) => {
     try { res.json(await SentMessage.find({ guildId: req.params.id })); }
     catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
-
 app.post('/api/guild/:id/custom', isModerator, async (req, res) => {
     try {
         const client = req.app.get('botClient');
         const { channelId, title, description, color, image, footer, author } = req.body || {};
         const channel = await client.channels.fetch(channelId).catch(() => null);
         if (!channel) return res.status(404).json({ error: 'Канал не найден' });
-        const embed = new EmbedBuilder()
-            .setTitle(title || 'Сообщение')
-            .setDescription(description || '')
-            .setColor(color || '#d4af37');
+        const embed = new EmbedBuilder().setTitle(title || 'Сообщение').setDescription(description || '').setColor(color || '#d4af37');
         if (image) embed.setImage(image);
         if (footer) embed.setFooter({ text: footer });
         if (author) embed.setAuthor({ name: author });
         const msg = await channel.send({ embeds: [embed] });
-        const sm = await SentMessage.create({
-            guildId: req.params.id, channelId, messageId: msg.id,
-            title, description, color, image, footer, author
-        });
+        const sm = await SentMessage.create({ guildId: req.params.id, channelId, messageId: msg.id, title, description, color, image, footer, author });
         res.json({ success: true, message: sm });
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
 });
-
 app.delete('/api/guild/:id/custom/:messageId', isModerator, async (req, res) => {
     try {
         await SentMessage.findOneAndDelete({ messageId: req.params.messageId, guildId: req.params.id });
@@ -843,40 +761,30 @@ app.get('/api/guild/:id/roster-check', async (req, res) => {
         const client = req.app.get('botClient');
         const discordGuild = client.guilds.cache.get(req.params.id);
         if (!discordGuild) return res.status(404).json({ error: 'Бот не на сервере' });
-
         const member = await discordGuild.members.fetch(req.user.id).catch(() => null);
         if (!member) return res.status(403).json({ error: 'Вы не на сервере', canView: false });
-
         const settings = await Settings.findOne({ guildId: req.params.id });
         const userGuildInfo = req.user.guilds.find(g => g.id === req.params.id);
         const isDiscordAdmin = userGuildInfo && (BigInt(userGuildInfo.permissions) & BigInt(0x8)) === BigInt(0x8);
         const isBotOwner = req.user.id === OWNER_ID;
         const isModRole = settings && settings.modRoles && member.roles.cache.some(r => settings.modRoles.includes(r.id));
         const isMod = isBotOwner || isDiscordAdmin || isModRole;
-
         if (isMod) return res.json({ canView: true, isMod: true, configured: true });
-
-        if (!settings || !settings.rosterRoleIds || settings.rosterRoleIds.length === 0) {
-            return res.json({ canView: false, isMod: false, configured: false });
-        }
+        if (!settings || !settings.rosterRoleIds || settings.rosterRoleIds.length === 0) return res.json({ canView: false, isMod: false, configured: false });
         const hasAccess = member.roles.cache.some(r => settings.rosterRoleIds.includes(r.id));
         return res.json({ canView: hasAccess, isMod: false, configured: true });
     } catch (e) { console.error('ROSTER CHECK:', e); res.status(500).json({ error: 'Ошибка' }); }
 });
-
 app.get('/api/guild/:id/roster-access', isModerator, async (req, res) => {
     try {
         const client = req.app.get('botClient');
         const guild = client.guilds.cache.get(req.params.id);
         if (!guild) return res.status(404).json({ error: 'Бот не на сервере' });
         const settings = await Settings.findOne({ guildId: req.params.id }) || await Settings.create({ guildId: req.params.id, modRoles: [] });
-        const allRoles = guild.roles.cache
-            .filter(r => r.id !== guild.id && !r.managed)
-            .map(r => ({ id: r.id, name: r.name, color: r.hexColor }));
+        const allRoles = guild.roles.cache.filter(r => r.id !== guild.id && !r.managed).map(r => ({ id: r.id, name: r.name, color: r.hexColor }));
         res.json({ rosterRoleIds: settings.rosterRoleIds || [], allRoles });
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
-
 app.post('/api/guild/:id/roster-access', isModerator, async (req, res) => {
     try {
         const { rosterRoleIds } = req.body || {};
@@ -885,69 +793,39 @@ app.post('/api/guild/:id/roster-access', isModerator, async (req, res) => {
         res.json({ success: true });
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
-
 app.get('/api/guild/:id/roster-config', isModerator, async (req, res) => {
     try {
         const client = req.app.get('botClient');
         const guild = client.guilds.cache.get(req.params.id);
         let config = await RosterConfig.findOne({ guildId: req.params.id });
-        if (!config) {
-            config = { guildId: req.params.id, columns: getDefaultRosterColumns(), manualAssignments: {} };
-        }
-        const allRoles = guild ? guild.roles.cache
-            .filter(r => r.id !== guild.id && !r.managed)
-            .map(r => ({ id: r.id, name: r.name })) : [];
-        res.json({
-            columns: config.columns && config.columns.length > 0 ? config.columns : getDefaultRosterColumns(),
-            manualAssignments: config.manualAssignments || {},
-            allRoles
-        });
+        if (!config) config = { guildId: req.params.id, columns: getDefaultRosterColumns(), manualAssignments: {} };
+        const allRoles = guild ? guild.roles.cache.filter(r => r.id !== guild.id && !r.managed).map(r => ({ id: r.id, name: r.name })) : [];
+        res.json({ columns: config.columns && config.columns.length > 0 ? config.columns : getDefaultRosterColumns(), manualAssignments: config.manualAssignments || {}, allRoles });
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
-
 app.post('/api/guild/:id/roster-config', isModerator, async (req, res) => {
     try {
         const { columns } = req.body || {};
         if (!Array.isArray(columns)) return res.status(400).json({ error: 'columns должен быть массивом' });
-
         const BASE_CLASSES = [
             { key: 'dps', name: 'ДД', icon: 'dps', color: '#e74c3c', isClass: true },
             { key: 'tank', name: 'Танк', icon: 'tank', color: '#2ecc71', isClass: true },
             { key: 'healer', name: 'Хил', icon: 'healer', color: '#9b59b6', isClass: true }
         ];
-
         const existing = await RosterConfig.findOne({ guildId: req.params.id });
         const existingClasses = (existing && existing.columns || []).filter(c => c.isClass);
-
         const baseClasses = BASE_CLASSES.map(def => {
             const found = existingClasses.find(c => c.key === def.key);
             return found ? { ...def, name: found.name || def.name } : def;
         });
-
-        const custom = columns.filter(c => c.isClass !== true).map(c => ({
-            key: c.key,
-            name: c.name,
-            icon: c.icon || 'custom',
-            color: c.color || '#d4af37',
-            isClass: false
-        }));
-
+        const custom = columns.filter(c => c.isClass !== true).map(c => ({ key: c.key, name: c.name, icon: c.icon || 'custom', color: c.color || '#d4af37', isClass: false }));
         const finalColumns = [...custom, ...baseClasses];
         finalColumns.forEach((c, i) => { c.order = i; });
-
-        const config = await RosterConfig.findOneAndUpdate(
-            { guildId: req.params.id },
-            { columns: finalColumns },
-            { upsert: true, new: true }
-        );
+        const config = await RosterConfig.findOneAndUpdate({ guildId: req.params.id }, { columns: finalColumns }, { upsert: true, new: true });
         res.json({ success: true, config });
         try { refreshRosterMessage(req.app.get('botClient'), req.params.id); } catch (e) {}
-    } catch (e) {
-        console.error('ROSTER CONFIG POST:', e);
-        res.status(500).json({ error: 'Ошибка: ' + e.message });
-    }
+    } catch (e) { console.error('ROSTER CONFIG POST:', e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
 });
-
 app.post('/api/guild/:id/roster-manual', isModerator, async (req, res) => {
     try {
         const { userId, columnKey } = req.body || {};
@@ -963,29 +841,15 @@ app.post('/api/guild/:id/roster-manual', isModerator, async (req, res) => {
         try { refreshRosterMessage(req.app.get('botClient'), req.params.id); } catch (e) {}
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
-
 app.get('/api/guild/:id/roster', canViewRoster, async (req, res) => {
     try {
         const botClient = req.app.get('botClient');
         const { buildClassifiedRoster } = require('./roster-refresh');
         const roster = await buildClassifiedRoster(botClient, req.params.id);
-        const stats = {
-            total: roster.members.length,
-            classified: roster.members.filter(m => m.detectedClass !== 'none' || m.manualColumnKey).length
-        };
-        res.json({
-            configured: true,
-            columns: roster.columns,
-            members: roster.members,
-            isMod: !!req.isRosterMod,
-            stats
-        });
-    } catch (e) {
-        console.error('ROSTER GET:', e);
-        res.status(500).json({ error: 'Ошибка: ' + e.message });
-    }
+        const stats = { total: roster.members.length, classified: roster.members.filter(m => m.detectedClass !== 'none' || m.manualColumnKey).length };
+        res.json({ configured: true, columns: roster.columns, members: roster.members, isMod: !!req.isRosterMod, stats });
+    } catch (e) { console.error('ROSTER GET:', e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
 });
-
 app.post('/api/guild/:id/roster/setup', isModerator, async (req, res) => {
     try {
         const client = req.app.get('botClient');
@@ -993,9 +857,7 @@ app.post('/api/guild/:id/roster/setup', isModerator, async (req, res) => {
         const channel = await client.channels.fetch(channelId).catch(() => null);
         if (!channel) return res.status(404).json({ error: 'Канал не найден' });
         const config = await RosterConfig.findOne({ guildId: req.params.id });
-        if (!config || !config.columns || config.columns.length === 0) {
-            return res.status(400).json({ error: 'Сначала настройте колонки' });
-        }
+        if (!config || !config.columns || config.columns.length === 0) return res.status(400).json({ error: 'Сначала настройте колонки' });
         const existing = await RosterMessage.findOne({ guildId: req.params.id });
         if (existing) {
             const oldMsg = await channel.messages.fetch(existing.messageId).catch(() => null);
@@ -1003,15 +865,10 @@ app.post('/api/guild/:id/roster/setup', isModerator, async (req, res) => {
         }
         const embed = new EmbedBuilder().setTitle('🛡️ Состав гильдии').setColor('#2b2d31').setDescription('Обновляется...');
         const msg = await channel.send({ embeds: [embed] });
-        await RosterMessage.findOneAndUpdate(
-            { guildId: req.params.id },
-            { channelId, messageId: msg.id },
-            { upsert: true }
-        );
+        await RosterMessage.findOneAndUpdate({ guildId: req.params.id }, { channelId, messageId: msg.id }, { upsert: true });
         res.json({ success: true, messageId: msg.id });
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
 });
-
 app.delete('/api/guild/:id/roster/setup', isModerator, async (req, res) => {
     try {
         await RosterMessage.findOneAndDelete({ guildId: req.params.id });
@@ -1026,53 +883,5 @@ function startWebServer(botClient) {
     app.set('botClient', botClient);
     app.listen(process.env.PORT || 8080, () => console.log('🌐 Веб-панель запущена'));
 }
-
-
-//------
-
-async function updateDuelMessage(client, challengeId) {
-    try {
-        const challenge = await Challenge.findById(challengeId);
-        if (!challenge || !challenge.channelId || !challenge.messageId) return;
-
-        const channel = await client.channels.fetch(challenge.channelId).catch(() => null);
-        if (!channel) return;
-        const message = await channel.messages.fetch(challenge.messageId).catch(() => null);
-        if (!message) return;
-
-        const challGuild = client.guilds.cache.get(challenge.challengerGuildId);
-        const oppGuild = client.guilds.cache.get(challenge.opponentGuildId);
-        const timeUnix = Math.floor(Number(challenge.time));
-
-        let statusText = '⏳ Ожидает ответа';
-        let color = '#f1c40f';
-        if (challenge.status === 'accepted') { statusText = '✅ Вызов принят!'; color = '#2ecc71'; }
-        if (challenge.status === 'declined') { statusText = '❌ Вызов отклонен'; color = '#e74c3c'; }
-        if (challenge.status === 'in_progress') { statusText = '⚔️ Бои идут!'; color = '#e67e22'; }
-        if (challenge.status === 'completed') { statusText = '🏆 Дуэль завершена!'; color = '#d4af37'; }
-
-        const embed = new EmbedBuilder()
-            .setTitle('⚔️ Вызов на Дуэль!')
-            .setColor(color)
-            .setDescription(`Гильдия **${challGuild.name}** вызывает гильдию **${oppGuild.name}**!`)
-            .addFields(
-                { name: '🏰 Вызывающий', value: challGuild.name, inline: true },
-                { name: '🛡️ Оппонент', value: oppGuild.name, inline: true },
-                { name: '🕒 Время', value: `<t:${timeUnix}:F> (<t:${timeUnix}:R>)`, inline: false },
-                { name: '⚔️ Формат', value: `${challenge.format} ${challenge.format == 1 ? 'бой' : 'боёв'}`, inline: true },
-                { name: '📜 Статус', value: statusText, inline: true }
-            )
-            .setFooter({ text: 'Открыть страницу дуэли для деталей' });
-
-        const button = new ButtonBuilder()
-            .setLabel('Открыть страницу дуэли')
-            .setURL('https://patchitos1234.fly.dev/duel/' + challenge._id)
-            .setStyle(ButtonStyle.Link);
-        const row = new ActionRowBuilder().addComponents(button);
-
-        await message.edit({ embeds: [embed], components: [row] });
-    } catch (e) {
-        console.error('UPDATE DUEL MSG:', e);
-    }
 
 module.exports = { startWebServer };
