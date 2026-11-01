@@ -9,10 +9,17 @@ const BASE_CLASSES = [
 
 function detectClassFromMartialArts(martialArts) {
     const map = {
+        // DPS
         nameless_sword: 'dps', nameless_spear: 'dps', strategic_sword: 'dps',
         heavenquaker_spear: 'dps', infernal_twinblades: 'dps', mortal_rope_dart: 'dps',
-        inkwell_fan: 'dps', vernal_umbrella: 'dps',
+        unfettered_rope_dart: 'dps', everspring_umbrella: 'dps',
+        inkwell_fan: 'dps', vernal_umbrella: 'dps', ninefold_umbrella: 'dps',
+        skygrasp_rope_dart: 'dps',
+        // TANK
         stormbreaker_spear: 'tank', thundercry_blade: 'tank',
+        snowparting_blade: 'tank', phalanxbane_blade: 'tank',
+        heavenwill_gauntlets: 'tank',
+        // HEALER
         panacea_fan: 'healer', soulshade_umbrella: 'healer'
     };
     const classes = (martialArts || []).map(id => map[id]).filter(Boolean);
