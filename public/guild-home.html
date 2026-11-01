@@ -326,17 +326,22 @@
                         ${options}
                     </select>
                 </div>
+                <div class="form-group" style="margin-top: 15px;">
+    <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Дата</label>
+    <input type="date" id="ch-date" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
+</div>
+<div class="form-group" style="margin-top: 15px;">
+    <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Время (ЧЧ:ММ)</label>
+    <input type="time" id="ch-time" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
+</div>
                 <div class="form-group">
-                    <label>Время (по вашему поясу)</label>
-                    <input type="datetime-local" id="ch-time" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
-                </div>
-                <div class="form-group">
-                    <label>Формат</label>
-                    <select id="ch-format" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
-                        <option value="Bo1">Bo1 (1 бой)</option>
-                        <option value="Bo3">Bo3 (до 2 побед)</option>
-                        <option value="Bo5">Bo5 (до 3 побед)</option>
-                    </select>
+    <label>Формат</label>
+    <select id="ch-format" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
+        <option value="1">1 бой</option>
+        <option value="2">2 боя</option>
+        <option value="3">3 боя</option>
+        <option value="5">5 боёв</option>
+    </select>
                 </div>
 
                 <div style="display:flex;gap:10px;margin-top:20px;">
@@ -351,12 +356,24 @@
 
 async function submitChallenge() {
     const opp = document.getElementById('ch-opponent').value;
-    const time = document.getElementById('ch-time').value;
+    const dateVal = document.getElementById('ch-date').value;
+    const timeVal = document.getElementById('ch-time').value;
     const format = document.getElementById('ch-format').value;
 
-    if (!opp || !time) return alert('Заполните все поля!');
+    // Дебаг: смотрим, что реально приходит из полей
+    console.log('DEBUG:', { opp, dateVal, timeVal, format });
+
+    if (!opp || !dateVal || !timeVal) {
+        return alert('Заполните все поля: гильдию, дату и время!\n\nВыбрано:\nГильдия: ' + (opp || 'ПУСТО') + '\nДата: ' + (dateVal || 'ПУСТО') + '\nВремя: ' + (timeVal || 'ПУСТО'));
+    }
     
-    const timestamp = Math.floor(new Date(time).getTime() / 1000);
+    // Объединяем дату и время
+    const datetime = dateVal + 'T' + timeVal + ':00';
+    const timestamp = Math.floor(new Date(datetime).getTime() / 1000);
+    
+    if (isNaN(timestamp)) {
+        return alert('Некорректная дата или время!');
+    }
 
     try {
         const res = await fetch('/api/guild/' + guildId + '/challenge', {
@@ -374,7 +391,7 @@ async function submitChallenge() {
             alert('❌ Ошибка: ' + data.error);
         }
     } catch (e) {
-        alert('❌ Ошибка сети');
+        alert('❌ Ошибка сети: ' + e.message);
     }
 }
     </script>
