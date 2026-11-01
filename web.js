@@ -167,18 +167,25 @@ async function updateDuelMessage(client, challengeId) {
         if (challenge.status === 'in_progress') { statusText = '⚔️ Бои идут!'; color = '#e67e22'; }
         if (challenge.status === 'completed') { statusText = '🏆 Дуэль завершена!'; color = '#d4af37'; }
 
-        const embed = new EmbedBuilder()
-            .setTitle('⚔️ Вызов на Дуэль!')
-            .setColor(color)
-            .setDescription(`Гильдия **${challGuild?.name || '?'}** вызывает гильдию **${oppGuild?.name || '?'}**!`)
-            .addFields(
-                { name: '🏰 Вызывающий', value: challGuild?.name || '?', inline: true },
-                { name: '🛡️ Оппонент', value: oppGuild?.name || '?', inline: true },
-                { name: '🕒 Время', value: `<t:${timeUnix}:F> (<t:${timeUnix}:R>)`, inline: false },
-                { name: '⚔️ Формат', value: `${challenge.format} ${challenge.format == 1 ? 'бой' : 'боёв'}`, inline: true },
-                { name: '📜 Статус', value: statusText, inline: true }
-            )
-            .setFooter({ text: 'Открыть страницу дуэли для деталей' });
+        const buildEmbed = (targetGuildId) => {
+            const isOpponent = targetGuildId === challenge.opponentGuildId;
+            const desc = isOpponent 
+                ? `Гильдия **${challGuild?.name || '?'}** вызывает вашу гильдию!`
+                : `Вы вызвали гильдию **${oppGuild?.name || '?'}** на дуэль!`;
+
+            return new EmbedBuilder()
+                .setTitle('⚔️ Вызов на Дуэль!')
+                .setColor(color)
+                .setDescription(desc)
+                .addFields(
+                    { name: '🏰 Вызывающий', value: challGuild?.name || '?', inline: true },
+                    { name: '🛡️ Оппонент', value: oppGuild?.name || '?', inline: true },
+                    { name: '🕒 Время', value: `<t:${timeUnix}:F> (<t:${timeUnix}:R>)`, inline: false },
+                    { name: '⚔️ Формат', value: `${challenge.format} ${challenge.format == 1 ? 'бой' : 'боёв'}`, inline: true },
+                    { name: '📜 Статус', value: statusText, inline: true }
+                )
+                .setFooter({ text: 'Открыть страницу дуэли для деталей' });
+        };
 
         const button = new ButtonBuilder()
             .setLabel('Открыть страницу дуэли')
@@ -186,17 +193,61 @@ async function updateDuelMessage(client, challengeId) {
             .setStyle(ButtonStyle.Link);
         const row = new ActionRowBuilder().addComponents(button);
 
-        // 1. Пытаемся отредактировать старое сообщение (если оно есть)
-        if (challenge.channelId && challenge.messageId) {
-            const channel = await client.channels.fetch(challenge.channelId).catch(() => null);
-            if (channel) {
-                const message = await channel.messages.fetch(challenge.messageId).catch(() => null);
-                if (message) {
-                    await message.edit({ embeds: [embed], components: [row] });
-                    return; // Успешно отредактировали, выходим
+        // ─── Обновляем / создаем сообщение у ОППОНЕНТА ───
+        const oppSettings = await Settings.findOne({ guildId: challenge.opponentGuildId });
+        if (oppSettings && oppSettings.challengeChannelId) {
+            const oppChannel = await client.channels.fetch(oppSettings.challengeChannelId).catch(() => null);
+            if (oppChannel) {
+                // Ищем сообщение в истории канала
+                const messages = await oppChannel.messages.fetch({ limit: 50 }).catch(() => null);
+                let existingMsg = null;
+                if (messages) {
+                    existingMsg = messages.find(m => m.author.id === client.user.id && m.embeds[0] && m.embeds[0].footer?.text === 'Открыть страницу дуэли' && m.components[0]?.components[0]?.url?.includes(challenge._id));
+                }
+
+                const content = challenge.status === 'pending' && oppSettings.modRoles?.length
+                    ? (oppSettings.modRoles.map(id => `<@&${id}>`).join(' ') + ', вам вызов!')
+                    : null;
+
+                if (existingMsg) {
+                    await existingMsg.edit({ content, embeds: [buildEmbed(challenge.opponentGuildId)], components: [row] });
+                } else {
+                    await oppChannel.send({ content, embeds: [buildEmbed(challenge.opponentGuildId)], components: [row] });
                 }
             }
         }
+
+        // ─── Обновляем / создаем сообщение у ВЫЗЫВАЮЩЕГО ───
+        const challSettings = await Settings.findOne({ guildId: challenge.challengerGuildId });
+        if (challSettings && challSettings.challengeChannelId) {
+            const challChannel = await client.channels.fetch(challSettings.challengeChannelId).catch(() => null);
+            if (challChannel) {
+                // Ищем сообщение в истории канала
+                const messages = await challChannel.messages.fetch({ limit: 50 }).catch(() => null);
+                let existingMsg = null;
+                if (messages) {
+                    existingMsg = messages.find(m => m.author.id === client.user.id && m.embeds[0] && m.embeds[0].footer?.text === 'Открыть страницу дуэли' && m.components[0]?.components[0]?.url?.includes(challenge._id));
+                }
+
+                let content = null;
+                if (challenge.status === 'accepted') {
+                    const modPings = (challSettings.modRoles || []).map(id => `<@&${id}>`).join(' ');
+                    content = modPings ? `${modPings}, ваш вызов принят!` : 'Ваш вызов принят!';
+                }
+                if (challenge.status === 'declined') {
+                    const modPings = (challSettings.modRoles || []).map(id => `<@&${id}>`).join(' ');
+                    content = modPings ? `${modPings}, ваш вызов отклонили.` : 'Ваш вызов отклонили.';
+                }
+
+                if (existingMsg) {
+                    await existingMsg.edit({ content, embeds: [buildEmbed(challenge.challengerGuildId)], components: [row] });
+                } else {
+                    await challChannel.send({ content, embeds: [buildEmbed(challenge.challengerGuildId)], components: [row] });
+                }
+            }
+        }
+    } catch (e) { console.error('UPDATE DUEL MSG:', e); }
+}
 
         // 2. Если сообщения нет (удалили) — отправляем НОВОЕ в канал оппонента (или вызывающего, если статус сменился)
         // Отправляем в канал оппонента, так как они принимают вызов
