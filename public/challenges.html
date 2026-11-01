@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вызовы — Where Winds Meet</title>
+    <link rel="stylesheet" href="/css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
+</head>
+<body class="admin-page">
+    <div class="bg-ink"></div>
+    <div class="fog"></div>
+
+    <div class="container">
+        <nav class="top-nav">
+            <div class="logo">WHERE WINDS MEET</div>
+            <a href="#" class="back-link" id="back-link">← Назад в гильдию</a>
+        </nav>
+
+        <div class="page-title">
+            <h1>⚔️ Вызовы гильдии</h1>
+            <p>☯ История дуэлей и текущие сражения</p>
+        </div>
+
+        <div id="content">
+            <div class="empty-state">Загрузка...</div>
+        </div>
+    </div>
+
+    <script>
+        const pathParts = window.location.pathname.split('/');
+        const guildId = pathParts[2];
+        const content = document.getElementById('content');
+        document.getElementById('back-link').href = '/guild/' + guildId;
+
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        }
+
+        fetch('/api/guild/' + guildId + '/challenges', { credentials: 'include' })
+            .then(r => r.ok ? r.json() : [])
+            .then(challenges => {
+                if (!challenges || challenges.length === 0) {
+                    content.innerHTML = '<div class="empty-state">Пока нет ни одного вызова.</div>';
+                    return;
+                }
+                content.innerHTML = challenges.map(ch => {
+                    const dateStr = new Date(ch.time * 1000).toLocaleString('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+                    let status = 'Ожидает';
+                    if (ch.status === 'accepted') status = 'Принят';
+                    if (ch.status === 'in_progress') status = 'В процессе';
+                    if (ch.status === 'completed') status = 'Завершён';
+                    if (ch.status === 'declined') status = 'Отклонён';
+                    
+                    return `
+                        <a href="/duel/${ch._id}" class="tile" style="margin-bottom:15px; display:block; border-left:3px solid #d4af37; padding:15px; text-decoration:none;">
+                            <div style="font-family:'Cinzel',serif; font-size:16px; color:#d4af37; margin-bottom:5px;">
+                                ${escapeHtml(ch.challengerName)} vs ${escapeHtml(ch.opponentName)}
+                            </div>
+                            <div style="font-size:13px; color:#8a8578;">
+                                Статус: ${status} • 🕒 ${dateStr} • ⚔️ ${ch.format} ${ch.format == 1 ? 'бой' : 'боёв'}
+                            </div>
+                        </a>
+                    `;
+                }).join('');
+            })
+            .catch(() => content.innerHTML = '<div class="empty-state">Ошибка загрузки.</div>');
+    </script>
+</body>
+</html>
