@@ -1,9 +1,10 @@
 const mongoose = require('mongoose');
 
-const SettingsSchema = new mongoose.Schema({
-    guildId: { type: String, required: true, unique: true },
+const SettingsSchema = new mongoose.Schema({ 
+    guildId: { type: String, required: true, unique: true }, 
     modRoles: { type: [String], default: [] },
-    rosterRoleIds: { type: [String], default: [] }
+    rosterRoleIds: { type: [String], default: [] },
+    challengeChannelId: { type: String, default: null } // ← НОВОЕ
 });
 const ReminderSchema = new mongoose.Schema({ id: { type: String, required: true, unique: true }, userId: String, channelId: String, text: String, targetId: String, targetType: String, repeat: String, nextTime: Number, hour: Number, minute: Number, timezone: Number, warned: { type: Boolean, default: false } });
 const ReactionRoleSchema = new mongoose.Schema({ guildId: String, channelId: String, messageId: String, title: String, desc: String, color: String, mode: String, roles: [{ roleId: String, label: String, emoji: String }] });
@@ -43,6 +44,24 @@ const PlayerProfileSchema = new mongoose.Schema({
         }
     }]
 });
+const ChallengeSchema = new mongoose.Schema({
+    challengerGuildId: { type: String, required: true },
+    opponentGuildId: { type: String, required: true },
+    status: { type: String, enum: ['pending', 'accepted', 'in_progress', 'completed', 'declined'], default: 'pending' },
+    time: { type: Number, required: true }, // Unix timestamp
+    format: { type: String, default: 'Bo1' }, // Bo1, Bo3, Bo5
+    channelId: { type: String }, // Канал, куда бот отправил сообщение
+    messageId: { type: String }, // ID сообщения бота
+    challengerRoster: [{ userId: String, name: String }],
+    opponentRoster: [{ userId: String, name: String }],
+    matches: [{
+        matchIndex: Number,
+        challengerPlayer: { userId: String, name: String },
+        opponentPlayer: { userId: String, name: String },
+        winner: { type: String, enum: ['challenger', 'opponent', null], default: null }
+    }],
+    winnerGuildId: { type: String, default: null }
+});
 
 module.exports = {
     Settings: mongoose.model('Settings', SettingsSchema),
@@ -55,5 +74,6 @@ module.exports = {
     Log: mongoose.model('Log', LogSchema),
     Guide: mongoose.model('Guide', GuideSchema),
     Event: mongoose.model('Event', EventSchema),
+    Challenge: mongoose.model('Challenge', ChallengeSchema),
     PlayerProfile: mongoose.model('PlayerProfile', PlayerProfileSchema)
 };
