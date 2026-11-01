@@ -350,48 +350,65 @@
                 </div>
             </div>
         </div>
-    `;
+    
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
-async function submitChallenge() {
-    const opp = document.getElementById('ch-opponent').value;
-    const dateVal = document.getElementById('ch-date').value;
-    const timeVal = document.getElementById('ch-time').value;
-    const format = document.getElementById('ch-format').value;
-
-    // Дебаг: смотрим, что реально приходит из полей
-    console.log('DEBUG:', { opp, dateVal, timeVal, format });
-
-    if (!opp || !dateVal || !timeVal) {
-        return alert('Заполните все поля: гильдию, дату и время!\n\nВыбрано:\nГильдия: ' + (opp || 'ПУСТО') + '\nДата: ' + (dateVal || 'ПУСТО') + '\nВремя: ' + (timeVal || 'ПУСТО'));
-    }
-    
-    // Объединяем дату и время
-    const datetime = dateVal + 'T' + timeVal + ':00';
-    const timestamp = Math.floor(new Date(datetime).getTime() / 1000);
-    
-    if (isNaN(timestamp)) {
-        return alert('Некорректная дата или время!');
-    }
-
+async function openChallengeModal() {
     try {
-        const res = await fetch('/api/guild/' + guildId + '/challenge', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ opponentGuildId: opp, time: timestamp, format })
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-            alert('✅ Вызов отправлен! Проверьте Discord.');
-            document.getElementById('challenge-modal').remove();
-        } else {
-            alert('❌ Ошибка: ' + data.error);
+        const res = await fetch('/api/guilds-list', { credentials: 'include' });
+        const guilds = await res.json();
+        const opponents = guilds.filter(g => g.id !== guildId);
+
+        if (opponents.length === 0) {
+            return alert('Бот не на других серверах, некого вызывать.');
         }
+
+        let options = opponents.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+
+        const modalHtml = `
+            <div class="modal-overlay active" id="challenge-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;">
+                <div class="modal-box" style="background:#12161c;padding:30px;border-radius:16px;border:1px solid var(--gold);max-width:400px;width:90%;">
+                    <h3 style="color:var(--gold);font-family:'Cinzel',serif;margin-bottom:20px;">Бросить вызов</h3>
+                    
+                    <div class="form-group">
+                        <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Кому бросить вызов?</label>
+                        <select id="ch-opponent" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
+                            <option value="">— Выберите гильдию —</option>
+                            ${options}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Дата (ГГГГ-ММ-ДД)</label>
+                        <input type="text" id="ch-date" value="${new Date().toISOString().split('T')[0]}" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
+                    </div>
+                    
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Время (ЧЧ:ММ)</label>
+                        <input type="text" id="ch-time" placeholder="18:00" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
+                    </div>
+                    
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Формат</label>
+                        <select id="ch-format" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
+                            <option value="1">1 бой</option>
+                            <option value="2">2 боя</option>
+                            <option value="3">3 боя</option>
+                            <option value="5">5 боёв</option>
+                        </select>
+                    </div>
+
+                    <div style="display:flex;gap:10px;margin-top:20px;">
+                        <button class="btn btn-danger" style="flex:1;" onclick="document.getElementById('challenge-modal').remove()">Отмена</button>
+                        <button class="btn btn-primary" style="flex:1;" onclick="submitChallenge()">Отправить</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
     } catch (e) {
-        alert('❌ Ошибка сети: ' + e.message);
+        alert('Ошибка загрузки списка гильдий: ' + e.message);
     }
 }
     </script>
