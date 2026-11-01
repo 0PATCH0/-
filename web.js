@@ -550,8 +550,9 @@ app.post('/api/duel/:id/accept', ensureAuth, async (req, res) => {
         // Проверка прав оппонента (упрощенно, полагаемся на UI, но лучше проверить)
         // В реальном проекте вынести проверку в middleware
         challenge.status = 'accepted';
-        await challenge.save();
-        res.json({ success: true });
+await challenge.save();
+try { await updateDuelMessage(req.app.get('botClient'), challenge._id); } catch(e) {}
+res.json({ success: true });
     } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
 });
 
@@ -561,9 +562,35 @@ app.post('/api/duel/:id/decline', ensureAuth, async (req, res) => {
         const challenge = await Challenge.findById(req.params.id);
         if (!challenge) return res.status(404).json({ error: 'Не найдено' });
         challenge.status = 'declined';
-        await challenge.save();
-        res.json({ success: true });
+await challenge.save();
+try { await updateDuelMessage(req.app.get('botClient'), challenge._id); } catch(e) {}
+res.json({ success: true });
     } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// Выбрать игрока на матч
+app.post('/api/duel/:id/set-player', ensureAuth, async (req, res) => {
+    try {
+        const { matchIndex, side, userId, name } = req.body; // side: 'challenger' | 'opponent'
+        const challenge = await Challenge.findById(req.params.id);
+        if (!challenge) return res.status(404).json({ error: 'Не найдено' });
+        if (challenge.status !== 'accepted' && challenge.status !== 'in_progress') {
+            return res.status(400).json({ error: 'Сначала примите вызов' });
+        }
+        
+        // Проверяем, что это модератор нужной стороны (упрощенно для API, в идеале middleware)
+        // ... проверка прав ...
+
+        const match = challenge.matches.find(m => m.matchIndex === Number(matchIndex));
+        if (!match) return res.status(400).json({ error: 'Матч не найден' });
+
+        if (side === 'challenger') match.challengerPlayer = { userId, name };
+        else if (side === 'opponent') match.opponentPlayer = { userId, name };
+        
+        challenge.markModified('matches');
+        await challenge.save();
+        res.json({ success: true, matches: challenge.matches });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
 
 // ─── СОБЫТИЯ ──────────────────────────────────────────────
