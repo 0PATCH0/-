@@ -438,18 +438,27 @@ app.post('/api/guild/:id/challenge', isModerator, async (req, res) => {
         if (!channel) return res.status(404).json({ error: 'Канал оппонента не найден' });
 
         // Создаем вызов в БД
-        const challenge = await Challenge.create({
-            challengerGuildId,
-            opponentGuildId,
-            time: Number(time),
-            format,
-            status: 'pending',
-            channelId: oppSettings.challengeChannelId
-        });
+        const numMatches = parseInt(format) || 1;
+const matches = Array.from({ length: numMatches }).map((_, i) => ({
+    matchIndex: i + 1,
+    challengerPlayer: null,
+    opponentPlayer: null,
+    winner: null
+}));
+
+const challenge = await Challenge.create({
+    challengerGuildId,
+    opponentGuildId,
+    time: Number(time),
+    format: numMatches,
+    status: 'pending',
+    channelId: oppSettings.challengeChannelId,
+    matches: matches
+});
 
         // Формируем Embed для Discord
         const challGuild = client.guilds.cache.get(challengerGuildId);
-        const timeUnix = Number(time);
+        const timeUnix = Math.floor(Number(time));
 const embed = new EmbedBuilder()
             .setTitle('⚔️ Вызов на Дуэль!')
             .setColor('#e74c3c')
@@ -990,5 +999,53 @@ function startWebServer(botClient) {
     app.set('botClient', botClient);
     app.listen(process.env.PORT || 8080, () => console.log('🌐 Веб-панель запущена'));
 }
+
+
+//------
+
+async function updateDuelMessage(client, challengeId) {
+    try {
+        const challenge = await Challenge.findById(challengeId);
+        if (!challenge || !challenge.channelId || !challenge.messageId) return;
+
+        const channel = await client.channels.fetch(challenge.channelId).catch(() => null);
+        if (!channel) return;
+        const message = await channel.messages.fetch(challenge.messageId).catch(() => null);
+        if (!message) return;
+
+        const challGuild = client.guilds.cache.get(challenge.challengerGuildId);
+        const oppGuild = client.guilds.cache.get(challenge.opponentGuildId);
+        const timeUnix = Math.floor(Number(challenge.time));
+
+        let statusText = '⏳ Ожидает ответа';
+        let color = '#f1c40f';
+        if (challenge.status === 'accepted') { statusText = '✅ Вызов принят!'; color = '#2ecc71'; }
+        if (challenge.status === 'declined') { statusText = '❌ Вызов отклонен'; color = '#e74c3c'; }
+        if (challenge.status === 'in_progress') { statusText = '⚔️ Бои идут!'; color = '#e67e22'; }
+        if (challenge.status === 'completed') { statusText = '🏆 Дуэль завершена!'; color = '#d4af37'; }
+
+        const embed = new EmbedBuilder()
+            .setTitle('⚔️ Вызов на Дуэль!')
+            .setColor(color)
+            .setDescription(`Гильдия **${challGuild.name}** вызывает гильдию **${oppGuild.name}**!`)
+            .addFields(
+                { name: '🏰 Вызывающий', value: challGuild.name, inline: true },
+                { name: '🛡️ Оппонент', value: oppGuild.name, inline: true },
+                { name: '🕒 Время', value: `<t:${timeUnix}:F> (<t:${timeUnix}:R>)`, inline: false },
+                { name: '⚔️ Формат', value: `${challenge.format} ${challenge.format == 1 ? 'бой' : 'боёв'}`, inline: true },
+                { name: '📜 Статус', value: statusText, inline: true }
+            )
+            .setFooter({ text: 'Открыть страницу дуэли для деталей' });
+
+        const button = new ButtonBuilder()
+            .setLabel('Открыть страницу дуэли')
+            .setURL('https://patchitos1234.fly.dev/duel/' + challenge._id)
+            .setStyle(ButtonStyle.Link);
+        const row = new ActionRowBuilder().addComponents(button);
+
+        await message.edit({ embeds: [embed], components: [row] });
+    } catch (e) {
+        console.error('UPDATE DUEL MSG:', e);
+    }
 
 module.exports = { startWebServer };
