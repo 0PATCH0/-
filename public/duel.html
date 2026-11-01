@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дуэль — Where Winds Meet</title>
+    <link rel="stylesheet" href="/css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
+</head>
+<body class="admin-page">
+    <div class="bg-ink"></div>
+    <div class="fog"></div>
+
+    <div class="container" style="max-width: 800px;">
+        <nav class="top-nav">
+            <div class="logo">WHERE WINDS MEET</div>
+            <a href="/dashboard" class="back-link">← К списку гильдий</a>
+        </nav>
+
+        <div id="content">
+            <div class="empty-state">Загрузка данных дуэли...</div>
+        </div>
+    </div>
+
+    <script>
+        const challengeId = window.location.pathname.split('/')[2];
+        const content = document.getElementById('content');
+
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        }
+
+        // Временный API-заглушка (добавим в web.js на следующем шаге)
+        // Пока просто выведем ID
+        content.innerHTML = `
+            <div class="panel" style="text-align: center; padding: 50px 20px; border-color: var(--gold); box-shadow: 0 0 50px rgba(212,175,55,0.1);">
+                <div style="font-size: 48px; margin-bottom: 20px;">⚔️</div>
+                <h1 style="font-family: 'Cinzel', serif; color: var(--gold); font-size: 32px; margin-bottom: 10px;">Дуэль</h1>
+                <p style="color: var(--text-muted); margin-bottom: 30px;">ID Вызова: ${challengeId}</p>
+                <p style="color: var(--text-main);">Здесь будет красивая карточка вызова, время, формат и кнопки управления.</p>
+            </div>
+        `;
+    </script>
+</body>
+</html>
