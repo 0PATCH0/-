@@ -154,12 +154,7 @@ function resolveProfileGuildId(req) {
 async function updateDuelMessage(client, challengeId) {
     try {
         const challenge = await Challenge.findById(challengeId);
-        if (!challenge || !challenge.channelId || !challenge.messageId) return;
-
-        const channel = await client.channels.fetch(challenge.channelId).catch(() => null);
-        if (!channel) return;
-        const message = await channel.messages.fetch(challenge.messageId).catch(() => null);
-        if (!message) return;
+        if (!challenge) return;
 
         const challGuild = client.guilds.cache.get(challenge.challengerGuildId);
         const oppGuild = client.guilds.cache.get(challenge.opponentGuildId);
@@ -191,7 +186,38 @@ async function updateDuelMessage(client, challengeId) {
             .setStyle(ButtonStyle.Link);
         const row = new ActionRowBuilder().addComponents(button);
 
-        await message.edit({ embeds: [embed], components: [row] });
+        // 1. Пытаемся отредактировать старое сообщение (если оно есть)
+        if (challenge.channelId && challenge.messageId) {
+            const channel = await client.channels.fetch(challenge.channelId).catch(() => null);
+            if (channel) {
+                const message = await channel.messages.fetch(challenge.messageId).catch(() => null);
+                if (message) {
+                    await message.edit({ embeds: [embed], components: [row] });
+                    return; // Успешно отредактировали, выходим
+                }
+            }
+        }
+
+        // 2. Если сообщения нет (удалили) — отправляем НОВОЕ в канал оппонента (или вызывающего, если статус сменился)
+        // Отправляем в канал оппонента, так как они принимают вызов
+        const targetSettings = await Settings.findOne({ guildId: challenge.opponentGuildId });
+        if (targetSettings && targetSettings.challengeChannelId) {
+            const targetChannel = await client.channels.fetch(targetSettings.challengeChannelId).catch(() => null);
+            if (targetChannel) {
+                // Если статус accepted, пингуем модераторов ВЫЗЫВАЮЩЕЙ гильдии, чтобы они знали
+                let content = 'Обновление статуса дуэли.';
+                if (challenge.status === 'accepted') {
+                    const challSettings = await Settings.findOne({ guildId: challenge.challengerGuildId });
+                    const modPings = (challSettings?.modRoles || []).map(id => `<@&${id}>`).join(' ');
+                    content = modPings ? `${modPings}, ваш вызов принят! Выбирайте бойцов.` : 'Ваш вызов принят! Выбирайте бойцов.';
+                }
+
+                const newMsg = await targetChannel.send({ content, embeds: [embed], components: [row] });
+                challenge.channelId = newMsg.channelId;
+                challenge.messageId = newMsg.id;
+                await challenge.save();
+            }
+        }
     } catch (e) { console.error('UPDATE DUEL MSG:', e); }
 }
 
@@ -533,12 +559,46 @@ app.post('/api/duel/:id/set-player', ensureAuth, async (req, res) => {
         const { matchIndex, side, userId, name } = req.body;
         const challenge = await Challenge.findById(req.params.id);
         if (!challenge) return res.status(404).json({ error: 'Не найдено' });
+        
         if (challenge.status !== 'accepted' && challenge.status !== 'in_progress') {
             return res.status(400).json({ error: 'Сначала примите вызов' });
         }
 
+        // Проверка прав: модератор может менять только свою сторону
+        const client = req.app.get('botClient');
+        const guildId = side === 'challenger' ? challenge.challengerGuildId : challenge.opponentGuildId;
+        const discordGuild = client.guilds.cache.get(guildId);
+        
+        let isMod = false;
+        if (req.user.id === OWNER_ID) {
+            isMod = true;
+        } else if (discordGuild) {
+            const member = await discordGuild.members.fetch(req.user.id).catch(() => null);
+            if (member) {
+                const settings = await Settings.findOne({ guildId });
+                const userGuildInfo = req.user.guilds.find(g => g.id === guildId);
+                const isDiscordAdmin = userGuildInfo && (BigInt(userGuildInfo.permissions) & BigInt(0x8)) === BigInt(0x8);
+                const isModRole = settings && settings.modRoles && member.roles.cache.some(r => settings.modRoles.includes(r.id));
+                if (isDiscordAdmin || isModRole) isMod = true;
+            }
+        }
+
+        if (!isMod) {
+            return res.status(403).json({ error: 'Вы не модератор этой гильдии' });
+        }
+
         const match = challenge.matches.find(m => m.matchIndex === Number(matchIndex));
         if (!match) return res.status(400).json({ error: 'Матч не найден' });
+
+        // Если игрок уже выбран и это не владелец бота — запрещаем менять
+        if (req.user.id !== OWNER_ID) {
+            if (side === 'challenger' && match.challengerPlayer) {
+                return res.status(400).json({ error: 'Боец уже выбран. Дождитесь начала боя.' });
+            }
+            if (side === 'opponent' && match.opponentPlayer) {
+                return res.status(400).json({ error: 'Боец уже выбран. Дождитесь начала боя.' });
+            }
+        }
 
         if (side === 'challenger') match.challengerPlayer = { userId, name };
         else if (side === 'opponent') match.opponentPlayer = { userId, name };
@@ -546,7 +606,28 @@ app.post('/api/duel/:id/set-player', ensureAuth, async (req, res) => {
         challenge.markModified('matches');
         await challenge.save();
         res.json({ success: true, matches: challenge.matches });
-    } catch (e) { console.error('SET PLAYER:', e); res.status(500).json({ error: 'Ошибка' }); }
+    } catch (e) { 
+        console.error('SET PLAYER:', e); 
+        res.status(500).json({ error: 'Ошибка' }); 
+    }
+});
+
+app.post('/api/duel/:id/start', ensureAuth, async (req, res) => {
+    try {
+        const challenge = await Challenge.findById(req.params.id);
+        if (!challenge) return res.status(404).json({ error: 'Не найдено' });
+        
+        // Проверяем, что все матчи заполнены (хотя бы по одному игроку с каждой стороны)
+        const allFilled = challenge.matches.every(m => m.challengerPlayer && m.opponentPlayer);
+        if (!allFilled) {
+            return res.status(400).json({ error: 'Не все матчи заполнены. Назначьте бойцов.' });
+        }
+
+        challenge.status = 'in_progress';
+        await challenge.save();
+        try { await updateDuelMessage(req.app.get('botClient'), challenge._id); } catch (e) {}
+        res.json({ success: true });
+    } catch (e) { console.error('START DUEL:', e); res.status(500).json({ error: 'Ошибка' }); }
 });
 
 // ─── ВЫЗОВЫ (СОЗДАНИЕ) ────────────────────────────────────
