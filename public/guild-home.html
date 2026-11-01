@@ -193,54 +193,130 @@
     </div>
 
     <script>
-        const pathParts = window.location.pathname.split('/');
-        const guildId = pathParts[2];
+    const pathParts = window.location.pathname.split('/');
+    const guildId = pathParts[2];
 
-        document.getElementById('tile-profile').href = '/profile?guild=' + guildId;
-        document.getElementById('tile-events').href = '/manage/' + guildId + '/events';
-        document.getElementById('tile-guides').href = '/manage/' + guildId + '/guides';
-        document.getElementById('tile-global').href = '/global-profiles';
-        document.getElementById('tile-manage').href = '/manage/' + guildId;
-        document.getElementById('tile-roster').href = '/guild/' + guildId + '/roster';
-        document.getElementById('tile-profiles-admin').href = '/manage/' + guildId + '/profiles';
+    // Инициализация плиток
+    const setHref = (id, href) => {
+        const el = document.getElementById(id);
+        if (el) el.href = href;
+    };
 
-        fetch('/api/user', { credentials: 'include' })
-            .then(r => r.ok ? r.json() : null)
-            .then(data => {
-                if (!data) return;
-                const guild = (data.guilds || []).find(g => g.id === guildId);
-                if (guild) {
-                    document.getElementById('guild-name').textContent = guild.name;
-                    const iconUrl = guild.icon
-                        ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`
-                        : null;
-                    const iconEl = document.getElementById('guild-icon');
-                    if (iconUrl) {
-                        iconEl.innerHTML = `<img src="${iconUrl}" alt="">`;
-                    } else {
-                        iconEl.textContent = guild.name.charAt(0).toUpperCase();
-                    }
+    setHref('tile-profile', '/profile?guild=' + guildId);
+    setHref('tile-events', '/manage/' + guildId + '/events');
+    setHref('tile-guides', '/manage/' + guildId + '/guides');
+    setHref('tile-manage', '/manage/' + guildId);
+    setHref('tile-roster', '/guild/' + guildId + '/roster');
+    setHref('tile-profiles-admin', '/manage/' + guildId + '/profiles');
+
+    // Инфо о гильдии
+    fetch('/api/user', { credentials: 'include' })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+            if (!data) return;
+            const guild = (data.guilds || []).find(g => g.id === guildId);
+            if (guild) {
+                document.getElementById('guild-name').textContent = guild.name;
+                const iconEl = document.getElementById('guild-icon');
+                if (guild.icon) {
+                    iconEl.innerHTML = `<img src="https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png" alt="">`;
+                } else {
+                    iconEl.textContent = guild.name.charAt(0).toUpperCase();
                 }
+            }
+        });
+
+    // Проверка прав модератора (показываем блок Управления)
+    fetch('/api/guild/' + guildId, { credentials: 'include' })
+        .then(r => {
+            if (r.ok) document.getElementById('admin-section').style.display = 'block';
+        })
+        .catch(() => {});
+
+    // ─── Модалка Вызова ───
+    function escapeHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    async function openChallengeModal() {
+        try {
+            const res = await fetch('/api/guilds-list', { credentials: 'include' });
+            const guilds = await res.json();
+            const opponents = guilds.filter(g => g.id !== guildId);
+
+            if (opponents.length === 0) {
+                return alert('Бот не на других серверах, некого вызывать.');
+            }
+
+            let options = opponents.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+
+            const modalHtml = `
+                <div class="modal-overlay active" id="challenge-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;">
+                    <div class="modal-box" style="background:#12161c;padding:30px;border-radius:16px;border:1px solid var(--gold);max-width:400px;width:90%;">
+                        <h3 style="color:var(--gold);font-family:'Cinzel',serif;margin-bottom:20px;">Бросить вызов</h3>
+                        
+                        <div class="form-group">
+                            <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Кому бросить вызов?</label>
+                            <select id="ch-opponent" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
+                                <option value="">— Выберите гильдию —</option>
+                                ${options}
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Время (по вашему поясу)</label>
+                            <input type="datetime-local" id="ch-time" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
+                        </div>
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Формат</label>
+                            <select id="ch-format" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
+                                <option value="Bo1">Bo1 (1 бой)</option>
+                                <option value="Bo3">Bo3 (до 2 побед)</option>
+                                <option value="Bo5">Bo5 (до 3 побед)</option>
+                            </select>
+                        </div>
+
+                        <div style="display:flex;gap:10px;margin-top:20px;">
+                            <button class="btn btn-danger" style="flex:1;" onclick="document.getElementById('challenge-modal').remove()">Отмена</button>
+                            <button class="btn btn-primary" style="flex:1;" onclick="submitChallenge()">Отправить</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        } catch (e) {
+            alert('Ошибка загрузки списка гильдий: ' + e.message);
+        }
+    }
+
+    async function submitChallenge() {
+        const opp = document.getElementById('ch-opponent').value;
+        const time = document.getElementById('ch-time').value;
+        const format = document.getElementById('ch-format').value;
+
+        if (!opp || !time) return alert('Заполните все поля!');
+        
+        const timestamp = Math.floor(new Date(time).getTime() / 1000);
+
+        try {
+            const res = await fetch('/api/guild/' + guildId + '/challenge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ opponentGuildId: opp, time: timestamp, format })
             });
-
-        fetch('/api/guild/' + guildId, { credentials: 'include' })
-            .then(r => {
-                if (r.ok) document.getElementById('admin-section').style.display = 'block';
-            })
-            .catch(() => {});
-
-        // ─── Модалка Вызова ───
-async function openChallengeModal() {
-    // Запрашиваем список гильдий
-    const res = await fetch('/api/guilds-list', { credentials: 'include' });
-    const guilds = await res.json();
-    const opponents = guilds.filter(g => g.id !== guildId);
-
-    let options = opponents.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
-
-    const modalHtml = `
-        <div class="modal-overlay active" id="challenge-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;">
-            <div class="modal-box" style="background:#12161c;padding:30px;border-radius:16px;border:1px solid var(--gold);max-width:400px;width:90%;">
+            const data = await res.json();
+            
+            if (data.success) {
+                alert('✅ Вызов отправлен! Проверьте Discord.');
+                document.getElementById('challenge-modal').remove();
+            } else {
+                alert('❌ Ошибка: ' + data.error);
+            }
+        } catch (e) {
+            alert('❌ Ошибка сети: ' + e.message);
+        }
+    }
+    </script>
                 <h3 style="color:var(--gold);font-family:'Cinzel',serif;margin-bottom:20px;">Бросить вызов</h3>
                 
                 <div class="form-group">
