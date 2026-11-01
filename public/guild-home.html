@@ -159,9 +159,9 @@
                 <span class="tile-desc">Читать тактики и руководства гильдии.</span>
             </a>
             <a href="#" class="tile" id="tile-global">
-    <span class="tile-icon">🌐</span>
-    <span class="tile-title">Глобальные странники</span>
-    <span class="tile-desc">Найти игроков по всей сети гильдий. Фильтр по гильдии и боевым искусствам.</span>
+                <span class="tile-icon">🌐</span>
+                <span class="tile-title">Глобальные странники</span>
+                <span class="tile-desc">Найти игроков по всей сети гильдий. Фильтр по гильдии и боевым искусствам.</span>
             </a>
         </div>
 
@@ -178,10 +178,10 @@
                     <span class="tile-title">Состав гильдии</span>
                     <span class="tile-desc">Список участников и настройка колонок.</span>
                 </a>
-                <a href="#" class="tile admin-tiles" onclick="openChallengeModal(); return false;">
-    <span class="tile-icon">⚔️</span>
-    <span class="tile-title">Бросить вызов</span>
-    <span class="tile-desc">Вызвать другую гильдию на турнирный бой.</span>
+                <a href="#" class="tile" onclick="openChallengeModal(); return false;">
+                    <span class="tile-icon">⚔️</span>
+                    <span class="tile-title">Бросить вызов</span>
+                    <span class="tile-desc">Вызвать другую гильдию на турнирный бой.</span>
                 </a>
                 <a href="#" class="tile" id="tile-profiles-admin">
                     <span class="tile-icon">👥</span>
@@ -196,7 +196,6 @@
     const pathParts = window.location.pathname.split('/');
     const guildId = pathParts[2];
 
-    // Инициализация плиток
     const setHref = (id, href) => {
         const el = document.getElementById(id);
         if (el) el.href = href;
@@ -205,11 +204,11 @@
     setHref('tile-profile', '/profile?guild=' + guildId);
     setHref('tile-events', '/manage/' + guildId + '/events');
     setHref('tile-guides', '/manage/' + guildId + '/guides');
+    setHref('tile-global', '/global-profiles');
     setHref('tile-manage', '/manage/' + guildId);
     setHref('tile-roster', '/guild/' + guildId + '/roster');
     setHref('tile-profiles-admin', '/manage/' + guildId + '/profiles');
 
-    // Инфо о гильдии
     fetch('/api/user', { credentials: 'include' })
         .then(r => r.ok ? r.json() : null)
         .then(data => {
@@ -226,16 +225,14 @@
             }
         });
 
-    // Проверка прав модератора (показываем блок Управления)
     fetch('/api/guild/' + guildId, { credentials: 'include' })
         .then(r => {
             if (r.ok) document.getElementById('admin-section').style.display = 'block';
         })
         .catch(() => {});
 
-    // ─── Модалка Вызова ───
     function escapeHtml(s) {
-        return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
     }
 
     async function openChallengeModal() {
@@ -254,7 +251,6 @@
                 <div class="modal-overlay active" id="challenge-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;">
                     <div class="modal-box" style="background:#12161c;padding:30px;border-radius:16px;border:1px solid var(--gold);max-width:400px;width:90%;">
                         <h3 style="color:var(--gold);font-family:'Cinzel',serif;margin-bottom:20px;">Бросить вызов</h3>
-                        
                         <div class="form-group">
                             <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Кому бросить вызов?</label>
                             <select id="ch-opponent" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
@@ -263,18 +259,22 @@
                             </select>
                         </div>
                         <div class="form-group" style="margin-top: 15px;">
-                            <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Время (по вашему поясу)</label>
-                            <input type="datetime-local" id="ch-time" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
+                            <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Дата (ГГГГ-ММ-ДД)</label>
+                            <input type="text" id="ch-date" value="${new Date().toISOString().split('T')[0]}" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
+                        </div>
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Время (ЧЧ:ММ)</label>
+                            <input type="text" id="ch-time" placeholder="18:00" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
                         </div>
                         <div class="form-group" style="margin-top: 15px;">
                             <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Формат</label>
                             <select id="ch-format" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
-                                <option value="Bo1">Bo1 (1 бой)</option>
-                                <option value="Bo3">Bo3 (до 2 побед)</option>
-                                <option value="Bo5">Bo5 (до 3 побед)</option>
+                                <option value="1">1 бой</option>
+                                <option value="2">2 боя</option>
+                                <option value="3">3 боя</option>
+                                <option value="5">5 боёв</option>
                             </select>
                         </div>
-
                         <div style="display:flex;gap:10px;margin-top:20px;">
                             <button class="btn btn-danger" style="flex:1;" onclick="document.getElementById('challenge-modal').remove()">Отмена</button>
                             <button class="btn btn-primary" style="flex:1;" onclick="submitChallenge()">Отправить</button>
@@ -290,12 +290,20 @@
 
     async function submitChallenge() {
         const opp = document.getElementById('ch-opponent').value;
-        const time = document.getElementById('ch-time').value;
+        const dateVal = document.getElementById('ch-date').value;
+        const timeVal = document.getElementById('ch-time').value;
         const format = document.getElementById('ch-format').value;
 
-        if (!opp || !time) return alert('Заполните все поля!');
-        
-        const timestamp = Math.floor(new Date(time).getTime() / 1000);
+        if (!opp || !dateVal || !timeVal) {
+            return alert('Заполните все поля: гильдию, дату и время!');
+        }
+
+        const datetime = dateVal + 'T' + timeVal + ':00';
+        const timestamp = Math.floor(new Date(datetime).getTime() / 1000);
+
+        if (isNaN(timestamp)) {
+            return alert('Некорректная дата или время!');
+        }
 
         try {
             const res = await fetch('/api/guild/' + guildId + '/challenge', {
@@ -305,7 +313,6 @@
                 body: JSON.stringify({ opponentGuildId: opp, time: timestamp, format })
             });
             const data = await res.json();
-            
             if (data.success) {
                 alert('✅ Вызов отправлен! Проверьте Discord.');
                 document.getElementById('challenge-modal').remove();
@@ -316,101 +323,6 @@
             alert('❌ Ошибка сети: ' + e.message);
         }
     }
-    </script>
-                <h3 style="color:var(--gold);font-family:'Cinzel',serif;margin-bottom:20px;">Бросить вызов</h3>
-                
-                <div class="form-group">
-                    <label>Кому бросить вызов?</label>
-                    <select id="ch-opponent" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
-                        <option value="">— Выберите гильдию —</option>
-                        ${options}
-                    </select>
-                </div>
-                <div class="form-group" style="margin-top: 15px;">
-    <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Дата</label>
-    <input type="date" id="ch-date" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
-</div>
-<div class="form-group" style="margin-top: 15px;">
-    <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Время (ЧЧ:ММ)</label>
-    <input type="time" id="ch-time" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
-</div>
-                <div class="form-group">
-    <label>Формат</label>
-    <select id="ch-format" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
-        <option value="1">1 бой</option>
-        <option value="2">2 боя</option>
-        <option value="3">3 боя</option>
-        <option value="5">5 боёв</option>
-    </select>
-                </div>
-
-                <div style="display:flex;gap:10px;margin-top:20px;">
-                    <button class="btn btn-danger" style="flex:1;" onclick="document.getElementById('challenge-modal').remove()">Отмена</button>
-                    <button class="btn btn-primary" style="flex:1;" onclick="submitChallenge()">Отправить</button>
-                </div>
-            </div>
-        </div>
-    
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-}
-
-async function openChallengeModal() {
-    try {
-        const res = await fetch('/api/guilds-list', { credentials: 'include' });
-        const guilds = await res.json();
-        const opponents = guilds.filter(g => g.id !== guildId);
-
-        if (opponents.length === 0) {
-            return alert('Бот не на других серверах, некого вызывать.');
-        }
-
-        let options = opponents.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
-
-        const modalHtml = `
-            <div class="modal-overlay active" id="challenge-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;">
-                <div class="modal-box" style="background:#12161c;padding:30px;border-radius:16px;border:1px solid var(--gold);max-width:400px;width:90%;">
-                    <h3 style="color:var(--gold);font-family:'Cinzel',serif;margin-bottom:20px;">Бросить вызов</h3>
-                    
-                    <div class="form-group">
-                        <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Кому бросить вызов?</label>
-                        <select id="ch-opponent" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
-                            <option value="">— Выберите гильдию —</option>
-                            ${options}
-                        </select>
-                    </div>
-                    
-                    <div class="form-group" style="margin-top: 15px;">
-                        <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Дата (ГГГГ-ММ-ДД)</label>
-                        <input type="text" id="ch-date" value="${new Date().toISOString().split('T')[0]}" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
-                    </div>
-                    
-                    <div class="form-group" style="margin-top: 15px;">
-                        <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Время (ЧЧ:ММ)</label>
-                        <input type="text" id="ch-time" placeholder="18:00" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
-                    </div>
-                    
-                    <div class="form-group" style="margin-top: 15px;">
-                        <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Формат</label>
-                        <select id="ch-format" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text-main);border-radius:8px;">
-                            <option value="1">1 бой</option>
-                            <option value="2">2 боя</option>
-                            <option value="3">3 боя</option>
-                            <option value="5">5 боёв</option>
-                        </select>
-                    </div>
-
-                    <div style="display:flex;gap:10px;margin-top:20px;">
-                        <button class="btn btn-danger" style="flex:1;" onclick="document.getElementById('challenge-modal').remove()">Отмена</button>
-                        <button class="btn btn-primary" style="flex:1;" onclick="submitChallenge()">Отправить</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-    } catch (e) {
-        alert('Ошибка загрузки списка гильдий: ' + e.message);
-    }
-}
     </script>
 </body>
 </html>
