@@ -11,7 +11,9 @@
     <div class="bg-ink"></div>
     <div class="fog"></div>
 
-    <div class="container">
+    <pre id="debug" style="position:fixed; top:0; left:0; right:0; color:#e74c3c; background:#000; padding:6px 10px; font-size:11px; z-index:99999; margin:0; white-space:pre-wrap; display:none;"></pre>
+
+    <div class="container" style="margin-top: 40px;">
         <nav class="top-nav">
             <div class="logo">WHERE WINDS MEET</div>
             <a href="#" class="back-link" id="back-link">← Назад в управление</a>
@@ -20,6 +22,10 @@
         <div class="page-title">
             <h1>📜 Журнал действий</h1>
             <p>☯ Кто, когда и что делал</p>
+        </div>
+
+        <div class="panel" id="error-panel" style="display:none;">
+            <div class="empty-state" id="error-msg"></div>
         </div>
 
         <div class="panel">
@@ -71,13 +77,7 @@
             border-bottom: 1px solid rgba(255,255,255,0.05);
         }
         .log-item:last-child { border-bottom: none; }
-        .log-time {
-            font-size: 12px;
-            color: var(--text-muted);
-            white-space: nowrap;
-            min-width: 150px;
-            padding-top: 3px;
-        }
+        .log-time { font-size: 12px; color: var(--text-muted); white-space: nowrap; min-width: 150px; padding-top: 3px; }
         .log-content { flex: 1; min-width: 0; }
         .log-user { color: var(--jade); font-weight: bold; font-size: 14px; margin-bottom: 4px; }
         .log-action {
@@ -99,7 +99,16 @@
     </style>
 
     <script>
+        const params = new URLSearchParams(window.location.search);
+        const showDebug = params.get('debug') === '1';
+        const dbg = document.getElementById('debug');
+        if (showDebug) dbg.style.display = 'block';
+        function log(msg) { if (showDebug) dbg.textContent += msg + '\n'; }
+
+        log('JS запущен');
         const guildId = window.location.pathname.split('/')[2];
+        log('guildId: ' + guildId);
+
         const backLink = document.getElementById('back-link');
         if (backLink) backLink.href = '/manage/' + guildId;
 
@@ -108,23 +117,28 @@
         let currentSearch = '';
 
         function escapeHtml(s) {
-            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
         }
 
-        fetch('/api/guild/' + guildId + '/logs', { credentials: 'include' })
-            .then(res => {
+        async function loadLogs() {
+            log('fetch /api/guild/.../logs');
+            try {
+                const res = await fetch('/api/guild/' + guildId + '/logs', { credentials: 'include' });
+                log('  status: ' + res.status);
+                if (res.status === 403) {
+                    document.getElementById('logs-list').innerHTML = '<div class="empty-state">❌ У вас нет прав модератора.</div>';
+                    return;
+                }
                 if (!res.ok) throw new Error('HTTP ' + res.status);
-                return res.json();
-            })
-            .then(data => {
-                allLogs = data || [];
+                allLogs = await res.json();
+                log('  логов: ' + (allLogs || []).length);
                 buildChips();
                 renderLogs();
-            })
-            .catch(err => {
+            } catch (err) {
                 document.getElementById('logs-list').innerHTML =
-                    '<div class="empty-state">Ошибка загрузки логов: ' + escapeHtml(err.message) + '</div>';
-            });
+                    '<div class="empty-state">Ошибка загрузки: ' + escapeHtml(err.message) + '</div>';
+            }
+        }
 
         function buildChips() {
             const actions = ['all', ...new Set(allLogs.map(l => l.action).filter(Boolean))];
@@ -177,7 +191,10 @@
                     </div>
                 `;
             }).join('');
+            log('render: отрисовано ' + filtered.length);
         }
+
+        loadLogs();
     </script>
 </body>
 </html>
