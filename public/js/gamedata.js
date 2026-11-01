@@ -93,42 +93,50 @@
           { id: "wind_beneath_wings", nameEN: "Wind Beneath Wings", nameRU: "Ветер под Крыльями", category: "General", img: "https://static0.fextralifeimages.com/file/wherewindsmeet/7/79/Wind-beneath-wings-internal-arts-wherewindsmeet-wiki-guide.webp" }
     ],
     martialArts: [
-    // ─── Bellstrike - Splendor (Melee DPS) ───
+    // 1. Bellstrike - Splendor (Melee DPS)
     { id: "nameless_sword", nameEN: "Nameless Sword", nameRU: "Безымянный меч", path: "Bellstrike - Splendor", emoji: "🗡️", desc: "Быстрый и чистый стиль ближнего боя, ориентированный на быстрые удары и мобильность." },
     { id: "nameless_spear", nameEN: "Nameless Spear", nameRU: "Безымянное копьё", path: "Bellstrike - Splendor", emoji: "🔱", desc: "Ближний бой с высокой мобильностью. Обездвиживает цель и наносит мощный удар по прямой." },
 
-    // ─── Bellstrike - Umbra (Melee DPS) ───
-    { id: "strategic_sword", nameEN: "Strategic Sword", nameRU: "Меч стратега", path: "Bellstrike - Umbra", emoji: "🗡️", desc: "Агрессивный ближний бой. При нанесении серии ударов вызывает у врага кровотечение." },
-    { id: "heavenquaker_spear", nameEN: "Heavenquaker Spear", nameRU: "Копьё дрожащих небес", path: "Bellstrike - Umbra", emoji: "🔱", desc: "Ближний бой с удержанием врагов на расстоянии. Комбо с вращением и кровотечением." },
+    // 2. Bellstrike - Umbra (Melee DPS)
+    { id: "strategic_sword", nameEN: "Strategic Sword", nameRU: "Стратегический меч", path: "Bellstrike - Umbra", emoji: "🗡️", desc: "Агрессивный ближний бой. При нанесении серии ударов вызывает у врага кровотечение." },
+    { id: "heavenquaker_spear", nameEN: "Heavenquaker Spear", nameRU: "Копьё Небесного Грома", path: "Bellstrike - Umbra", emoji: "🔱", desc: "Ближний бой с удержанием врагов на расстоянии. Комбо с вращением и кровотечением." },
 
-    // ─── Bamboocut - Wind (Melee DPS) ───
-    { id: "infernal_twinblades", nameEN: "Infernal Twinblades", nameRU: "Клинки преисподней", path: "Bamboocut - Wind", emoji: "⚔️", desc: "Динамичный ближний бой. Накапливает кармическое пламя, даёт неуязвимость и повышает урон." },
-    { id: "mortal_rope_dart", nameEN: "Mortal Rope Dart", nameRU: "Шэнбяо бренности", path: "Bamboocut - Wind", emoji: "🪢", desc: "Быстрая техника ближнего боя. Притягивает врагов и призывает агрессивных крыс." },
+    // 3. Bamboocut - Wind (Melee DPS)
+    { id: "infernal_twinblades", nameEN: "Infernal Twinblades", nameRU: "Адские Парные Клинки", path: "Bamboocut - Wind", emoji: "⚔️", desc: "Динамичный ближний бой. Накапливает кармическое пламя, даёт неуязвимость и повышает урон." },
+    { id: "mortal_rope_dart", nameEN: "Mortal Rope Dart", nameRU: "Смертельный Канатный Дротик", path: "Bamboocut - Wind", emoji: "🪢", desc: "Быстрая техника ближнего боя. Притягивает врагов и призывает агрессивных крыс." },
 
-    // ─── Bamboocut - Dust (Ranged/AoE DPS) ───
-    { id: "unfettered_rope_dart", nameEN: "Unfettered Rope Dart", nameRU: "Шэнбяо раскрепощения", path: "Bamboocut - Dust", emoji: "🪢", desc: "Продвинутая техника шэнбяо. Молниеносные рывки и обездвиживание цели на расстоянии." },
-    { id: "everspring_umbrella", nameEN: "Everspring Umbrella", nameRU: "Зонт вечной весны", path: "Bamboocut - Dust", emoji: "☂️", desc: "Дальний бой с зонтом. Непрерывное лечение союзников и очищение от негативных эффектов." },
+    // 4. Bamboocut - Dust (Ranged DPS)
+    { id: "unfettered_rope_dart", nameEN: "Unfettered Rope Dart", nameRU: "Несвязанный Веревочный Дротик", path: "Bamboocut - Dust", emoji: "🪢", desc: "Продвинутая техника шэнбяо. Молниеносные рывки и обездвиживание цели на расстоянии." },
+    { id: "everspring_umbrella", nameEN: "Everspring Umbrella", nameRU: "Вечновесенний Зонт", path: "Bamboocut - Dust", emoji: "☂️", desc: "Дальний бой с зонтом. Непрерывное лечение союзников и очищение от негативных эффектов." },
 
-    // ─── Silkbind - Jade (Ranged DPS) ───
-    { id: "inkwell_fan", nameEN: "Inkwell Fan", nameRU: "Чернильный веер", path: "Silkbind - Jade", emoji: "🪭", desc: "Ближний бой на отдалении. Подбрасывает врагов и сдувает порывами ветра, даёт бонус к уклонению." },
-    { id: "vernal_umbrella", nameEN: "Vernal Umbrella", nameRU: "Зонт юности", path: "Silkbind - Jade", emoji: "☂️", desc: "Дальний бой. Превращает зонт в турель, обездвиживает врагов (кроме боссов)." },
+    // 5. Bamboocut - Kite (Melee DPS)
+    { id: "heavenwill_gauntlets", nameEN: "Heavenwill Gauntlets", nameRU: "Рукавицы Небесной Воли", path: "Bamboocut - Kite", emoji: "👊", desc: "Тяжёлые рукавицы. Мощные удары, сбивающие врагов с ног и пробивающие защиту." },
+    { id: "skygrasp_rope_dart", nameEN: "Skygrasp Rope Dart", nameRU: "Веревочный дротик Небесной Хватки", path: "Bamboocut - Kite", emoji: "🪢", desc: "Дальний захват. Притягивает врагов к себе и позволяет совершать добивающие удары." },
 
-    // ─── Silkbind - Deluge (Healer) ───
-    { id: "panacea_fan", nameEN: "Panacea Fan", nameRU: "Веер панацеи", path: "Silkbind - Deluge", emoji: "🪭", desc: "Поддержка и дальний бой. Лечит союзников по площади и восстанавливает здоровье." },
-    { id: "soulshade_umbrella", nameEN: "Soulshade Umbrella", nameRU: "Зонт прикрытой души", path: "Silkbind - Deluge", emoji: "☂️", desc: "Лечение и дальний бой. Подсвечивает раненых союзников и превращает зонт в турель поддержки." },
+    // 6. Bamboocut - Draught (Melee DPS)
+    { id: "skystrike_gauntlets", nameEN: "Skystrike Gauntlets", nameRU: "Рукавицы Небесного Удара", path: "Bamboocut - Draught", emoji: "👊", desc: "Сокрушительные удары с воздуха. Наносит высокий урон и дезориентирует врагов." },
+    { id: "riven_twinblades", nameEN: "Riven Twinblades", nameRU: "Ривен Твинблейдс", path: "Bamboocut - Draught", emoji: "⚔️", desc: "Агрессивный стиль парных клинков с рывками и быстрыми комбо-атаками." },
 
-    // ─── Stonesplit - Might (Tank) ───
-    { id: "stormbreaker_spear", nameEN: "Stormbreaker Spear", nameRU: "Копьё-громобой", path: "Stonesplit - Might", emoji: "🔱", desc: "Высокий урон и способность отвлекать врагов, снижая наносимый ими урон. Сбивает с ног." },
-    { id: "thundercry_blade", nameEN: "Thundercry Blade", nameRU: "Клинок раската грома", path: "Stonesplit - Might", emoji: "⚔️", desc: "Тяжёлое оружие. Создаёт щит на 25% здоровья, притягивает врагов и сокрушает их по площади." },
-
-    // ─── Stonesplit - Strength (Tank/DPS) ───
-    { id: "snowparting_blade", nameEN: "Snowparting Blade", nameRU: "Клинок, рассекающий снег", path: "Stonesplit - Strength", emoji: "⚔️", desc: "Мощные широкие взмахи глефой. Наносит высокий урон по площади и оглушает врагов." },
-    { id: "phalanxbane_blade", nameEN: "Phalanxbane Blade", nameRU: "Клинок, крушащий фалангу", path: "Stonesplit - Strength", emoji: "⚔️", desc: "Пробивной стиль глефы. Игнорирует часть защиты врага и ломает строй." },
-
-    // ─── Отдельные ───
+    // 7. Silkbind - Jade (Ranged DPS)
+    { id: "inkwell_fan", nameEN: "Inkwell Fan", nameRU: "Веер Чернильницы", path: "Silkbind - Jade", emoji: "🪭", desc: "Ближний бой на отдалении. Подбрасывает врагов и сдувает порывами ветра, даёт бонус к уклонению." },
+    { id: "vernal_umbrella", nameEN: "Vernal Umbrella", nameRU: "Весенний Зонт", path: "Silkbind - Jade", emoji: "☂️", desc: "Дальний бой. Превращает зонт в турель, обездвиживает врагов (кроме боссов)." },
     { id: "ninefold_umbrella", nameEN: "Ninefold Umbrella", nameRU: "Девятикратный зонт", path: "Silkbind - Jade", emoji: "☂️", desc: "Атакующий стиль зонта. Наносит серию быстрых ударов и накладывает кровотечение." },
-    { id: "heavenwill_gauntlets", nameEN: "Heavenwill Gauntlets", nameRU: "Небесные рукавицы", path: "Stonesplit - Might", emoji: "👊", desc: "Тяжёлые рукавицы. Мощные удары, сбивающие врагов с ног и пробивающие защиту." },
-    { id: "skygrasp_rope_dart", nameEN: "Skygrasp Rope Dart", nameRU: "Шэнбяо небесного хвата", path: "Bamboocut - Dust", emoji: "🪢", desc: "Дальний захват. Притягивает врагов к себе и позволяет совершать добивающие удары." }
+
+    // 8. Silkbind - Deluge (Healer)
+    { id: "panacea_fan", nameEN: "Panacea Fan", nameRU: "Веер Панацеи", path: "Silkbind - Deluge", emoji: "🪭", desc: "Поддержка и дальний бой. Лечит союзников по площади и восстанавливает здоровье." },
+    { id: "soulshade_umbrella", nameEN: "Soulshade Umbrella", nameRU: "Зонт Теней Души", path: "Silkbind - Deluge", emoji: "☂️", desc: "Лечение и дальний бой. Подсвечивает раненых союзников и превращает зонт в турель поддержки." },
+
+    // 9. Stonesplit - Might (Tank)
+    { id: "stormbreaker_spear", nameEN: "Stormbreaker Spear", nameRU: "Копьё Грозового Разлома", path: "Stonesplit - Might", emoji: "🔱", desc: "Высокий урон и способность отвлекать врагов, снижая наносимый ими урон. Сбивает с ног." },
+    { id: "thundercry_blade", nameEN: "Thundercry Blade", nameRU: "Клинок Громового Крика", path: "Stonesplit - Might", emoji: "⚔️", desc: "Тяжёлое оружие. Создаёт щит на 25% здоровья, притягивает врагов и сокрушает их по площади." },
+
+    // 10. Stonesplit - Strength (Tank)
+    { id: "snowparting_blade", nameEN: "Snowparting Blade", nameRU: "Клинок Рассекающий Снег", path: "Stonesplit - Strength", emoji: "⚔️", desc: "Мощные широкие взмахи глефой. Наносит высокий урон по площади и оглушает врагов." },
+    { id: "phalanxbane_blade", nameEN: "Phalanxbane Blade", nameRU: "Клинок Губителя Фаланги", path: "Stonesplit - Strength", emoji: "⚔️", desc: "Пробивной стиль глефы. Игнорирует часть защиты врага и ломает строй." },
+
+    // 11. Универсальные / Отдельные
+    { id: "willowbend_fan", nameEN: "Willowbend Fan", nameRU: "Поклонник Ивового Изгиба", path: "Universal", emoji: "🪭", desc: "Универсальный веер, сочетающий атаку и контроль." },
+    { id: "musical_drum", nameEN: "Musical Drum", nameRU: "Поясной Барабан Муз", path: "Universal", emoji: "🥁", desc: "Уникальный инструмент поддержки. Вдохновляет союзников и восстанавливает силы." }
 ]
 };
 
