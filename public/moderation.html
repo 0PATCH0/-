@@ -11,7 +11,9 @@
     <div class="bg-ink"></div>
     <div class="fog"></div>
 
-    <div class="container">
+    <pre id="debug" style="position:fixed; top:0; left:0; right:0; color:#e74c3c; background:#000; padding:6px 10px; font-size:11px; z-index:99999; margin:0; white-space:pre-wrap;"></pre>
+
+    <div class="container" style="margin-top: 40px;">
         <nav class="top-nav">
             <div class="logo">WHERE WINDS MEET</div>
             <a href="#" class="back-link" id="back-link">← Назад в управление</a>
@@ -65,7 +67,17 @@
     </style>
 
     <script>
+        const dbg = document.getElementById('debug');
+        function log(msg) {
+            dbg.textContent += msg + '\n';
+        }
+
+        log('JS запущен');
+        log('pathname: ' + window.location.pathname);
+
         const guildId = window.location.pathname.split('/')[2];
+        log('guildId: ' + guildId);
+
         const backLink = document.getElementById('back-link');
         if (backLink) backLink.href = '/manage/' + guildId;
 
@@ -73,18 +85,23 @@
         let selectedRoles = new Set();
 
         function escapeHtml(s) {
-            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
         }
 
         function showError(msg) {
             document.getElementById('error-panel').style.display = 'block';
             document.getElementById('error-msg').textContent = msg;
             document.getElementById('roles-list').innerHTML = '';
+            log('ERROR: ' + msg);
         }
 
         async function loadData() {
+            log('loadData: старт');
             try {
+                log('fetch /api/guild/...');
                 const guildRes = await fetch('/api/guild/' + guildId, { credentials: 'include' });
+                log('  status: ' + guildRes.status);
+
                 if (guildRes.status === 403) {
                     return showError('❌ У вас нет прав модератора на этом сервере.');
                 }
@@ -93,8 +110,12 @@
                 }
                 const guildData = await guildRes.json();
                 serverRoles = guildData.roles || [];
+                log('  ролей: ' + serverRoles.length);
 
+                log('fetch /api/guild/.../moderation');
                 const modRes = await fetch('/api/guild/' + guildId + '/moderation', { credentials: 'include' });
+                log('  status: ' + modRes.status);
+
                 if (modRes.status === 403) {
                     return showError('❌ У вас нет прав модератора на этом сервере.');
                 }
@@ -103,9 +124,11 @@
                 }
                 const modData = await modRes.json();
                 selectedRoles = new Set(modData.modRoles || []);
+                log('  выбрано: ' + selectedRoles.size);
 
                 renderRoles();
                 document.getElementById('save-btn').disabled = false;
+                log('loadData: ГОТОВО');
             } catch (e) {
                 showError('❌ Ошибка: ' + e.message);
             }
@@ -123,6 +146,7 @@
                     <span>${escapeHtml(r.name)}</span>
                 </label>
             `).join('');
+            log('renderRoles: отрисовано ' + serverRoles.length);
         }
 
         function toggleRole(id, checked) {
@@ -138,16 +162,23 @@
         }
 
         function saveModeration() {
+            log('saveModeration: POST');
             fetch('/api/guild/' + guildId + '/moderation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({ modRoles: Array.from(selectedRoles) })
             }).then(res => {
+                log('  status: ' + res.status);
                 if (res.ok) setStatus('✅ Настройки модерации сохранены', 'ok');
                 else setStatus('❌ Ошибка сохранения', 'err');
             }).catch(() => setStatus('❌ Ошибка сети', 'err'));
         }
+
+        // Автозапуск с обработкой ошибок загрузки страницы
+        window.addEventListener('error', (e) => {
+            log('WINDOW ERROR: ' + e.message);
+        });
 
         loadData();
     </script>
