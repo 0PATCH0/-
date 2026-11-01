@@ -5,7 +5,7 @@ const DiscordStrategy = require('passport-discord').Strategy;
 const path = require('path');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { 
-    ReactionRole, Settings, Reminder, SentMessage, Roster, RosterConfig, RosterMessage, Log, Guide, PlayerProfile, Event 
+    ReactionRole, Settings, Reminder, SentMessage, Roster, RosterConfig, RosterMessage, Log, Guide, PlayerProfile, Event, Challenge 
 } = require('./models');
 const { refreshRosterMessage } = require('./roster-refresh');
 
