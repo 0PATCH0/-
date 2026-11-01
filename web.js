@@ -247,61 +247,6 @@ async function updateDuelMessage(client, challengeId) {
     } catch (e) { console.error('UPDATE DUEL MSG:', e); }
 }
 
-        // ─── Обновляем / создаем сообщение у ВЫЗЫВАЮЩЕГО ───
-        const challSettings = await Settings.findOne({ guildId: challenge.challengerGuildId });
-        if (challSettings && challSettings.challengeChannelId) {
-            const challChannel = await client.channels.fetch(challSettings.challengeChannelId).catch(() => null);
-            if (challChannel) {
-                // Ищем сообщение в истории канала
-                const messages = await challChannel.messages.fetch({ limit: 50 }).catch(() => null);
-                let existingMsg = null;
-                if (messages) {
-                    existingMsg = messages.find(m => m.author.id === client.user.id && m.embeds[0] && m.embeds[0].footer?.text === 'Открыть страницу дуэли' && m.components[0]?.components[0]?.url?.includes(challenge._id));
-                }
-
-                let content = null;
-                if (challenge.status === 'accepted') {
-                    const modPings = (challSettings.modRoles || []).map(id => `<@&${id}>`).join(' ');
-                    content = modPings ? `${modPings}, ваш вызов принят!` : 'Ваш вызов принят!';
-                }
-                if (challenge.status === 'declined') {
-                    const modPings = (challSettings.modRoles || []).map(id => `<@&${id}>`).join(' ');
-                    content = modPings ? `${modPings}, ваш вызов отклонили.` : 'Ваш вызов отклонили.';
-                }
-
-                if (existingMsg) {
-                    await existingMsg.edit({ content, embeds: [buildEmbed(challenge.challengerGuildId)], components: [row] });
-                } else {
-                    await challChannel.send({ content, embeds: [buildEmbed(challenge.challengerGuildId)], components: [row] });
-                }
-            }
-        }
-    } catch (e) { console.error('UPDATE DUEL MSG:', e); }
-}
-
-        // 2. Если сообщения нет (удалили) — отправляем НОВОЕ в канал оппонента (или вызывающего, если статус сменился)
-        // Отправляем в канал оппонента, так как они принимают вызов
-        const targetSettings = await Settings.findOne({ guildId: challenge.opponentGuildId });
-        if (targetSettings && targetSettings.challengeChannelId) {
-            const targetChannel = await client.channels.fetch(targetSettings.challengeChannelId).catch(() => null);
-            if (targetChannel) {
-                // Если статус accepted, пингуем модераторов ВЫЗЫВАЮЩЕЙ гильдии, чтобы они знали
-                let content = 'Обновление статуса дуэли.';
-                if (challenge.status === 'accepted') {
-                    const challSettings = await Settings.findOne({ guildId: challenge.challengerGuildId });
-                    const modPings = (challSettings?.modRoles || []).map(id => `<@&${id}>`).join(' ');
-                    content = modPings ? `${modPings}, ваш вызов принят! Выбирайте бойцов.` : 'Ваш вызов принят! Выбирайте бойцов.';
-                }
-
-                const newMsg = await targetChannel.send({ content, embeds: [embed], components: [row] });
-                challenge.channelId = newMsg.channelId;
-                challenge.messageId = newMsg.id;
-                await challenge.save();
-            }
-        }
-    } catch (e) { console.error('UPDATE DUEL MSG:', e); }
-}
-
 // ─── AUTH ─────────────────────────────────────────────────
 app.get('/auth/discord', (req, res, next) => {
     if (req.query.returnTo) req.session.returnTo = req.query.returnTo;
@@ -574,7 +519,7 @@ app.get('/api/guild/:id/channels', isModerator, async (req, res) => {
         const channels = guild.channels.cache.filter(ch => ch.isTextBased && ch.isTextBased() && !ch.isThread() && ch.type !== 4).map(ch => ({ id: ch.id, name: ch.name }));
         const roles = guild.roles.cache.filter(r => r.id !== guild.id && !r.managed && !r.name.startsWith('@')).map(r => ({ id: r.id, name: r.name }));
         res.json({ channels, roles });
-    } catch (e) { console.error('GUILD CHANNELS:', e); res.status(500).json({ error: 'Ошибка' }); }
+        } catch (e) { console.error('GUILD CHANNELS:', e); res.status(500).json({ error: 'Ошибка' }); }
 });
 
 // ─── ДУЭЛИ ────────────────────────────────────────────────
@@ -585,6 +530,7 @@ app.get('/api/duel/:id', ensureAuth, async (req, res) => {
         const client = req.app.get('botClient');
         const challengerGuild = client.guilds.cache.get(challenge.challengerGuildId);
         const opponentGuild = client.guilds.cache.get(challenge.opponentGuildId);
+        
         const isChallengerMod = await (async () => {
             if (req.user.id === OWNER_ID) return true;
             const g = req.user.guilds.find(gi => gi.id === challenge.challengerGuildId);
@@ -596,6 +542,7 @@ app.get('/api/duel/:id', ensureAuth, async (req, res) => {
             }
             return false;
         })();
+        
         const isOpponentMod = await (async () => {
             if (req.user.id === OWNER_ID) return true;
             const g = req.user.guilds.find(gi => gi.id === challenge.opponentGuildId);
@@ -607,15 +554,22 @@ app.get('/api/duel/:id', ensureAuth, async (req, res) => {
             }
             return false;
         })();
-        res.json({ challenge, challengerGuild: { id: challengerGuild?.id, name: challengerGuild?.name || 'Неизвестно', icon: challengerGuild?.icon }, opponentGuild: { id: opponentGuild?.id, name: opponentGuild?.name || 'Неизвестно', icon: opponentGuild?.icon }, canManageChallenger: isChallengerMod, canManageOpponent: isOpponentMod });
+        
+        res.json({ 
+            challenge, 
+            challengerGuild: { id: challengerGuild?.id, name: challengerGuild?.name || 'Неизвестно', icon: challengerGuild?.icon }, 
+            opponentGuild: { id: opponentGuild?.id, name: opponentGuild?.name || 'Неизвестно', icon: opponentGuild?.icon }, 
+            canManageChallenger: isChallengerMod, 
+            canManageOpponent: isOpponentMod 
+        });
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.post('/api/duel/:id/accept', ensureAuth, async (req, res) => {
     try {
         const challenge = await Challenge.findById(req.params.id);
-                if (!challenge) return res.status(404).json({ error: 'Не найдено' });
-        
+        if (!challenge) return res.status(404).json({ error: 'Не найдено' });
+
         challenge.status = 'accepted';
         await challenge.save();
         try { await updateDuelMessage(req.app.get('botClient'), challenge._id); } catch (e) {}
@@ -627,7 +581,7 @@ app.post('/api/duel/:id/decline', ensureAuth, async (req, res) => {
     try {
         const challenge = await Challenge.findById(req.params.id);
         if (!challenge) return res.status(404).json({ error: 'Не найдено' });
-        
+
         challenge.status = 'declined';
         await challenge.save();
         try { await updateDuelMessage(req.app.get('botClient'), challenge._id); } catch (e) {}
@@ -640,16 +594,15 @@ app.post('/api/duel/:id/set-player', ensureAuth, async (req, res) => {
         const { matchIndex, side, userId, name } = req.body;
         const challenge = await Challenge.findById(req.params.id);
         if (!challenge) return res.status(404).json({ error: 'Не найдено' });
-        
+
         if (challenge.status !== 'accepted' && challenge.status !== 'in_progress') {
             return res.status(400).json({ error: 'Сначала примите вызов' });
         }
 
-        // Проверка прав: модератор может менять только свою сторону
         const client = req.app.get('botClient');
         const guildId = side === 'challenger' ? challenge.challengerGuildId : challenge.opponentGuildId;
         const discordGuild = client.guilds.cache.get(guildId);
-        
+
         let isMod = false;
         if (req.user.id === OWNER_ID) {
             isMod = true;
@@ -671,7 +624,6 @@ app.post('/api/duel/:id/set-player', ensureAuth, async (req, res) => {
         const match = challenge.matches.find(m => m.matchIndex === Number(matchIndex));
         if (!match) return res.status(400).json({ error: 'Матч не найден' });
 
-        // Если игрок уже выбран и это не владелец бота — запрещаем менять
         if (req.user.id !== OWNER_ID) {
             if (side === 'challenger' && match.challengerPlayer) {
                 return res.status(400).json({ error: 'Боец уже выбран. Дождитесь начала боя.' });
@@ -683,7 +635,7 @@ app.post('/api/duel/:id/set-player', ensureAuth, async (req, res) => {
 
         if (side === 'challenger') match.challengerPlayer = { userId, name };
         else if (side === 'opponent') match.opponentPlayer = { userId, name };
-        
+
         challenge.markModified('matches');
         await challenge.save();
         res.json({ success: true, matches: challenge.matches });
@@ -697,8 +649,7 @@ app.post('/api/duel/:id/start', ensureAuth, async (req, res) => {
     try {
         const challenge = await Challenge.findById(req.params.id);
         if (!challenge) return res.status(404).json({ error: 'Не найдено' });
-        
-        // Проверяем, что все матчи заполнены (хотя бы по одному игроку с каждой стороны)
+
         const allFilled = challenge.matches.every(m => m.challengerPlayer && m.opponentPlayer);
         if (!allFilled) {
             return res.status(400).json({ error: 'Не все матчи заполнены. Назначьте бойцов.' });
@@ -756,7 +707,7 @@ app.post('/api/guild/:id/challenge', isModerator, async (req, res) => {
 
         const challGuild = client.guilds.cache.get(challengerGuildId);
         const timeUnix = Math.floor(Number(time));
-        
+
         const embed = new EmbedBuilder()
             .setTitle('⚔️ Вызов на Дуэль!')
             .setColor('#e74c3c')
@@ -779,7 +730,7 @@ app.post('/api/guild/:id/challenge', isModerator, async (req, res) => {
         const content = modPings ? modPings + ', вам вызов!' : 'Вам вызов!';
 
         const msg = await channel.send({ content, embeds: [embed], components: [row] });
-        
+
         challenge.messageId = msg.id;
         await challenge.save();
 
