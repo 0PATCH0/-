@@ -23,17 +23,22 @@
             <div class="empty-state" id="error-msg"></div>
         </div>
         <div class="panel">
-            <div class="panel-title">
-                <span>Роли модераторов</span>
-                <button class="btn btn-primary btn-small" onclick="saveModeration()" id="save-btn" disabled>💾 Сохранить</button>
-            </div>
-            <div class="panel-desc">
-                Выберите роли Discord, которым разрешено использовать команды модерации (/мут, /очистить, /сказать, /настройки и т.д.).
-            </div>
-            <div id="roles-list">
-                <div class="empty-state">Загрузка...</div>
-            </div>
-            <div class="status-msg" id="status"></div>
+    <div class="panel-title">
+        <span>Роли и канал</span>
+        <button class="btn btn-primary btn-small" onclick="saveModeration()" id="save-btn" disabled>💾 Сохранить</button>
+    </div>
+    <div class="panel-desc">Выберите роли модераторов и канал, куда будут приходить вызовы на дуэли.</div>
+    
+    <div class="form-group" style="margin-bottom: 20px;">
+        <label>Канал для вызовов</label>
+        <select id="challenge-channel" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid var(--border); color: var(--text-main); border-radius: 8px;">
+            <option value="">— Выберите канал —</option>
+        </select>
+    </div>
+
+    <label style="font-size: 14px; color: var(--text-muted); display: block; margin-bottom: 10px;">Роли модераторов</label>
+    <div id="roles-list" style="max-height: 400px; overflow-y: auto;"></div>
+    <div class="status-msg" id="status"></div>
         </div>
     </div>
     <style>
@@ -53,76 +58,66 @@
     </style>
     <script>
         const guildId = window.location.pathname.split('/')[2];
-        const backLink = document.getElementById('back-link');
-        if (backLink) backLink.href = '/manage/' + guildId;
+const backLink = document.getElementById('back-link');
+if (backLink) backLink.href = '/manage/' + guildId;
 
-        let serverRoles = [];
-        let selectedRoles = new Set();
+let serverRoles = [];
+let selectedRoles = new Set();
+let challengeChannelId = '';
 
-        function escapeHtml(s) {
-            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-        }
-        function showError(msg) {
-            document.getElementById('error-panel').style.display = 'block';
-            document.getElementById('error-msg').textContent = msg;
-            document.getElementById('roles-list').innerHTML = '';
-        }
+async function loadData() {
+    try {
+        const res = await fetch('/api/guild/' + guildId + '/moderation', { credentials: 'include' });
+        if (res.status === 403) return alert('Нет прав');
+        const data = await res.json();
+        serverRoles = data.modRoles ? data.modRoles.map(id => ({ id, name: id })) : []; // Заглушка, лучше брать из /api/guild/:id
+        // На самом деле роли мы тянем из /api/guild/:id, но для простоты сделаем так:
+        const gRes = await fetch('/api/guild/' + guildId, { credentials: 'include' });
+        const gData = await gRes.json();
+        serverRoles = gData.roles || [];
+        
+        const channelSelect = document.getElementById('challenge-channel');
+        (data.channels || []).forEach(ch => {
+            const opt = document.createElement('option');
+            opt.value = ch.id;
+            opt.textContent = '#' + ch.name;
+            if (ch.id === data.challengeChannelId) opt.selected = true;
+            channelSelect.appendChild(opt);
+        });
+        challengeChannelId = data.challengeChannelId || '';
+        
+        selectedRoles = new Set(data.modRoles || []);
+        renderRoles();
+        document.getElementById('save-btn').disabled = false;
+    } catch (e) { console.error(e); }
+}
 
-        async function loadData() {
-            try {
-                const guildRes = await fetch('/api/guild/' + guildId, { credentials: 'include' });
-                if (guildRes.status === 403) return showError('❌ У вас нет прав модератора на этом сервере.');
-                if (!guildRes.ok) return showError('❌ Ошибка загрузки гильдии: HTTP ' + guildRes.status);
-                const guildData = await guildRes.json();
-                serverRoles = guildData.roles || [];
+function renderRoles() {
+    const list = document.getElementById('roles-list');
+    list.innerHTML = serverRoles.map(r => `
+        <label class="role-item">
+            <input type="checkbox" value="${r.id}" ${selectedRoles.has(r.id) ? 'checked' : ''} onchange="toggleRole('${r.id}', this.checked)">
+            <span>${r.name}</span>
+        </label>
+    `).join('');
+}
 
-                const modRes = await fetch('/api/guild/' + guildId + '/moderation', { credentials: 'include' });
-                if (modRes.status === 403) return showError('❌ У вас нет прав модератора на этом сервере.');
-                if (!modRes.ok) return showError('❌ Ошибка загрузки прав: HTTP ' + modRes.status);
-                const modData = await modRes.json();
-                selectedRoles = new Set(modData.modRoles || []);
+function toggleRole(id, checked) {
+    if (checked) selectedRoles.add(id); else selectedRoles.delete(id);
+}
 
-                renderRoles();
-                document.getElementById('save-btn').disabled = false;
-            } catch (e) {
-                showError('❌ Ошибка: ' + e.message);
-            }
-        }
-        function renderRoles() {
-            const list = document.getElementById('roles-list');
-            if (serverRoles.length === 0) {
-                list.innerHTML = '<div class="empty-state">Роли не найдены.</div>';
-                return;
-            }
-            list.innerHTML = serverRoles.map(r => `
-                <label class="role-item">
-                    <input type="checkbox" value="${r.id}" ${selectedRoles.has(r.id) ? 'checked' : ''} onchange="toggleRole('${r.id}', this.checked)">
-                    <span>${escapeHtml(r.name)}</span>
-                </label>
-            `).join('');
-        }
-        function toggleRole(id, checked) {
-            if (checked) selectedRoles.add(id);
-            else selectedRoles.delete(id);
-        }
-        function setStatus(msg, type) {
-            const el = document.getElementById('status');
-            el.textContent = msg;
-            el.className = 'status-msg ' + (type || '');
-            if (type === 'ok') setTimeout(() => { el.textContent = ''; el.className = 'status-msg'; }, 3000);
-        }
-        function saveModeration() {
-            fetch('/api/guild/' + guildId + '/moderation', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ modRoles: Array.from(selectedRoles) })
-            }).then(res => {
-                if (res.ok) setStatus('✅ Настройки модерации сохранены', 'ok');
-                else setStatus('❌ Ошибка сохранения', 'err');
-            }).catch(() => setStatus('❌ Ошибка сети', 'err'));
-        }
-        loadData();
+function saveModeration() {
+    const chId = document.getElementById('challenge-channel').value;
+    fetch('/api/guild/' + guildId + '/moderation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ modRoles: Array.from(selectedRoles), challengeChannelId: chId })
+    }).then(res => {
+        if (res.ok) alert('✅ Сохранено!');
+    });
+}
+loadData();
     </script>
 </body>
 </html>
