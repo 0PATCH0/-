@@ -518,16 +518,31 @@ app.get('/api/guild/:id/logs', isModerator, async (req, res) => {
 app.get('/api/guild/:id/moderation', isModerator, async (req, res) => {
     try {
         let s = await Settings.findOne({ guildId: req.params.id }) || await Settings.create({ guildId: req.params.id, modRoles: [] });
-        res.json(s);
-    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
-});
-app.post('/api/guild/:id/moderation', isModerator, async (req, res) => {
-    try {
-        await Settings.findOneAndUpdate({ guildId: req.params.id }, { modRoles: req.body.modRoles }, { upsert: true });
-        res.json({ success: true });
+        const client = req.app.get('botClient');
+        const guild = client.guilds.cache.get(req.params.id);
+        const channels = guild ? guild.channels.cache
+            .filter(ch => ch.isTextBased && ch.isTextBased() && !ch.isThread() && ch.type !== 4)
+            .map(ch => ({ id: ch.id, name: ch.name })) : [];
+        
+        res.json({
+            modRoles: s.modRoles || [],
+            challengeChannelId: s.challengeChannelId || null,
+            channels
+        });
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
 
+app.post('/api/guild/:id/moderation', isModerator, async (req, res) => {
+    try {
+        const { modRoles, challengeChannelId } = req.body;
+        await Settings.findOneAndUpdate(
+            { guildId: req.params.id }, 
+            { modRoles, challengeChannelId }, 
+            { upsert: true }
+        );
+        res.json({ success: true });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
 // ─── НАПОМИНАНИЯ ──────────────────────────────────────────
 app.get('/api/guild/:id/reminders', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
