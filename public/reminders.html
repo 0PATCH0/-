@@ -10,30 +10,26 @@
 <body class="admin-page">
     <div class="bg-ink"></div>
     <div class="fog"></div>
-
     <div class="container">
         <nav class="top-nav">
             <div class="logo">WHERE WINDS MEET</div>
             <a href="#" class="back-link" id="back-link">← Назад в управление</a>
         </nav>
-
         <div class="page-title">
             <h1>⏰ Напоминания</h1>
             <p>☯ Автоматические пинги и события</p>
         </div>
-
         <div id="reminders-grid" class="tiles">
             <div class="empty-state">Загрузка...</div>
         </div>
     </div>
-
     <script>
         const guildId = window.location.pathname.split('/')[2];
         const backLink = document.getElementById('back-link');
         if (backLink) backLink.href = '/manage/' + guildId;
 
         function escapeHtml(s) {
-            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
         }
 
         fetch('/api/guild/' + guildId + '/reminders', { credentials: 'include' })
@@ -56,10 +52,7 @@
                     card.innerHTML = `
                         <span class="tile-icon">⏰</span>
                         <span class="tile-title">${escapeHtml(r.text || 'Напоминание')}</span>
-                        <span class="tile-desc">
-                            Сработает: <b>${time}</b><br>
-                            Повтор: ${escapeHtml(r.repeat || '—')}
-                        </span>
+                        <span class="tile-desc">Сработает: <b>${time}</b><br>Повтор: ${escapeHtml(r.repeat || '—')}</span>
                         <button class="btn btn-danger btn-small" style="margin-top: 10px;">🗑 Удалить</button>
                     `;
                     card.querySelector('.btn-danger').onclick = () => deleteReminder(r.id);
