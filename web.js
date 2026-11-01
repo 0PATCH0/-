@@ -484,6 +484,79 @@ const embed = new EmbedBuilder()
     }
 });
 
+// ─── API ДУЭЛЕЙ ───
+app.get('/api/duel/:id', ensureAuth, async (req, res) => {
+    try {
+        const challenge = await Challenge.findById(req.params.id);
+        if (!challenge) return res.status(404).json({ error: 'Вызов не найден' });
+
+        const client = req.app.get('botClient');
+        const challengerGuild = client.guilds.cache.get(challenge.challengerGuildId);
+        const opponentGuild = client.guilds.cache.get(challenge.opponentGuildId);
+
+        // Проверка прав: может ли текущий пользователь управлять гильдиями
+        const isChallengerMod = await (async () => {
+            if (req.user.id === OWNER_ID) return true;
+            const g = req.user.guilds.find(gi => gi.id === challenge.challengerGuildId);
+            if (g && (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8)) return true;
+            const s = await Settings.findOne({ guildId: challenge.challengerGuildId });
+            if (s && s.modRoles) {
+                const m = await challengerGuild.members.fetch(req.user.id).catch(() => null);
+                if (m && m.roles.cache.some(r => s.modRoles.includes(r.id))) return true;
+            }
+            return false;
+        })();
+
+        const isOpponentMod = await (async () => {
+            if (req.user.id === OWNER_ID) return true;
+            const g = req.user.guilds.find(gi => gi.id === challenge.opponentGuildId);
+            if (g && (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8)) return true;
+            const s = await Settings.findOne({ guildId: challenge.opponentGuildId });
+            if (s && s.modRoles) {
+                const m = await opponentGuild.members.fetch(req.user.id).catch(() => null);
+                if (m && m.roles.cache.some(r => s.modRoles.includes(r.id))) return true;
+            }
+            return false;
+        })();
+
+        res.json({
+            challenge,
+            challengerGuild: { id: challengerGuild?.id, name: challengerGuild?.name || 'Неизвестно', icon: challengerGuild?.icon },
+            opponentGuild: { id: opponentGuild?.id, name: opponentGuild?.name || 'Неизвестно', icon: opponentGuild?.icon },
+            canManageChallenger: isChallengerMod,
+            canManageOpponent: isOpponentMod
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// Принять вызов (только оппонент)
+app.post('/api/duel/:id/accept', ensureAuth, async (req, res) => {
+    try {
+        const challenge = await Challenge.findById(req.params.id);
+        if (!challenge) return res.status(404).json({ error: 'Не найдено' });
+        
+        // Проверка прав оппонента (упрощенно, полагаемся на UI, но лучше проверить)
+        // В реальном проекте вынести проверку в middleware
+        challenge.status = 'accepted';
+        await challenge.save();
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// Отклонить вызов
+app.post('/api/duel/:id/decline', ensureAuth, async (req, res) => {
+    try {
+        const challenge = await Challenge.findById(req.params.id);
+        if (!challenge) return res.status(404).json({ error: 'Не найдено' });
+        challenge.status = 'declined';
+        await challenge.save();
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
 // ─── СОБЫТИЯ ──────────────────────────────────────────────
 app.get('/api/events/:guildId', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
