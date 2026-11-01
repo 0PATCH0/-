@@ -249,13 +249,21 @@ async function updateDuelMessage(client, challengeId) {
 
 // ─── AUTH ─────────────────────────────────────────────────
 app.get('/auth/discord', (req, res, next) => {
-    if (req.query.returnTo) req.session.returnTo = req.query.returnTo;
-    passport.authenticate('discord')(req, res, next);
+    // Сохраняем returnTo в state параметре OAuth (он вернется в callback)
+    const returnTo = req.query.returnTo || '/dashboard';
+    passport.authenticate('discord', { state: returnTo })(req, res, next);
 });
-app.get('/auth/discord/callback', passport.authenticate('discord', { failureRedirect: '/' }), (req, res) => {
-    const returnTo = req.session.returnTo || '/dashboard';
-    delete req.session.returnTo;
-    res.redirect(returnTo);
+
+app.get('/auth/discord/callback', (req, res, next) => {
+    passport.authenticate('discord', { failureRedirect: '/' }, (err, user) => {
+        if (err || !user) return res.redirect('/');
+        req.logIn(user, (err) => {
+            if (err) return res.redirect('/');
+            // Берем returnTo из state
+            const returnTo = req.query.state || '/dashboard';
+            res.redirect(returnTo);
+        });
+    })(req, res, next);
 });
 app.get('/logout', (req, res) => req.logout(() => res.redirect('/')));
 
