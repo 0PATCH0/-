@@ -573,6 +573,37 @@ app.get('/api/duel/:id', ensureAuth, async (req, res) => {
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
+app.get('/api/guild/:id/challenges', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    try {
+        const challenges = await Challenge.find({
+            $or: [{ challengerGuildId: req.params.id }, { opponentGuildId: req.params.id }]
+        }).sort({ time: -1 }).limit(10); // последние 10
+
+        const client = req.app.get('botClient');
+        const enriched = await Promise.all(challenges.map(async ch => {
+            const chGuild = client.guilds.cache.get(ch.challengerGuildId);
+            const oppGuild = client.guilds.cache.get(ch.opponentGuildId);
+            return {
+                _id: ch._id,
+                time: ch.time,
+                format: ch.format,
+                status: ch.status,
+                challengerName: chGuild?.name || 'Неизвестно',
+                opponentName: oppGuild?.name || 'Неизвестно',
+            };
+        }));
+        res.json(enriched);
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+        
+        res.json(enriched);
+    } catch (e) { 
+        console.error('CHALLENGES LIST:', e); 
+        res.status(500).json({ error: 'Ошибка' }); 
+    }
+});
+
 app.post('/api/duel/:id/accept', ensureAuth, async (req, res) => {
     try {
         const challenge = await Challenge.findById(req.params.id);
