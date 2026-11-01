@@ -79,6 +79,11 @@ async function canViewRoster(req, res, next) {
     }
 }
 
+function ensureAuth(req, res, next) {
+    if (req.user) return next();
+    res.redirect('/auth/discord?returnTo=' + encodeURIComponent(req.originalUrl));
+}
+
 // ─── ХЕЛПЕРЫ ──────────────────────────────────────────────
 function detectClassFromMartialArts(martialArts) {
     const map = {
@@ -160,8 +165,15 @@ function resolveProfileGuildId(req) {
 }
 
 // ─── AUTH ─────────────────────────────────────────────────
-app.get('/auth/discord', passport.authenticate('discord'));
-app.get('/auth/discord/callback', passport.authenticate('discord', { failureRedirect: '/' }), (req, res) => res.redirect('/dashboard'));
+app.get('/auth/discord', (req, res, next) => {
+    if (req.query.returnTo) req.session.returnTo = req.query.returnTo;
+    passport.authenticate('discord')(req, res, next);
+});
+app.get('/auth/discord/callback', passport.authenticate('discord', { failureRedirect: '/' }), (req, res) => {
+    const returnTo = req.session.returnTo || '/dashboard';
+    delete req.session.returnTo;
+    res.redirect(returnTo);
+});
 app.get('/logout', (req, res) => req.logout(() => res.redirect('/')));
 
 // ─── СТРАНИЦЫ ─────────────────────────────────────────────
@@ -182,6 +194,7 @@ app.get('/manage/:id/roster', (req, res) => { if (!req.user) return res.redirect
 app.get('/manage/:id/roster-config', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'roster-config.html')); });
 app.get('/manage/:id/logs', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'logs.html')); });
 app.get('/manage/:id/profiles', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'profiles-admin.html')); });
+app.get('/duel/:id', ensureAuth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'duel.html')));
 app.get('/profile', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'profile.html')); });
 
 // ─── API ПОЛЬЗОВАТЕЛЯ ─────────────────────────────────────
@@ -396,6 +409,79 @@ app.get('/api/profiles-global', async (req, res) => {
     } catch (e) {
         console.error('PROFILES GLOBAL:', e);
         res.status(500).json({ error: 'Ошибка: ' + e.message });
+    }
+});
+
+// ─── ВЫЗОВЫ (ДУЭЛИ) ──────────────────────────────────────
+app.post('/api/guild/:id/challenge', isModerator, async (req, res) => {
+    try {
+        const { opponentGuildId, time, format } = req.body || {};
+        const challengerGuildId = req.params.id;
+
+        if (!opponentGuildId || !time || !format) {
+            return res.status(400).json({ error: 'Не все поля заполнены' });
+        }
+        if (opponentGuildId === challengerGuildId) {
+            return res.status(400).json({ error: 'Нельзя вызвать свою же гильдию' });
+        }
+
+        const client = req.app.get('botClient');
+        const opponentGuild = client.guilds.cache.get(opponentGuildId);
+        if (!opponentGuild) return res.status(404).json({ error: 'Гильдия-оппонент не найдена' });
+
+        const oppSettings = await Settings.findOne({ guildId: opponentGuildId });
+        if (!oppSettings || !oppSettings.challengeChannelId) {
+            return res.status(400).json({ error: 'Оппонент не настроил канал для вызовов' });
+        }
+
+        const channel = await client.channels.fetch(oppSettings.challengeChannelId).catch(() => null);
+        if (!channel) return res.status(404).json({ error: 'Канал оппонента не найден' });
+
+        // Создаем вызов в БД
+        const challenge = await Challenge.create({
+            challengerGuildId,
+            opponentGuildId,
+            time: Number(time),
+            format,
+            status: 'pending',
+            channelId: oppSettings.challengeChannelId
+        });
+
+        // Формируем Embed для Discord
+        const challGuild = client.guilds.cache.get(challengerGuildId);
+        const timeUnix = Math.floor(Number(time) / 1000);
+        
+        const embed = new EmbedBuilder()
+            .setTitle('⚔️ Вызов на Дуэль!')
+            .setColor('#e74c3c')
+            .setDescription(`Гильдия **${challGuild.name}** бросает вызов вашей гильдии!`)
+            .addFields(
+                { name: '🏰 Вызывающий', value: challGuild.name, inline: true },
+                { name: '🛡️ Оппонент', value: opponentGuild.name, inline: true },
+                { name: '🕒 Время', value: `<t:${timeUnix}:F> (<t:${timeUnix}:R>)`, inline: false },
+                { name: '⚔️ Формат', value: format, inline: true }
+            )
+            .setFooter({ text: 'Нажмите кнопку ниже, чтобы перейти на сайт' });
+
+        const button = new ButtonBuilder()
+            .setLabel('Открыть страницу дуэли')
+            .setURL('https://patchitos1234.fly.dev/duel/' + challenge._id)
+            .setStyle(ButtonStyle.Link);
+        const row = new ActionRowBuilder().addComponents(button);
+
+        // Тег модераторов оппонента
+        const modPings = (oppSettings.modRoles || []).map(id => `<@&${id}>`).join(' ');
+        const content = modPings ? modPings + ', вам вызов!' : 'Вам вызов!';
+
+        const msg = await channel.send({ content, embeds: [embed], components: [row] });
+        
+        challenge.messageId = msg.id;
+        await challenge.save();
+
+        res.json({ success: true, challengeId: challenge._id });
+    } catch (e) {
+        console.error('CHALLENGE CREATE:', e);
+        res.status(500).json({ error: 'Ошибка сервера: ' + e.message });
     }
 });
 
