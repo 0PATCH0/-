@@ -10,153 +10,74 @@
 <body class="admin-page">
     <div class="bg-ink"></div>
     <div class="fog"></div>
-
     <div class="container">
         <nav class="top-nav">
             <div class="logo">WHERE WINDS MEET</div>
             <a href="#" class="back-link" id="back-link">← Назад в управление</a>
         </nav>
-
         <div class="page-title">
             <h1>✉️ Эмбеды</h1>
             <p>☯ Сообщения от имени бота</p>
         </div>
-
         <div class="panel" id="error-panel" style="display:none;">
             <div class="empty-state" id="error-msg"></div>
         </div>
-
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;" id="custom-layout">
-            <!-- ЛЕВАЯ: ФОРМА -->
             <div class="panel">
-                <div class="panel-title">
-                    <span id="form-title">Создать сообщение</span>
-                </div>
-
-                <div class="form-group">
-                    <label>ID канала</label>
-                    <input type="text" id="channel-id" placeholder="123456789..." oninput="updatePreview()">
-                </div>
-                <div class="form-group">
-                    <label>Заголовок</label>
-                    <input type="text" id="cmd-title" placeholder="Заголовок сообщения" oninput="updatePreview()">
-                </div>
-                <div class="form-group">
-                    <label>Описание</label>
-                    <textarea id="cmd-desc" placeholder="Текст сообщения..." style="min-height: 100px;" oninput="updatePreview()"></textarea>
-                </div>
+                <div class="panel-title"><span id="form-title">Создать сообщение</span></div>
+                <div class="form-group"><label>ID канала</label><input type="text" id="channel-id" placeholder="123456789..." oninput="updatePreview()"></div>
+                <div class="form-group"><label>Заголовок</label><input type="text" id="cmd-title" placeholder="Заголовок" oninput="updatePreview()"></div>
+                <div class="form-group"><label>Описание</label><textarea id="cmd-desc" placeholder="Текст..." style="min-height: 100px;" oninput="updatePreview()"></textarea></div>
                 <div class="form-row">
-                    <div class="form-group">
-                        <label>Цвет полоски</label>
-                        <input type="color" id="cmd-color" value="#d4af37" style="height: 45px; padding: 5px;" oninput="updatePreview()">
-                    </div>
-                    <div class="form-group">
-                        <label>Автор (опционально)</label>
-                        <input type="text" id="cmd-author" placeholder="Имя автора" oninput="updatePreview()">
-                    </div>
+                    <div class="form-group"><label>Цвет</label><input type="color" id="cmd-color" value="#d4af37" style="height: 45px; padding: 5px;" oninput="updatePreview()"></div>
+                    <div class="form-group"><label>Автор</label><input type="text" id="cmd-author" placeholder="Имя" oninput="updatePreview()"></div>
                 </div>
-                <div class="form-group">
-                    <label>Картинка (URL, опционально)</label>
-                    <input type="url" id="cmd-image" placeholder="https://..." oninput="updatePreview()">
-                </div>
-                <div class="form-group">
-                    <label>Подвал (опционально)</label>
-                    <input type="text" id="cmd-footer" placeholder="Footer текст" oninput="updatePreview()">
-                </div>
-
+                <div class="form-group"><label>Картинка (URL)</label><input type="url" id="cmd-image" placeholder="https://..." oninput="updatePreview()"></div>
+                <div class="form-group"><label>Подвал</label><input type="text" id="cmd-footer" placeholder="Footer текст" oninput="updatePreview()"></div>
                 <div style="display: flex; gap: 10px; margin-top: 20px;">
                     <button class="btn btn-primary" onclick="saveMessage()" id="btn-save" style="flex: 1;">📤 Отправить</button>
                     <button class="btn btn-danger" onclick="cancelEdit()" id="btn-cancel" style="display: none;">Отмена</button>
                 </div>
             </div>
-
-            <!-- ПРАВАЯ: ПРЕВЬЮ И СПИСОК -->
             <div style="display: flex; flex-direction: column; gap: 20px;">
                 <div class="panel">
-                    <div class="panel-title">
-                        <span>Превью</span>
-                    </div>
+                    <div class="panel-title"><span>Превью</span></div>
                     <div id="embed-preview"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-title">
-                        <span>Отправленные</span>
-                    </div>
-                    <div id="messages-list">
-                        <div class="empty-state">Загрузка...</div>
-                    </div>
+                    <div class="panel-title"><span>Отправленные</span></div>
+                    <div id="messages-list"><div class="empty-state">Загрузка...</div></div>
                 </div>
             </div>
         </div>
     </div>
-
     <style>
-        @media (max-width: 900px) {
-            #custom-layout { grid-template-columns: 1fr !important; }
-        }
+        @media (max-width: 900px) { #custom-layout { grid-template-columns: 1fr !important; } }
         .msg-card {
-            background: rgba(0,0,0,0.35);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 14px;
-            margin-bottom: 10px;
+            background: rgba(0,0,0,0.35); border: 1px solid var(--border);
+            border-radius: 10px; padding: 14px; margin-bottom: 10px;
         }
         .msg-card h4 { color: var(--gold); font-family: 'Cinzel', serif; margin-bottom: 6px; font-size: 15px; }
         .msg-card p { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
         .embed-preview-box {
-            background: #2f3136;
-            border-left: 4px solid #d4af37;
-            border-radius: 4px;
-            padding: 14px 16px;
-            font-family: 'Segoe UI', 'Marcellus', sans-serif;
-            color: #dcddde;
-            font-size: 14px;
-            line-height: 1.5;
+            background: #2f3136; border-left: 4px solid #d4af37;
+            border-radius: 4px; padding: 14px 16px;
+            font-family: 'Segoe UI', sans-serif; color: #dcddde; font-size: 14px; line-height: 1.5;
         }
-        .embed-preview-author {
-            font-size: 13px;
-            color: #ffffff;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-        .embed-preview-title {
-            font-size: 16px;
-            color: #ffffff;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        .embed-preview-desc {
-            color: #dcddde;
-            font-size: 14px;
-            margin-bottom: 10px;
-            white-space: pre-wrap;
-        }
-        .embed-preview-image {
-            max-width: 100%;
-            border-radius: 4px;
-            margin-top: 8px;
-        }
-        .embed-preview-footer {
-            font-size: 12px;
-            color: #72767d;
-            margin-top: 10px;
-            padding-top: 8px;
-            border-top: 1px solid rgba(255,255,255,0.06);
-        }
-        .embed-preview-empty {
-            color: #72767d;
-            font-style: italic;
-            font-size: 13px;
-        }
+        .embed-preview-author { font-size: 13px; color: #fff; margin-bottom: 8px; font-weight: 600; }
+        .embed-preview-title { font-size: 16px; color: #fff; font-weight: 600; margin-bottom: 8px; }
+        .embed-preview-desc { color: #dcddde; font-size: 14px; margin-bottom: 10px; white-space: pre-wrap; }
+        .embed-preview-image { max-width: 100%; border-radius: 4px; margin-top: 8px; }
+        .embed-preview-footer { font-size: 12px; color: #72767d; margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); }
+        .embed-preview-empty { color: #72767d; font-style: italic; font-size: 13px; }
     </style>
-
     <script>
         const guildId = window.location.pathname.split('/')[2];
         const backLink = document.getElementById('back-link');
         if (backLink) backLink.href = '/manage/' + guildId;
 
         function escapeHtml(s) {
-            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
+            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
         }
 
         function updatePreview() {
@@ -166,10 +87,9 @@
             const image = document.getElementById('cmd-image').value;
             const author = document.getElementById('cmd-author').value;
             const footer = document.getElementById('cmd-footer').value;
-
             const preview = document.getElementById('embed-preview');
             if (!title && !desc && !image && !author) {
-                preview.innerHTML = '<div class="embed-preview-empty">Начните заполнять поля слева — превью появится здесь.</div>';
+                preview.innerHTML = '<div class="embed-preview-empty">Начните заполнять поля — превью появится.</div>';
                 return;
             }
             let html = `<div class="embed-preview-box" style="border-left-color: ${color};">`;
@@ -206,11 +126,9 @@
                         <h4>${escapeHtml(msg.title || 'Без заголовка')}</h4>
                         <p>${msg.description ? escapeHtml(msg.description.substring(0, 80)) + '...' : 'Без описания'}</p>
                         <div style="display: flex; gap: 10px;">
-                            <button class="btn btn-secondary btn-small" style="flex: 1;">✏ Ред.</button>
                             <button class="btn btn-danger btn-small" style="flex: 1;">🗑 Удалить</button>
                         </div>
                     `;
-                    card.querySelector('.btn-secondary').onclick = () => editMessage(msg);
                     card.querySelector('.btn-danger').onclick = () => deleteMessage(msg.messageId);
                     list.appendChild(card);
                 });
@@ -231,10 +149,8 @@
                 footer: document.getElementById('cmd-footer').value
             };
             if (!payload.channelId) return alert('Укажите ID канала!');
-
             const btn = document.getElementById('btn-save');
             btn.innerHTML = 'Отправка...'; btn.disabled = true;
-
             fetch('/api/guild/' + guildId + '/custom', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -250,23 +166,7 @@
               .finally(() => { btn.innerHTML = '📤 Отправить'; btn.disabled = false; });
         }
 
-        function editMessage(msg) {
-            if (!confirm('В web.js нет редактирования кастомных сообщений. Форма заполнится, но при отправке создастся НОВОЕ сообщение. Продолжить?')) return;
-            document.getElementById('form-title').innerText = 'Редактировать (создаст новое)';
-            document.getElementById('channel-id').value = msg.channelId;
-            document.getElementById('cmd-title').value = msg.title || '';
-            document.getElementById('cmd-desc').value = msg.description || '';
-            document.getElementById('cmd-color').value = msg.color || '#d4af37';
-            document.getElementById('cmd-image').value = msg.image || '';
-            document.getElementById('cmd-author').value = msg.author || '';
-            document.getElementById('cmd-footer').value = msg.footer || '';
-            document.getElementById('btn-cancel').style.display = 'block';
-            updatePreview();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
         function cancelEdit() {
-            document.getElementById('form-title').innerText = 'Создать сообщение';
             document.getElementById('channel-id').value = '';
             document.getElementById('cmd-title').value = '';
             document.getElementById('cmd-desc').value = '';
