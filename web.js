@@ -87,15 +87,33 @@ function detectClassFromMartialArts(martialArts) {
         heavenquaker_spear: 'dps', infernal_twinblades: 'dps', mortal_rope_dart: 'dps',
         unfettered_rope_dart: 'dps', everspring_umbrella: 'dps',
         inkwell_fan: 'dps', vernal_umbrella: 'dps', ninefold_umbrella: 'dps',
-        skygrasp_rope_dart: 'dps',
+        willowbend_fan: 'dps', riven_twinblades: 'dps', skystrike_gauntlets: 'dps',
         // TANK
         stormbreaker_spear: 'tank', thundercry_blade: 'tank',
         snowparting_blade: 'tank', phalanxbane_blade: 'tank',
-        heavenwill_gauntlets: 'tank',
+        heavenwill_gauntlets: 'tank', skygrasp_rope_dart: 'tank',
         // HEALER
         panacea_fan: 'healer', soulshade_umbrella: 'healer'
     };
-    const classes = (martialArts || []).map(id => map[id]).filter(Boolean);
+
+    const arts = (martialArts || []).filter(Boolean);
+    if (arts.length === 0) return null;
+
+    // ─── Особая логика для барабана (Musical Drum) ───
+    const hasDrum = arts.includes('musical_drum');
+    if (hasDrum) {
+        // Ищем парное искусство (не барабан)
+        const other = arts.find(a => a !== 'musical_drum');
+        if (!other) {
+            // Только барабан — по умолчанию хил
+            return 'healer';
+        }
+        // Класс берём от парного искусства
+        return map[other] || 'healer';
+    }
+
+    // ─── Обычная логика для остальных ───
+    const classes = arts.map(id => map[id]).filter(Boolean);
     if (classes.length === 0) return null;
     const unique = [...new Set(classes)];
     if (unique.length === 1) return unique[0];
