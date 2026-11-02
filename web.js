@@ -788,7 +788,6 @@ app.delete('/api/duel/:id', ensureAuth, async (req, res) => {
         res.json({ success: true });
     } catch (e) { console.error('DELETE DUEL:', e); res.status(500).json({ error: 'Ошибка' }); }
 });
-});
 
 // ─── ВЫЗОВЫ (СОЗДАНИЕ) ────────────────────────────────────
 app.post('/api/guild/:id/challenge', isModerator, async (req, res) => {
