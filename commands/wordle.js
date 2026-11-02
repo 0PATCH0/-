@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const { WordleLobby } = require('../models');
 
 module.exports = {
@@ -8,13 +8,14 @@ module.exports = {
 
     async execute(interaction) {
         try {
-            // Создаем лобби в БД
             const lobby = await WordleLobby.create({
                 channelId: interaction.channelId,
                 guildId: interaction.guildId,
                 hostId: interaction.user.id,
                 status: 'waiting',
                 mode: 'race',
+                wordLength: 5,
+                maxAttempts: 6,
                 totalRounds: 1,
                 players: [{ userId: interaction.user.id, name: interaction.user.username }]
             });
@@ -35,10 +36,8 @@ module.exports = {
             );
 
             const message = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
-            
             lobby.messageId = message.id;
             await lobby.save();
-
         } catch (e) {
             console.error('WORDLE CMD:', e);
             await interaction.reply({ content: '❌ Ошибка при создании лобби.', ephemeral: true });
