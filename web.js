@@ -5,7 +5,7 @@ const DiscordStrategy = require('passport-discord').Strategy;
 const path = require('path');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { 
-    ReactionRole, Settings, Reminder, SentMessage, Roster, RosterConfig, RosterMessage, Log, Guide, PlayerProfile, Event, Challenge 
+    ReactionRole, Settings, Reminder, SentMessage, Roster, RosterConfig, RosterMessage, Log, Guide, PlayerProfile, Event, Challenge, WordleLobby
 } = require('./models');
 const { refreshRosterMessage } = require('./roster-refresh');
 
@@ -249,7 +249,6 @@ async function updateDuelMessage(client, challengeId) {
 
 // ─── AUTH ─────────────────────────────────────────────────
 app.get('/auth/discord', (req, res, next) => {
-    // Сохраняем returnTo в state параметре OAuth (он вернется в callback)
     const returnTo = req.query.returnTo || '/dashboard';
     passport.authenticate('discord', { state: returnTo })(req, res, next);
 });
@@ -259,7 +258,6 @@ app.get('/auth/discord/callback', (req, res, next) => {
         if (err || !user) return res.redirect('/');
         req.logIn(user, (err) => {
             if (err) return res.redirect('/');
-            // Берем returnTo из state
             const returnTo = req.query.state || '/dashboard';
             res.redirect(returnTo);
         });
@@ -276,7 +274,7 @@ app.get('/global-profiles', (req, res) => { if (!req.user) return res.redirect('
 app.get('/view-profile/:userId', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'view-profile.html')); });
 app.get('/duel/:id', ensureAuth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'duel.html')));
 app.get('/guild/:id/challenges', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'challenges.html')); });
-app.get('/wordle', (req, res) => res.sendFile(path.join(__dirname, 'public', 'wordle.html')));
+app.get('/wordle/lobby/:id', ensureAuth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'wordle-lobby.html')));
 app.get('/manage/:id/events', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'events.html')); });
 app.get('/manage/:id/guides', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'guides.html')); });
 app.get('/manage/:id/guides/edit/:guideId', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'guide-edit.html')); });
@@ -357,7 +355,7 @@ app.delete('/api/profile/:guildId', async (req, res) => {
         await PlayerProfile.findOneAndDelete({ userId: req.user.id, guildId });
         res.json({ success: true });
         try { refreshRosterMessage(req.app.get('botClient'), guildId); } catch (e) {}
-    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка базы данных' }); }
+      } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка базы данных' }); }
 });
 
 // ─── АДМИН ПРОФИЛЕЙ ───────────────────────────────────────
@@ -529,7 +527,7 @@ app.get('/api/guild/:id/channels', isModerator, async (req, res) => {
         const channels = guild.channels.cache.filter(ch => ch.isTextBased && ch.isTextBased() && !ch.isThread() && ch.type !== 4).map(ch => ({ id: ch.id, name: ch.name }));
         const roles = guild.roles.cache.filter(r => r.id !== guild.id && !r.managed && !r.name.startsWith('@')).map(r => ({ id: r.id, name: r.name }));
         res.json({ channels, roles });
-        } catch (e) { console.error('GUILD CHANNELS:', e); res.status(500).json({ error: 'Ошибка' }); }
+    } catch (e) { console.error('GUILD CHANNELS:', e); res.status(500).json({ error: 'Ошибка' }); }
 });
 
 // ─── ДУЭЛИ ────────────────────────────────────────────────
@@ -575,7 +573,6 @@ app.get('/api/duel/:id', ensureAuth, async (req, res) => {
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
-// ─── СПИСОК ВЫЗОВОВ ───────────────────────────────────────
 app.get('/api/guild/:id/challenges', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     try {
@@ -700,13 +697,13 @@ app.post('/api/duel/:id/start', ensureAuth, async (req, res) => {
     } catch (e) { console.error('START DUEL:', e); res.status(500).json({ error: 'Ошибка' }); }
 });
 
-    // Установить победителя матча
+// Установить победителя матча
 app.post('/api/duel/:id/set-winner', ensureAuth, async (req, res) => {
     try {
         const { matchIndex, winnerSide } = req.body;
         const challenge = await Challenge.findById(req.params.id);
         if (!challenge) return res.status(404).json({ error: 'Не найдено' });
-        
+
         if (challenge.status !== 'in_progress') {
             return res.status(400).json({ error: 'Бои еще не начались' });
         }
@@ -714,28 +711,23 @@ app.post('/api/duel/:id/set-winner', ensureAuth, async (req, res) => {
         const match = challenge.matches.find(m => m.matchIndex === Number(matchIndex));
         if (!match) return res.status(400).json({ error: 'Матч не найден' });
 
-        match.winner = winnerSide; // 'challenger' | 'opponent'
+        match.winner = winnerSide;
         challenge.markModified('matches');
 
-        // Проверяем, завершились ли все бои
         const totalMatches = challenge.matches.length;
         const finishedMatches = challenge.matches.filter(m => m.winner !== null).length;
 
         if (finishedMatches === totalMatches) {
             challenge.status = 'completed';
-            
-            // Считаем победы
             const chWins = challenge.matches.filter(m => m.winner === 'challenger').length;
             const oppWins = challenge.matches.filter(m => m.winner === 'opponent').length;
-            
             if (chWins > oppWins) challenge.winnerGuildId = challenge.challengerGuildId;
             else if (oppWins > chWins) challenge.winnerGuildId = challenge.opponentGuildId;
-            // Если ничья — winnerGuildId остается null
         }
 
         await challenge.save();
         try { await updateDuelMessage(req.app.get('botClient'), challenge._id); } catch (e) {}
-        
+
         res.json({ success: true, status: challenge.status, matches: challenge.matches, winnerGuildId: challenge.winnerGuildId });
     } catch (e) { console.error('SET WINNER:', e); res.status(500).json({ error: 'Ошибка' }); }
 });
@@ -746,7 +738,6 @@ app.delete('/api/duel/:id', ensureAuth, async (req, res) => {
         const challenge = await Challenge.findById(req.params.id);
         if (!challenge) return res.status(404).json({ error: 'Не найдено' });
 
-        // Проверка прав (только модератор гильдии может удалить)
         const client = req.app.get('botClient');
         const isChallenger = await (async () => {
             const g = req.user.guilds.find(gi => gi.id === challenge.challengerGuildId);
@@ -775,7 +766,6 @@ app.delete('/api/duel/:id', ensureAuth, async (req, res) => {
             return res.status(403).json({ error: 'Нет прав на удаление' });
         }
 
-        // Удаляем сообщения из Discord
         if (challenge.channelId && challenge.messageId) {
             const channel = await client.channels.fetch(challenge.channelId).catch(() => null);
             if (channel) {
@@ -783,9 +773,8 @@ app.delete('/api/duel/:id', ensureAuth, async (req, res) => {
                 if (msg) await msg.delete().catch(() => {});
             }
         }
-        // Удаляем из БД
         await Challenge.findByIdAndDelete(req.params.id);
-        
+
         res.json({ success: true });
     } catch (e) { console.error('DELETE DUEL:', e); res.status(500).json({ error: 'Ошибка' }); }
 });
@@ -869,7 +858,6 @@ app.post('/api/guild/:id/challenge', isModerator, async (req, res) => {
     }
 });
 
-
 // ─── WORDLE (СВИТОК ИЕРОГЛИФОВ) ───────────────────────────
 
 // Получить данные лобби (кто в нем, статус)
@@ -878,7 +866,6 @@ app.get('/api/wordle/lobby/:id', ensureAuth, async (req, res) => {
         const lobby = await WordleLobby.findById(req.params.id);
         if (!lobby) return res.status(404).json({ error: 'Лобби не найдено' });
 
-        // Добавляем текущего игрока в лобби, если его там нет (при входе)
         if (!lobby.players.find(p => p.userId === req.user.id)) {
             lobby.players.push({ userId: req.user.id, name: req.user.username });
             await lobby.save();
@@ -924,12 +911,10 @@ app.post('/api/wordle/lobby/:id/start', ensureAuth, async (req, res) => {
         lobby.status = 'playing';
         lobby.secretWord = WORDS[Math.floor(Math.random() * WORDS.length)];
         lobby.currentRound = 1;
-        // Очищаем попытки у всех игроков
         lobby.players.forEach(p => { p.attempts = []; p.isWinner = false; p.finishTime = null; });
-        
+
         await lobby.save();
 
-        // Обновляем сообщение в Discord
         const client = req.app.get('botClient');
         const channel = await client.channels.fetch(lobby.channelId).catch(() => null);
         if (channel) {
@@ -939,7 +924,7 @@ app.post('/api/wordle/lobby/:id/start', ensureAuth, async (req, res) => {
                     .setTitle('📜 Свиток Иероглифов')
                     .setDescription(`⚔️ **Гонка началась!**\nРаунд 1 из ${lobby.totalRounds}.\nСлово загадано. Вперед!`)
                     .setColor('#e67e22');
-                await msg.edit({ embeds: [embed], components: [] }); // Убираем кнопку, чтобы новые не зашли
+                await msg.edit({ embeds: [embed], components: [] });
             }
         }
 
@@ -953,6 +938,7 @@ app.post('/api/wordle/lobby/:id/guess', ensureAuth, async (req, res) => {
         const { guess } = req.body;
         const lobby = await WordleLobby.findById(req.params.id);
         if (!lobby || lobby.status !== 'playing') return res.status(400).json({ error: 'Игра не идет' });
+
         
         const player = lobby.players.find(p => p.userId === req.user.id);
         if (!player) return res.status(403).json({ error: 'Вы не в лобби' });
@@ -962,7 +948,6 @@ app.post('/api/wordle/lobby/:id/guess', ensureAuth, async (req, res) => {
         const secret = lobby.secretWord;
         if (word.length !== 5) return res.status(400).json({ error: '5 букв' });
 
-        // Логика проверки (Жадный алгоритм)
         const result = [];
         const secretArr = secret.split('');
         const guessArr = word.split('');
@@ -980,7 +965,7 @@ app.post('/api/wordle/lobby/:id/guess', ensureAuth, async (req, res) => {
         }
 
         player.attempts.push({ word, result });
-        
+
         if (word === secret) {
             player.isWinner = true;
             player.finishTime = Date.now();
@@ -988,12 +973,10 @@ app.post('/api/wordle/lobby/:id/guess', ensureAuth, async (req, res) => {
 
         await lobby.save();
 
-        // ПРОВЕРКА: Все ли закончили?
         const allFinished = lobby.players.every(p => p.isWinner || p.attempts.length >= 6);
         if (allFinished) {
             lobby.status = 'finished';
             await lobby.save();
-            // Тут можно отправить финальный свиток в Discord (добавим позже)
         }
 
         res.json({ success: true, result, isWinner: player.isWinner, allFinished });
@@ -1005,8 +988,7 @@ app.get('/api/wordle/lobby/:id/status', ensureAuth, async (req, res) => {
     try {
         const lobby = await WordleLobby.findById(req.params.id);
         if (!lobby) return res.status(404).json({ error: 'Не найдено' });
-        
-        // Отдаем только безопасную инфу для Варианта Б
+
         const status = lobby.players.map(p => ({
             userId: p.userId,
             name: p.name,
@@ -1017,46 +999,6 @@ app.get('/api/wordle/lobby/:id/status', ensureAuth, async (req, res) => {
 
         res.json({ status: lobby.status, players: status });
     } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
-});
-
-
-// ─── РЕЗУЛЬТАТ WORDLE ─────────────────────────────────────
-app.post('/api/wordle/result', async (req, res) => {
-    try {
-        const { channelId, userId, secretWord, isWin, attempts } = req.body;
-        if (!channelId || !userId || !secretWord) {
-            return res.status(400).json({ error: 'Не хватает данных' });
-        }
-
-        const client = req.app.get('botClient');
-        const channel = await client.channels.fetch(channelId).catch(() => null);
-        if (!channel) return res.status(404).json({ error: 'Канал не найден' });
-
-        const user = await client.users.fetch(userId).catch(() => null);
-        const userName = user ? user.username : 'Неизвестный';
-
-        const embed = new EmbedBuilder()
-            .setTitle('📜 Свиток Иероглифов')
-            .setColor(isWin ? '#2ecc71' : '#e74c3c')
-            .setDescription(isWin 
-                ? `🏆 **@${userName}** угадал слово **${secretWord}** за **${attempts}/6** попыток!` 
-                : `💀 **@${userName}** не угадал слово **${secretWord}** за **6** попыток.`)
-            .setFooter({ text: 'Where Winds Meet • Мини-игра' });
-
-        // Добавляем кнопку для повторной игры
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setLabel('🎮 Играть')
-                .setURL('https://patchitos1234.fly.dev/wordle?channel=' + channelId + '&user=' + userId)
-                .setStyle(ButtonStyle.Link)
-        );
-
-        await channel.send({ embeds: [embed], components: [row] });
-        res.json({ success: true });
-    } catch (e) {
-        console.error('WORDLE RESULT:', e);
-        res.status(500).json({ error: 'Ошибка сервера' });
-    }
 });
 
 // ─── ГАЙДЫ ────────────────────────────────────────────────
@@ -1206,6 +1148,7 @@ app.get('/api/guild/:id/roster-check', async (req, res) => {
         return res.json({ canView: hasAccess, isMod: false, configured: true });
     } catch (e) { console.error('ROSTER CHECK:', e); res.status(500).json({ error: 'Ошибка' }); }
 });
+
 app.get('/api/guild/:id/roster-access', isModerator, async (req, res) => {
     try {
         const client = req.app.get('botClient');
@@ -1216,6 +1159,7 @@ app.get('/api/guild/:id/roster-access', isModerator, async (req, res) => {
         res.json({ rosterRoleIds: settings.rosterRoleIds || [], allRoles });
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
+
 app.post('/api/guild/:id/roster-access', isModerator, async (req, res) => {
     try {
         const { rosterRoleIds } = req.body || {};
@@ -1224,6 +1168,7 @@ app.post('/api/guild/:id/roster-access', isModerator, async (req, res) => {
         res.json({ success: true });
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
+
 app.get('/api/guild/:id/roster-config', isModerator, async (req, res) => {
     try {
         const client = req.app.get('botClient');
@@ -1234,6 +1179,7 @@ app.get('/api/guild/:id/roster-config', isModerator, async (req, res) => {
         res.json({ columns: config.columns && config.columns.length > 0 ? config.columns : getDefaultRosterColumns(), manualAssignments: config.manualAssignments || {}, allRoles });
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
+
 app.post('/api/guild/:id/roster-config', isModerator, async (req, res) => {
     try {
         const { columns } = req.body || {};
@@ -1257,6 +1203,7 @@ app.post('/api/guild/:id/roster-config', isModerator, async (req, res) => {
         try { refreshRosterMessage(req.app.get('botClient'), req.params.id); } catch (e) {}
     } catch (e) { console.error('ROSTER CONFIG POST:', e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
 });
+
 app.post('/api/guild/:id/roster-manual', isModerator, async (req, res) => {
     try {
         const { userId, columnKey } = req.body || {};
@@ -1272,6 +1219,7 @@ app.post('/api/guild/:id/roster-manual', isModerator, async (req, res) => {
         try { refreshRosterMessage(req.app.get('botClient'), req.params.id); } catch (e) {}
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
+
 app.get('/api/guild/:id/roster', canViewRoster, async (req, res) => {
     try {
         const botClient = req.app.get('botClient');
@@ -1281,6 +1229,7 @@ app.get('/api/guild/:id/roster', canViewRoster, async (req, res) => {
         res.json({ configured: true, columns: roster.columns, members: roster.members, isMod: !!req.isRosterMod, stats });
     } catch (e) { console.error('ROSTER GET:', e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
 });
+
 app.post('/api/guild/:id/roster/setup', isModerator, async (req, res) => {
     try {
         const client = req.app.get('botClient');
@@ -1300,6 +1249,7 @@ app.post('/api/guild/:id/roster/setup', isModerator, async (req, res) => {
         res.json({ success: true, messageId: msg.id });
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
 });
+
 app.delete('/api/guild/:id/roster/setup', isModerator, async (req, res) => {
     try {
         await RosterMessage.findOneAndDelete({ guildId: req.params.id });
