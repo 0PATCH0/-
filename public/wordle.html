@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Свиток Иероглифов — Where Winds Meet</title>
+    <link rel="stylesheet" href="/css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --jade: #2ecc71;
+            --gold: #d4af37;
+            --danger: #e74c3c;
+            --mist: #34495e;
+            --bg: #06080a;
+            --border: rgba(212, 175, 55, 0.18);
+        }
+        body {
+            background: var(--bg);
+            color: #e8e3d4;
+            font-family: 'Marcellus', serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .bg-ink {
+            position: fixed; inset: 0; z-index: -1;
+            background: radial-gradient(ellipse at 50% 50%, rgba(212,175,55,0.05), transparent 60%),
+                        radial-gradient(ellipse at 80% 20%, rgba(46,204,113,0.03), transparent 50%);
+        }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 28px;
+            color: var(--gold);
+            margin: 0;
+            text-shadow: 0 0 20px rgba(212,175,55,0.4);
+        }
+        .header p { color: #8a8578; font-size: 14px; margin-top: 5px; }
+
+        .game-board {
+            display: grid;
+            grid-template-rows: repeat(6, 1fr);
+            gap: 8px;
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 350px;
+        }
+        .row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+        .tile {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: rgba(0,0,0,0.4);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+        .tile.filled { border-color: #8a8578; }
+        .tile.jade { background: var(--jade); border-color: var(--jade); color: #000; }
+        .tile.gold { background: var(--gold); border-color: var(--gold); color: #000; }
+        .tile.mist { background: var(--mist); border-color: var(--mist); color: #fff; }
+
+        .input-area { display: flex; gap: 10px; width: 100%; max-width: 350px; }
+        .input-area input {
+            flex: 1;
+            padding: 15px;
+            font-size: 18px;
+            text-align: center;
+            text-transform: uppercase;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--gold);
+            color: #fff;
+            border-radius: 8px;
+            font-family: 'Marcellus', serif;
+            outline: none;
+        }
+        .input-area button {
+            padding: 15px 25px;
+            background: linear-gradient(135deg, var(--gold), #aa8624);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .input-area button:hover { filter: brightness(1.1); }
+        .input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .message { margin-top: 20px; font-size: 16px; text-align: center; min-height: 24px; }
+        .message.win { color: var(--jade); }
+        .message.lose { color: var(--danger); }
+        .shake { animation: shake 0.5s; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="bg-ink"></div>
+    
+    <div class="header">
+        <h1>📜 Свиток Иероглифов</h1>
+        <p>Угадайте слово из 5 букв за 6 попыток</p>
+    </div>
+
+    <div class="game-board" id="board"></div>
+
+    <div class="input-area" id="input-area">
+        <input type="text" id="guess-input" maxlength="5" placeholder="СЛОВО" autocomplete="off">
+        <button id="guess-btn">Ввод</button>
+    </div>
+
+    <div class="message" id="message"></div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const channelId = urlParams.get('channel');
+        const userId = urlParams.get('user');
+
+        const WORDS = [
+            'ВЕТЕР', 'МЕЧТА', 'ТУМАН', 'НЕФРИТ', 'ЗОЛОТО', 'СВИТОК', 'ДРАКОН', 'ТИГР', 'ГОРА', 'РЕКА',
+            'ЛУНА', 'СОЛНЦЕ', 'ЗВЕЗДА', 'ОГОНЬ', 'ВОДА', 'ЗЕМЛЯ', 'МЕТАЛЛ', 'ДЕРЕВО', 'ЦВЕТОК', 'ЛИСТ',
+            'ПТИЦА', 'РЫБА', 'КОНЬ', 'ВОЛК', 'ЛИСА', 'МЕДВЕДЬ', 'ЗМЕЯ', 'ОРЕЛ', 'СОКОЛ', 'ВОРОН',
+            'КЛИНОК', 'КОПЬЕ', 'ЛУК', 'СТРЕЛА', 'ЩИТ', 'БРОНЯ', 'ШЛЕМ', 'ПОЯС', 'ПЛАЩ', 'САПОГ',
+            'ХРАМ', 'ПАГОДА', 'ДВОРЕЦ', 'ЗАМОК', 'БАШНЯ', 'МОСТ', 'СТЕНА', 'ВОРОТА', 'ДВЕРЬ', 'ОКНО',
+            'СВЕТ', 'ТЕНЬ', 'ТЬМА', 'РАССВЕТ', 'ЗАКАТ', 'НОЧЬ', 'ДЕНЬ', 'УТРО', 'ВЕЧЕР', 'ПОЛДЕНЬ',
+            'ПУТЬ', 'ДОРОГА', 'ТРОПА', 'ЛЕСТНИЦА', 'ПЕРЕВАЛ', 'ПЕЩЕРА', 'ЛЕС', 'ПОЛЕ', 'ЛУГ', 'САД',
+            'ЧАЙ', 'РИС', 'ХЛЕБ', 'СУП', 'МЯСО', 'ОВОЩ', 'ФРУКТ', 'ЯГОДА', 'ГРИБ'
+        ];
+
+        let secretWord = WORDS[Math.floor(Math.random() * WORDS.length)];
+        let currentRow = 0;
+        let currentGuess = '';
+        let gameOver = false;
+        const board = document.getElementById('board');
+        const input = document.getElementById('guess-input');
+        const btn = document.getElementById('guess-btn');
+        const messageEl = document.getElementById('message');
+
+        // Инициализация поля
+        for (let r = 0; r < 6; r++) {
+            const row = document.createElement('div');
+            row.className = 'row';
+            row.id = 'row-' + r;
+            for (let c = 0; c < 5; c++) {
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                tile.id = `tile-${r}-${c}`;
+                row.appendChild(tile);
+            }
+            board.appendChild(row);
+        }
+
+        input.addEventListener('input', () => {
+            input.value = input.value.replace(/[^А-Яа-яЁё]/g, '').toUpperCase();
+            currentGuess = input.value;
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') submitGuess();
+        });
+
+        btn.addEventListener('click', submitGuess);
+
+        function submitGuess() {
+            if (gameOver) return;
+            if (currentGuess.length !== 5) {
+                showMessage('Введите слово из 5 букв', '');
+                return;
+            }
+            if (!/^[А-ЯЁ]+$/.test(currentGuess)) {
+                showMessage('Только русские буквы', '');
+                return;
+            }
+
+            const row = document.getElementById('row-' + currentRow);
+            const tiles = row.querySelectorAll('.tile');
+            const result = checkGuess(currentGuess, secretWord);
+
+            tiles.forEach((tile, i) => {
+                tile.textContent = currentGuess[i];
+                tile.classList.add(result[i]);
+            });
+
+            if (currentGuess === secretWord) {
+                gameOver = true;
+                showMessage(`🎉 Победа! Слово: ${secretWord}`, 'win');
+                disableInput();
+                sendResult(true);
+                return;
+            }
+
+            currentRow++;
+            input.value = '';
+            currentGuess = '';
+
+            if (currentRow >= 6) {
+                gameOver = true;
+                showMessage(`💀 Поражение. Слово было: ${secretWord}`, 'lose');
+                disableInput();
+                sendResult(false);
+            }
+        }
+
+        function checkGuess(guess, secret) {
+            const result = [];
+            const secretArr = secret.split('');
+            const guessArr = guess.split('');
+
+            for (let i = 0; i < 5; i++) {
+                if (guessArr[i] === secretArr[i]) {
+                    result[i] = 'jade';
+                    secretArr[i] = null;
+                    guessArr[i] = null;
+                }
+            }
+            for (let i = 0; i < 5; i++) {
+                if (guessArr[i] === null) continue;
+                const idx = secretArr.indexOf(guessArr[i]);
+                if (idx !== -1) {
+                    result[i] = 'gold';
+                    secretArr[idx] = null;
+                } else {
+                    result[i] = 'mist';
+                }
+            }
+            return result;
+        }
+
+        function showMessage(text, type) {
+            messageEl.textContent = text;
+            messageEl.className = 'message ' + type;
+        }
+
+        function disableInput() {
+            input.disabled = true;
+            btn.disabled = true;
+        }
+
+        async function sendResult(isWin) {
+            if (!channelId || !userId) return;
+            try {
+                await fetch('/api/wordle/result', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        channelId,
+                        userId,
+                        secretWord,
+                        isWin,
+                        attempts: currentRow + (isWin ? 1 : 0)
+                    })
+                });
+            } catch (e) {
+                console.error('Не удалось отправить результат', e);
+            }
+        }
+    </script>
+</body>
+</html>
