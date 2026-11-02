@@ -870,6 +870,156 @@ app.post('/api/guild/:id/challenge', isModerator, async (req, res) => {
 });
 
 
+// ─── WORDLE (СВИТОК ИЕРОГЛИФОВ) ───────────────────────────
+
+// Получить данные лобби (кто в нем, статус)
+app.get('/api/wordle/lobby/:id', ensureAuth, async (req, res) => {
+    try {
+        const lobby = await WordleLobby.findById(req.params.id);
+        if (!lobby) return res.status(404).json({ error: 'Лобби не найдено' });
+
+        // Добавляем текущего игрока в лобби, если его там нет (при входе)
+        if (!lobby.players.find(p => p.userId === req.user.id)) {
+            lobby.players.push({ userId: req.user.id, name: req.user.username });
+            await lobby.save();
+        }
+
+        const isHost = lobby.hostId === req.user.id;
+        res.json({ lobby, isHost });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// Настройка лобби хостом (кол-во раундов)
+app.post('/api/wordle/lobby/:id/settings', ensureAuth, async (req, res) => {
+    try {
+        const lobby = await WordleLobby.findById(req.params.id);
+        if (!lobby) return res.status(404).json({ error: 'Не найдено' });
+        if (lobby.hostId !== req.user.id) return res.status(403).json({ error: 'Только хост может настраивать' });
+        if (lobby.status !== 'waiting') return res.status(400).json({ error: 'Игра уже началась' });
+
+        const { totalRounds } = req.body;
+        if (totalRounds && Number(totalRounds) > 0) {
+            lobby.totalRounds = Number(totalRounds);
+            await lobby.save();
+        }
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// Запуск игры хостом
+app.post('/api/wordle/lobby/:id/start', ensureAuth, async (req, res) => {
+    try {
+        const lobby = await WordleLobby.findById(req.params.id);
+        if (!lobby) return res.status(404).json({ error: 'Не найдено' });
+        if (lobby.hostId !== req.user.id) return res.status(403).json({ error: 'Только хост может начать' });
+        if (lobby.status !== 'waiting') return res.status(400).json({ error: 'Уже идет игра' });
+
+        const WORDS = [
+            'ВЕТЕР', 'МЕЧТА', 'ТУМАН', 'НЕФРИТ', 'ЗОЛОТО', 'СВИТОК', 'ДРАКОН', 'ТИГР', 'ГОРА', 'РЕКА',
+            'ЛУНА', 'СОЛНЦЕ', 'ЗВЕЗДА', 'ОГОНЬ', 'ВОДА', 'ЗЕМЛЯ', 'МЕТАЛЛ', 'ДЕРЕВО', 'ЦВЕТОК', 'ЛИСТ',
+            'ПТИЦА', 'РЫБА', 'КОНЬ', 'ВОЛК', 'ЛИСА', 'МЕДВЕДЬ', 'ЗМЕЯ', 'ОРЕЛ', 'СОКОЛ', 'ВОРОН',
+            'КЛИНОК', 'КОПЬЕ', 'ЛУК', 'СТРЕЛА', 'ЩИТ', 'БРОНЯ', 'ШЛЕМ', 'ПОЯС', 'ПЛАЩ', 'САПОГ'
+        ];
+
+        lobby.status = 'playing';
+        lobby.secretWord = WORDS[Math.floor(Math.random() * WORDS.length)];
+        lobby.currentRound = 1;
+        // Очищаем попытки у всех игроков
+        lobby.players.forEach(p => { p.attempts = []; p.isWinner = false; p.finishTime = null; });
+        
+        await lobby.save();
+
+        // Обновляем сообщение в Discord
+        const client = req.app.get('botClient');
+        const channel = await client.channels.fetch(lobby.channelId).catch(() => null);
+        if (channel) {
+            const msg = await channel.messages.fetch(lobby.messageId).catch(() => null);
+            if (msg) {
+                const embed = new EmbedBuilder()
+                    .setTitle('📜 Свиток Иероглифов')
+                    .setDescription(`⚔️ **Гонка началась!**\nРаунд 1 из ${lobby.totalRounds}.\nСлово загадано. Вперед!`)
+                    .setColor('#e67e22');
+                await msg.edit({ embeds: [embed], components: [] }); // Убираем кнопку, чтобы новые не зашли
+            }
+        }
+
+        res.json({ success: true });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// Отправка попытки (игрок вводит слово)
+app.post('/api/wordle/lobby/:id/guess', ensureAuth, async (req, res) => {
+    try {
+        const { guess } = req.body;
+        const lobby = await WordleLobby.findById(req.params.id);
+        if (!lobby || lobby.status !== 'playing') return res.status(400).json({ error: 'Игра не идет' });
+        
+        const player = lobby.players.find(p => p.userId === req.user.id);
+        if (!player) return res.status(403).json({ error: 'Вы не в лобби' });
+        if (player.isWinner || player.attempts.length >= 6) return res.status(400).json({ error: 'Вы уже закончили' });
+
+        const word = guess.toUpperCase();
+        const secret = lobby.secretWord;
+        if (word.length !== 5) return res.status(400).json({ error: '5 букв' });
+
+        // Логика проверки (Жадный алгоритм)
+        const result = [];
+        const secretArr = secret.split('');
+        const guessArr = word.split('');
+
+        for (let i = 0; i < 5; i++) {
+            if (guessArr[i] === secretArr[i]) {
+                result[i] = 'jade'; secretArr[i] = null; guessArr[i] = null;
+            }
+        }
+        for (let i = 0; i < 5; i++) {
+            if (guessArr[i] === null) continue;
+            const idx = secretArr.indexOf(guessArr[i]);
+            if (idx !== -1) { result[i] = 'gold'; secretArr[idx] = null; }
+            else { result[i] = 'mist'; }
+        }
+
+        player.attempts.push({ word, result });
+        
+        if (word === secret) {
+            player.isWinner = true;
+            player.finishTime = Date.now();
+        }
+
+        await lobby.save();
+
+        // ПРОВЕРКА: Все ли закончили?
+        const allFinished = lobby.players.every(p => p.isWinner || p.attempts.length >= 6);
+        if (allFinished) {
+            lobby.status = 'finished';
+            await lobby.save();
+            // Тут можно отправить финальный свиток в Discord (добавим позже)
+        }
+
+        res.json({ success: true, result, isWinner: player.isWinner, allFinished });
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// Статус игры (для опроса на сайте)
+app.get('/api/wordle/lobby/:id/status', ensureAuth, async (req, res) => {
+    try {
+        const lobby = await WordleLobby.findById(req.params.id);
+        if (!lobby) return res.status(404).json({ error: 'Не найдено' });
+        
+        // Отдаем только безопасную инфу для Варианта Б
+        const status = lobby.players.map(p => ({
+            userId: p.userId,
+            name: p.name,
+            attemptsCount: p.attempts.length,
+            isFinished: p.isWinner || p.attempts.length >= 6,
+            isWinner: p.isWinner
+        }));
+
+        res.json({ status: lobby.status, players: status });
+    } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
+
 // ─── РЕЗУЛЬТАТ WORDLE ─────────────────────────────────────
 app.post('/api/wordle/result', async (req, res) => {
     try {
