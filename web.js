@@ -867,7 +867,7 @@ app.post('/api/guild/:id/challenge', isModerator, async (req, res) => {
     // ─── WORDLE (СВИТОК ИЕРОГЛИФОВ) ───────────────────────────
 
 const fs = require('fs');
-const path = require('path');
+
 
 // Тематические слова (гарантируют, что загаданное слово точно будет в словаре)
 const RAW_WORDLE_DICTS = {
