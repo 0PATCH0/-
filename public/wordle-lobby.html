@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Лобби — Свиток Иероглифов</title>
+    <link rel="stylesheet" href="/css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
+    <style>
+        :root { --jade: #2ecc71; --gold: #d4af37; --danger: #e74c3c; --bg: #06080a; --border: rgba(212, 175, 55, 0.2); }
+        body { background: var(--bg); color: #e8e3d4; font-family: 'Marcellus', serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .bg-ink { position: fixed; inset: 0; z-index: -1; background: radial-gradient(ellipse at 50% 50%, rgba(212,175,55,0.08), transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(46,204,113,0.04), transparent 50%); }
+        .header { text-align: center; margin-bottom: 30px; margin-top: 20px; }
+        .header h1 { font-family: 'Cinzel', serif; font-size: 32px; color: var(--gold); margin: 0; text-shadow: 0 0 20px rgba(212,175,55,0.4); }
+        .header p { color: #8a8578; font-size: 15px; margin-top: 5px; }
+        .card { background: rgba(0,0,0,0.6); border: 1px solid var(--border); border-radius: 12px; padding: 25px; width: 100%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .players-list { list-style: none; padding: 0; margin: 0 0 20px 0; }
+        .players-list li { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between; font-size: 16px; }
+        .players-list li:last-child { border-bottom: none; }
+        .host-badge { color: var(--gold); font-size: 12px; border: 1px solid var(--gold); border-radius: 4px; padding: 2px 6px; margin-left: 8px; }
+        .settings-area { margin-bottom: 20px; padding: 15px; background: rgba(212,175,55,0.05); border: 1px dashed var(--gold); border-radius: 8px; }
+        .settings-area h3 { margin: 0 0 10px 0; color: var(--gold); font-size: 16px; }
+        .rounds-select { display: flex; gap: 10px; }
+        .rounds-select button { flex: 1; padding: 10px; background: transparent; border: 1px solid var(--border); color: #fff; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .rounds-select button.active { background: var(--gold); color: #000; border-color: var(--gold); font-weight: bold; }
+        .btn-start { width: 100%; padding: 15px; background: linear-gradient(135deg, var(--jade), #27ae60); color: #000; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        .btn-start:hover { filter: brightness(1.1); }
+        .btn-start:disabled { opacity: 0.5; cursor: not-allowed; }
+        .hidden { display: none !important; }
+        .waiting-text { text-align: center; color: var(--gold); font-size: 18px; margin-top: 20px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body>
+    <div class="bg-ink"></div>
+    <div class="header">
+        <h1>📜 Свиток Иероглифов</h1>
+        <p>Лобби</p>
+    </div>
+    <div class="card">
+        <h3 style="margin-top:0; color:#fff;">Участники (<span id="player-count">1</span>)</h3>
+        <ul class="players-list" id="players-list"></ul>
+        
+        <div class="settings-area hidden" id="host-settings">
+            <h3>Настройки игры (Хост)</h3>
+            <p style="font-size:14px; color:#aaa; margin-top:0;">Количество раундов:</p>
+            <div class="rounds-select">
+                <button onclick="setRounds(1)" id="round-btn-1" class="active">1</button>
+                <button onclick="setRounds(3)" id="round-btn-3">3</button>
+                <button onclick="setRounds(5)" id="round-btn-5">5</button>
+            </div>
+            <button class="btn-start" id="btn-start" onclick="startGame()">Начать игру</button>
+        </div>
+        <div class="waiting-text hidden" id="waiting-text">Ожидание хоста...</div>
+    </div>
+    <script>
+        const lobbyId = window.location.pathname.split('/').pop();
+        let isHost = false;
+        let currentRounds = 1;
+
+        async function fetchLobby() {
+            try {
+                const res = await fetch('/api/wordle/lobby/' + lobbyId);
+                if (!res.ok) throw new Error('Ошибка загрузки');
+                const data = await res.json();
+                
+                isHost = data.isHost;
+                currentRounds = data.lobby.totalRounds;
+                
+                document.getElementById('player-count').textContent = data.lobby.players.length;
+                const list = document.getElementById('players-list');
+                list.innerHTML = '';
+                data.lobby.players.forEach(p => {
+                    const li = document.createElement('li');
+                    const isHostPlayer = p.userId === data.lobby.hostId;
+                    li.innerHTML = `<span>👤 ${p.name} ${isHostPlayer ? '<span class="host-badge">Хост</span>' : ''}</span>`;
+                    list.appendChild(li);
+                });
+
+                if (data.lobby.status === 'playing' || data.lobby.status === 'finished') {
+                    window.location.href = '/wordle/game/' + lobbyId;
+                    return;
+                }
+
+                if (isHost) {
+                    document.getElementById('host-settings').classList.remove('hidden');
+                    document.getElementById('waiting-text').classList.add('hidden');
+                    updateRoundButtons();
+                } else {
+                    document.getElementById('host-settings').classList.add('hidden');
+                    document.getElementById('waiting-text').classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function updateRoundButtons() {
+            [1, 3, 5].forEach(r => {
+                const btn = document.getElementById('round-btn-' + r);
+                if (r === currentRounds) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+        }
+
+        async function setRounds(rounds) {
+            if (!isHost) return;
+            currentRounds = rounds;
+            updateRoundButtons();
+            await fetch('/api/wordle/lobby/' + lobbyId + '/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ totalRounds: rounds })
+            });
+        }
+
+        async function startGame() {
+            if (!isHost) return;
+            const btn = document.getElementById('btn-start');
+            btn.disabled = true;
+            btn.textContent = 'Запуск...';
+            try {
+                const res = await fetch('/api/wordle/lobby/' + lobbyId + '/start', { method: 'POST' });
+                if (res.ok) {
+                    window.location.href = '/wordle/game/' + lobbyId;
+                } else {
+                    alert('Не удалось начать игру');
+                    btn.disabled = false;
+                    btn.textContent = 'Начать игру';
+                }
+            } catch (e) {
+                alert('Ошибка сети');
+                btn.disabled = false;
+                btn.textContent = 'Начать игру';
+            }
+        }
+
+        fetchLobby();
+        setInterval(fetchLobby, 2000);
+    </script>
+</body>
+</html>
