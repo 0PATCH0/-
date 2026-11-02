@@ -697,6 +697,96 @@ app.post('/api/duel/:id/start', ensureAuth, async (req, res) => {
         try { await updateDuelMessage(req.app.get('botClient'), challenge._id); } catch (e) {}
         res.json({ success: true });
     } catch (e) { console.error('START DUEL:', e); res.status(500).json({ error: 'Ошибка' }); }
+
+    // Установить победителя матча
+app.post('/api/duel/:id/set-winner', ensureAuth, async (req, res) => {
+    try {
+        const { matchIndex, winnerSide } = req.body;
+        const challenge = await Challenge.findById(req.params.id);
+        if (!challenge) return res.status(404).json({ error: 'Не найдено' });
+        
+        if (challenge.status !== 'in_progress') {
+            return res.status(400).json({ error: 'Бои еще не начались' });
+        }
+
+        const match = challenge.matches.find(m => m.matchIndex === Number(matchIndex));
+        if (!match) return res.status(400).json({ error: 'Матч не найден' });
+
+        match.winner = winnerSide; // 'challenger' | 'opponent'
+        challenge.markModified('matches');
+
+        // Проверяем, завершились ли все бои
+        const totalMatches = challenge.matches.length;
+        const finishedMatches = challenge.matches.filter(m => m.winner !== null).length;
+
+        if (finishedMatches === totalMatches) {
+            challenge.status = 'completed';
+            
+            // Считаем победы
+            const chWins = challenge.matches.filter(m => m.winner === 'challenger').length;
+            const oppWins = challenge.matches.filter(m => m.winner === 'opponent').length;
+            
+            if (chWins > oppWins) challenge.winnerGuildId = challenge.challengerGuildId;
+            else if (oppWins > chWins) challenge.winnerGuildId = challenge.opponentGuildId;
+            // Если ничья — winnerGuildId остается null
+        }
+
+        await challenge.save();
+        try { await updateDuelMessage(req.app.get('botClient'), challenge._id); } catch (e) {}
+        
+        res.json({ success: true, status: challenge.status, matches: challenge.matches, winnerGuildId: challenge.winnerGuildId });
+    } catch (e) { console.error('SET WINNER:', e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// Удалить вызов
+app.delete('/api/duel/:id', ensureAuth, async (req, res) => {
+    try {
+        const challenge = await Challenge.findById(req.params.id);
+        if (!challenge) return res.status(404).json({ error: 'Не найдено' });
+
+        // Проверка прав (только модератор гильдии может удалить)
+        const client = req.app.get('botClient');
+        const isChallenger = await (async () => {
+            const g = req.user.guilds.find(gi => gi.id === challenge.challengerGuildId);
+            if (g && (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8)) return true;
+            const s = await Settings.findOne({ guildId: challenge.challengerGuildId });
+            if (s && s.modRoles) {
+                const guild = client.guilds.cache.get(challenge.challengerGuildId);
+                const m = await guild.members.fetch(req.user.id).catch(() => null);
+                if (m && m.roles.cache.some(r => s.modRoles.includes(r.id))) return true;
+            }
+            return false;
+        })();
+        const isOpponent = await (async () => {
+            const g = req.user.guilds.find(gi => gi.id === challenge.opponentGuildId);
+            if (g && (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8)) return true;
+            const s = await Settings.findOne({ guildId: challenge.opponentGuildId });
+            if (s && s.modRoles) {
+                const guild = client.guilds.cache.get(challenge.opponentGuildId);
+                const m = await guild.members.fetch(req.user.id).catch(() => null);
+                if (m && m.roles.cache.some(r => s.modRoles.includes(r.id))) return true;
+            }
+            return false;
+        })();
+
+        if (!isChallenger && !isOpponent && req.user.id !== OWNER_ID) {
+            return res.status(403).json({ error: 'Нет прав на удаление' });
+        }
+
+        // Удаляем сообщения из Discord
+        if (challenge.channelId && challenge.messageId) {
+            const channel = await client.channels.fetch(challenge.channelId).catch(() => null);
+            if (channel) {
+                const msg = await channel.messages.fetch(challenge.messageId).catch(() => null);
+                if (msg) await msg.delete().catch(() => {});
+            }
+        }
+        // Удаляем из БД
+        await Challenge.findByIdAndDelete(req.params.id);
+        
+        res.json({ success: true });
+    } catch (e) { console.error('DELETE DUEL:', e); res.status(500).json({ error: 'Ошибка' }); }
+});
 });
 
 // ─── ВЫЗОВЫ (СОЗДАНИЕ) ────────────────────────────────────
