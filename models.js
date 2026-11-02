@@ -60,6 +60,27 @@ const ChallengeSchema = new mongoose.Schema({
     }],
     winnerGuildId: { type: String, default: null }
 });
+
+const WordleLobbySchema = new mongoose.Schema({
+    channelId: { type: String, required: true },
+    guildId: { type: String, required: true },
+    hostId: { type: String, required: true },
+    messageId: { type: String }, // ID сообщения в Discord
+    status: { type: String, enum: ['waiting', 'playing', 'finished'], default: 'waiting' },
+    mode: { type: String, enum: ['race', 'coop'], default: 'race' },
+    totalRounds: { type: Number, default: 1 },
+    currentRound: { type: Number, default: 1 },
+    secretWord: { type: String },
+    players: [{
+        userId: { type: String },
+        name: { type: String },
+        attempts: [{ word: String, result: [String] }],
+        isWinner: { type: Boolean, default: false },
+        finishTime: { type: Number } // Время завершения в мс
+    }]
+}, { timestamps: true });
+
+
 module.exports = {
     Settings: mongoose.model('Settings', SettingsSchema),
     Reminder: mongoose.model('Reminder', ReminderSchema),
@@ -72,5 +93,6 @@ module.exports = {
     Guide: mongoose.model('Guide', GuideSchema),
     Event: mongoose.model('Event', EventSchema),
     Challenge: mongoose.model('Challenge', ChallengeSchema),
+    WordleLobby: mongoose.model('WordleLobby', WordleLobbySchema),
     PlayerProfile: mongoose.model('PlayerProfile', PlayerProfileSchema)
 };
