@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра — Свиток Иероглифов</title>
+    <link rel="stylesheet" href="/css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
+    <style>
+        :root { --jade: #2ecc71; --gold: #d4af37; --danger: #e74c3c; --mist: #34495e; --bg: #06080a; --border: rgba(212, 175, 55, 0.18); }
+        body { background: var(--bg); color: #e8e3d4; font-family: 'Marcellus', serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .bg-ink { position: fixed; inset: 0; z-index: -1; background: radial-gradient(ellipse at 50% 50%, rgba(212,175,55,0.05), transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(46,204,113,0.03), transparent 50%); }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { font-family: 'Cinzel', serif; font-size: 28px; color: var(--gold); margin: 0; text-shadow: 0 0 20px rgba(212,175,55,0.4); }
+        .header p { color: #8a8578; font-size: 14px; margin-top: 5px; }
+        
+        .game-container { display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 800px; }
+        .board-wrapper { display: flex; flex-direction: column; align-items: center; }
+        .game-board { display: grid; grid-template-rows: repeat(6, 1fr); gap: 8px; width: 100%; max-width: 350px; }
+        .row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .tile { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; text-transform: uppercase; background: rgba(0,0,0,0.4); border: 2px solid var(--border); border-radius: 8px; transition: all 0.3s ease; user-select: none; }
+        .tile.filled { border-color: #8a8578; }
+        .tile.jade { background: var(--jade); border-color: var(--jade); color: #000; }
+        .tile.gold { background: var(--gold); border-color: var(--gold); color: #000; }
+        .tile.mist { background: var(--mist); border-color: var(--mist); color: #fff; }
+
+        .input-area { display: flex; gap: 10px; width: 100%; max-width: 350px; margin-top: 15px; }
+        .input-area input { flex: 1; padding: 15px; font-size: 18px; text-align: center; text-transform: uppercase; background: rgba(0,0,0,0.5); border: 1px solid var(--gold); color: #fff; border-radius: 8px; font-family: 'Marcellus', serif; outline: none; }
+        .input-area button { padding: 15px 25px; background: linear-gradient(135deg, var(--gold), #aa8624); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .input-area button:hover { filter: brightness(1.1); }
+        .input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .sidebar { background: rgba(0,0,0,0.6); border: 1px solid var(--border); border-radius: 12px; padding: 20px; width: 100%; max-width: 300px; }
+        .sidebar h3 { margin-top: 0; color: var(--gold); font-family: 'Cinzel', serif; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .player-stat { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 15px; }
+        .player-stat:last-child { border-bottom: none; }
+        .player-stat.winner { color: var(--jade); font-weight: bold; }
+        
+        .message { margin-top: 20px; font-size: 18px; text-align: center; min-height: 24px; font-weight: bold; }
+        .message.win { color: var(--jade); text-shadow: 0 0 10px rgba(46,204,113,0.5); }
+        .message.lose { color: var(--danger); }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="bg-ink"></div>
+    <div class="header">
+        <h1>📜 Свиток Иероглифов</h1>
+        <p id="round-info">Раунд 1 / 1</p>
+    </div>
+
+    <div class="game-container">
+        <div class="board-wrapper">
+            <div class="game-board" id="board"></div>
+            <div class="input-area" id="input-area">
+                <input type="text" id="guess-input" maxlength="5" placeholder="СЛОВО" autocomplete="off">
+                <button id="guess-btn">Ввод</button>
+            </div>
+            <div class="message" id="message"></div>
+        </div>
+
+        <div class="sidebar">
+            <h3>Гонка</h3>
+            <div id="players-stats"></div>
+        </div>
+    </div>
+
+    <script>
+        const lobbyId = window.location.pathname.split('/').pop();
+        let currentRow = 0;
+        let currentGuess = '';
+        let gameOver = false;
+        const board = document.getElementById('board');
+        const input = document.getElementById('guess-input');
+        const btn = document.getElementById('guess-btn');
+        const messageEl = document.getElementById('message');
+
+        function initBoard() {
+            board.innerHTML = '';
+            for (let r = 0; r < 6; r++) {
+                const row = document.createElement('div');
+                row.className = 'row';
+                row.id = 'row-' + r;
+                for (let c = 0; c < 5; c++) {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile';
+                    tile.id = `tile-${r}-${c}`;
+                    row.appendChild(tile);
+                }
+                board.appendChild(row);
+            }
+        }
+        initBoard();
+
+        input.addEventListener('input', () => {
+            input.value = input.value.replace(/[^А-Яа-яЁё]/g, '').toUpperCase();
+            currentGuess = input.value;
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') submitGuess();
+        });
+        btn.addEventListener('click', submitGuess);
+
+        async function submitGuess() {
+            if (gameOver) return;
+            if (currentGuess.length !== 5) {
+                showMessage('Введите слово из 5 букв', '');
+                return;
+            }
+
+            btn.disabled = true;
+            try {
+                const res = await fetch(`/api/wordle/lobby/${lobbyId}/guess`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ guess: currentGuess })
+                });
+                
+                const data = await res.json();
+                if (!res.ok) {
+                    showMessage(data.error || 'Ошибка', '');
+                    btn.disabled = false;
+                    return;
+                }
+
+                const row = document.getElementById('row-' + currentRow);
+                const tiles = row.querySelectorAll('.tile');
+                tiles.forEach((tile, i) => {
+                    tile.textContent = currentGuess[i];
+                    tile.classList.add(data.result[i]);
+                });
+
+                if (data.isWinner) {
+                    gameOver = true;
+                    showMessage(`🎉 Победа! Слово: ${currentGuess}`, 'win');
+                    disableInput();
+                } else {
+                    currentRow++;
+                    input.value = '';
+                    currentGuess = '';
+
+                    if (currentRow >= 6) {
+                        gameOver = true;
+                        showMessage(`💀 Попытки закончились. Ждём остальных...`, 'lose');
+                        disableInput();
+                    } else {
+                        btn.disabled = false;
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                showMessage('Ошибка сети', '');
+                btn.disabled = false;
+            }
+        }
+
+        function showMessage(text, type) {
+            messageEl.textContent = text;
+            messageEl.className = 'message ' + type;
+        }
+
+        function disableInput() {
+            input.disabled = true;
+            btn.disabled = true;
+        }
+
+        async function pollStatus() {
+            try {
+                const res = await fetch(`/api/wordle/lobby/${lobbyId}/status`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                const statsContainer = document.getElementById('players-stats');
+                statsContainer.innerHTML = '';
+                
+                data.players.forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = 'player-stat' + (p.isWinner ? ' winner' : '');
+                    let statusText = `${p.attemptsCount} попыток`;
+                    if (p.isWinner) statusText = `🏆 Победил`;
+                    else if (p.isFinished) statusText = `💀 Выбыл`;
+                    
+                    div.innerHTML = `<span>👤 ${p.name}</span> <span>${statusText}</span>`;
+                    statsContainer.appendChild(div);
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        pollStatus();
+        setInterval(pollStatus, 2000);
+    </script>
+</body>
+</html>
