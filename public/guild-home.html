@@ -82,11 +82,6 @@
             </a>
         </div>
 
-        <div class="section-title">Текущие вызовы</div>
-<div id="active-challenges" class="tiles" style="margin-bottom: 20px;">
-    <div class="empty-state">Загрузка вызовов...</div>
-</div>
-
         <div id="admin-section" style="display:none;">
             <div class="section-title">Управление</div>
             <div class="tiles admin-tiles">
@@ -249,33 +244,6 @@
         }
     }
 
-        fetch('/api/guild/' + guildId + '/challenges', { credentials: 'include' })
-    .then(r => r.ok ? r.json() : [])
-    .then(challenges => {
-        const container = document.getElementById('active-challenges');
-        if (!challenges || challenges.length === 0) {
-            container.innerHTML = '<div class="empty-state">Нет активных вызовов.</div>';
-            return;
-        }
-        container.innerHTML = challenges.map(ch => {
-            const dateStr = new Date(ch.time * 1000).toLocaleString('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-            let status = 'Ожидает';
-            if (ch.status === 'accepted') status = 'Принят';
-            if (ch.status === 'in_progress') status = 'В процессе';
-            if (ch.status === 'completed') status = 'Завершён';
-            if (ch.status === 'declined') status = 'Отклонён';
-            
-            return `
-                <a href="/duel/${ch._id}" class="tile" style="border-left: 3px solid #d4af37;">
-                    <span class="tile-title" style="font-size:15px;">${escapeHtml(ch.challengerName)} vs ${escapeHtml(ch.opponentName)}</span>
-                    <span class="tile-desc">Статус: ${status}<br>🕒 ${dateStr} • ⚔️ ${ch.format} ${ch.format == 1 ? 'бой' : 'боёв'}</span>
-                </a>
-            `;
-        }).join('');
-    })
-    .catch(() => {
-        document.getElementById('active-challenges').innerHTML = '<div class="empty-state">Ошибка загрузки вызовов.</div>';
-    });
     </script>
 </body>
 </html>
