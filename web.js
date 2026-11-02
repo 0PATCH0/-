@@ -864,22 +864,49 @@ app.post('/api/guild/:id/challenge', isModerator, async (req, res) => {
 
 // ─── WORDLE (СВИТОК ИЕРОГЛИФОВ) ───────────────────────────
 
-// Получить данные лобби (кто в нем, статус)
+// Получить данные лобби
 app.get('/api/wordle/lobby/:id', ensureAuth, async (req, res) => {
     try {
         const lobby = await WordleLobby.findById(req.params.id);
         if (!lobby) return res.status(404).json({ error: 'Лобби не найдено' });
 
+        let changed = false;
         if (!lobby.players.find(p => p.userId === req.user.id)) {
             lobby.players.push({ userId: req.user.id, name: req.user.username });
+            changed = true;
             await lobby.save();
+        }
+
+        // Если игрок добавился и лобби еще в ожидании — обновляем сообщение в Discord
+        if (changed && lobby.status === 'waiting') {
+            const client = req.app.get('botClient');
+            const channel = await client.channels.fetch(lobby.channelId).catch(() => null);
+            if (channel && lobby.messageId) {
+                const msg = await channel.messages.fetch(lobby.messageId).catch(() => null);
+                if (msg) {
+                    const siteUrl = `https://patchitos1234.fly.dev/wordle/lobby/${lobby._id}`;
+                    const embed = new EmbedBuilder()
+                        .setTitle('📜 Свиток Иероглифов')
+                        .setDescription(`Лобби создано!\n\n👑 **Хост:** <@${lobby.hostId}>\n👥 **Игроков:** ${lobby.players.length}\n\nНажмите кнопку ниже, чтобы присоединиться к гонке.`)
+                        .setColor('#d4af37')
+                        .setFooter({ text: 'Where Winds Meet • Мини-игра' });
+
+                    const row = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder()
+                            .setLabel('🎮 Присоединиться')
+                            .setURL(siteUrl)
+                            .setStyle(ButtonStyle.Link)
+                    );
+
+                    await msg.edit({ embeds: [embed], components: [row] }).catch(() => {});
+                }
+            }
         }
 
         const isHost = lobby.hostId === req.user.id;
         res.json({ lobby, isHost });
-    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+    } catch (e) { console.error('WORDLE LOBBY GET:', e); res.status(500).json({ error: 'Ошибка' }); }
 });
-
 // Настройка лобби хостом (кол-во раундов)
 app.post('/api/wordle/lobby/:id/settings', ensureAuth, async (req, res) => {
     try {
