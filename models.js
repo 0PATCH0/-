@@ -66,6 +66,8 @@ const WordleLobbySchema = new mongoose.Schema({
     guildId: { type: String, required: true },
     hostId: { type: String, required: true },
     messageId: { type: String }, // ID сообщения в Discord
+    wordLength: { type: Number, default: 5 },
+maxAttempts: { type: Number, default: 6 },
     status: { type: String, enum: ['waiting', 'playing', 'finished'], default: 'waiting' },
     mode: { type: String, enum: ['race', 'coop'], default: 'race' },
     totalRounds: { type: Number, default: 1 },
