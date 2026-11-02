@@ -354,8 +354,8 @@ app.delete('/api/profile/:guildId', async (req, res) => {
         const guildId = resolveProfileGuildId(req);
         await PlayerProfile.findOneAndDelete({ userId: req.user.id, guildId });
         res.json({ success: true });
-        try { refreshRosterMessage(req.app.get('botClient'), guildId); } catch (e) {}
-      } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка базы данных' }); }
+        try { refreshRosterMessage(req.app.get('botClient'), guildId); } catch (e) {
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка базы данных' }); }
 });
 
 // ─── АДМИН ПРОФИЛЕЙ ───────────────────────────────────────
