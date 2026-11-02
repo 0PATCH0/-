@@ -100,6 +100,7 @@
         const messageEl = document.getElementById('message');
         const modal = document.getElementById('game-over-modal');
 
+        // Инициализация доски в зависимости от длины слова и попыток
         function initBoard(wLen, maxAtt) {
             board.innerHTML = '';
             input.maxLength = wLen;
@@ -198,12 +199,14 @@
                 if (!res.ok) return;
                 const data = await res.json();
 
-                // Инициализируем доску при первом получении данных
+                // Инициализируем доску, как только получили реальные настройки с сервера
                 if (!boardInitialized || wordLength !== data.wordLength || maxAttempts !== data.maxAttempts) {
                     wordLength = data.wordLength;
                     maxAttempts = data.maxAttempts;
                     initBoard(wordLength, maxAttempts);
                 }
+
+                document.getElementById('round-info').textContent = `Слово: ${wordLength} букв • Попыток: ${maxAttempts}`;
 
                 const statsContainer = document.getElementById('players-stats');
                 statsContainer.innerHTML = '';
@@ -219,11 +222,12 @@
                     statsContainer.appendChild(div);
                 });
 
+                // Экран завершения игры
                 if (data.status === 'finished' && modal.classList.contains('hidden')) {
                     gameOver = true;
                     disableInput();
                     document.getElementById('final-secret-word').textContent = data.secretWord || '???';
-                    document.getElementById('final-status-text').textContent = 'Смотрите результаты в Discord!';
+                    document.getElementById('final-status-text').textContent = 'Смотрите полную таблицу в Discord!';
                     modal.classList.remove('hidden');
                 }
 
