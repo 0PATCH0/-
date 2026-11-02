@@ -276,6 +276,7 @@ app.get('/global-profiles', (req, res) => { if (!req.user) return res.redirect('
 app.get('/view-profile/:userId', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'view-profile.html')); });
 app.get('/duel/:id', ensureAuth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'duel.html')));
 app.get('/guild/:id/challenges', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'challenges.html')); });
+app.get('/wordle', (req, res) => res.sendFile(path.join(__dirname, 'public', 'wordle.html')));
 app.get('/manage/:id/events', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'events.html')); });
 app.get('/manage/:id/guides', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'guides.html')); });
 app.get('/manage/:id/guides/edit/:guideId', (req, res) => { if (!req.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'guide-edit.html')); });
@@ -865,6 +866,46 @@ app.post('/api/guild/:id/challenge', isModerator, async (req, res) => {
     } catch (e) {
         console.error('CHALLENGE CREATE:', e);
         res.status(500).json({ error: 'Ошибка сервера: ' + e.message });
+    }
+});
+
+
+// ─── РЕЗУЛЬТАТ WORDLE ─────────────────────────────────────
+app.post('/api/wordle/result', async (req, res) => {
+    try {
+        const { channelId, userId, secretWord, isWin, attempts } = req.body;
+        if (!channelId || !userId || !secretWord) {
+            return res.status(400).json({ error: 'Не хватает данных' });
+        }
+
+        const client = req.app.get('botClient');
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+        if (!channel) return res.status(404).json({ error: 'Канал не найден' });
+
+        const user = await client.users.fetch(userId).catch(() => null);
+        const userName = user ? user.username : 'Неизвестный';
+
+        const embed = new EmbedBuilder()
+            .setTitle('📜 Свиток Иероглифов')
+            .setColor(isWin ? '#2ecc71' : '#e74c3c')
+            .setDescription(isWin 
+                ? `🏆 **@${userName}** угадал слово **${secretWord}** за **${attempts}/6** попыток!` 
+                : `💀 **@${userName}** не угадал слово **${secretWord}** за **6** попыток.`)
+            .setFooter({ text: 'Where Winds Meet • Мини-игра' });
+
+        // Добавляем кнопку для повторной игры
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setLabel('🎮 Играть')
+                .setURL('https://patchitos1234.fly.dev/wordle?channel=' + channelId + '&user=' + userId)
+                .setStyle(ButtonStyle.Link)
+        );
+
+        await channel.send({ embeds: [embed], components: [row] });
+        res.json({ success: true });
+    } catch (e) {
+        console.error('WORDLE RESULT:', e);
+        res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
