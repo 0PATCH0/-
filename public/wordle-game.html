@@ -15,16 +15,19 @@
         .header p { color: #8a8578; font-size: 14px; margin-top: 5px; }
         
         .game-container { display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 800px; }
-        .board-wrapper { display: flex; flex-direction: column; align-items: center; }
-        .game-board { display: grid; grid-template-rows: repeat(6, 1fr); gap: 8px; width: 100%; max-width: 350px; }
-        .row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-        .tile { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; text-transform: uppercase; background: rgba(0,0,0,0.4); border: 2px solid var(--border); border-radius: 8px; transition: all 0.3s ease; user-select: none; }
+        .board-wrapper { display: flex; flex-direction: column; align-items: center; position: relative; }
+        
+        /* Адаптивная доска */
+        .game-board { display: grid; gap: 6px; width: 100%; max-width: 400px; justify-content: center; }
+        .row { display: flex; gap: 6px; justify-content: center; }
+        .tile { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; text-transform: uppercase; background: rgba(0,0,0,0.4); border: 2px solid var(--border); border-radius: 6px; transition: all 0.3s ease; user-select: none; }
+        @media (max-width: 500px) { .tile { width: 40px; height: 40px; font-size: 20px; } }
         .tile.filled { border-color: #8a8578; }
         .tile.jade { background: var(--jade); border-color: var(--jade); color: #000; }
         .tile.gold { background: var(--gold); border-color: var(--gold); color: #000; }
         .tile.mist { background: var(--mist); border-color: var(--mist); color: #fff; }
 
-        .input-area { display: flex; gap: 10px; width: 100%; max-width: 350px; margin-top: 15px; }
+        .input-area { display: flex; gap: 10px; width: 100%; max-width: 400px; margin-top: 20px; }
         .input-area input { flex: 1; padding: 15px; font-size: 18px; text-align: center; text-transform: uppercase; background: rgba(0,0,0,0.5); border: 1px solid var(--gold); color: #fff; border-radius: 8px; font-family: 'Marcellus', serif; outline: none; }
         .input-area button { padding: 15px 25px; background: linear-gradient(135deg, var(--gold), #aa8624); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .input-area button:hover { filter: brightness(1.1); }
@@ -39,6 +42,14 @@
         .message { margin-top: 20px; font-size: 18px; text-align: center; min-height: 24px; font-weight: bold; }
         .message.win { color: var(--jade); text-shadow: 0 0 10px rgba(46,204,113,0.5); }
         .message.lose { color: var(--danger); }
+
+        /* Модалка завершения */
+        .game-over-modal { position: absolute; inset: -10px; background: rgba(6, 8, 10, 0.95); backdrop-filter: blur(5px); display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; z-index: 10; text-align: center; padding: 20px; border: 2px solid var(--gold); box-shadow: 0 0 30px rgba(212,175,55,0.2); }
+        .game-over-modal h2 { color: var(--gold); margin-top: 0; font-family: 'Cinzel', serif; font-size: 28px; }
+        .game-over-modal p { font-size: 18px; margin: 10px 0; }
+        .game-over-modal .secret-word { font-size: 32px; font-weight: bold; color: var(--jade); letter-spacing: 5px; margin: 15px 0; text-shadow: 0 0 15px rgba(46,204,113,0.4); }
+        .btn-close { margin-top: 20px; padding: 10px 30px; background: var(--gold); color: #000; text-decoration: none; border-radius: 6px; font-weight: bold; transition: 0.2s; }
+        .btn-close:hover { filter: brightness(1.2); }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -46,14 +57,23 @@
     <div class="bg-ink"></div>
     <div class="header">
         <h1>📜 Свиток Иероглифов</h1>
-        <p id="round-info">Раунд 1 / 1</p>
+        <p id="round-info">Загрузка...</p>
     </div>
 
     <div class="game-container">
         <div class="board-wrapper">
             <div class="game-board" id="board"></div>
+            
+            <div class="game-over-modal hidden" id="game-over-modal">
+                <h2>Игра завершена!</h2>
+                <p>Загаданное слово:</p>
+                <div class="secret-word" id="final-secret-word">...</div>
+                <p id="final-status-text"></p>
+                <a href="https://patchitos1234.fly.dev/dashboard" class="btn-close">Вернуться в меню</a>
+            </div>
+
             <div class="input-area" id="input-area">
-                <input type="text" id="guess-input" maxlength="5" placeholder="СЛОВО" autocomplete="off">
+                <input type="text" id="guess-input" placeholder="СЛОВО" autocomplete="off">
                 <button id="guess-btn">Ввод</button>
             </div>
             <div class="message" id="message"></div>
@@ -70,18 +90,25 @@
         let currentRow = 0;
         let currentGuess = '';
         let gameOver = false;
+        let wordLength = 5;
+        let maxAttempts = 6;
+        let boardInitialized = false;
+
         const board = document.getElementById('board');
         const input = document.getElementById('guess-input');
         const btn = document.getElementById('guess-btn');
         const messageEl = document.getElementById('message');
+        const modal = document.getElementById('game-over-modal');
 
-        function initBoard() {
+        function initBoard(wLen, maxAtt) {
             board.innerHTML = '';
-            for (let r = 0; r < 6; r++) {
+            input.maxLength = wLen;
+            input.placeholder = `СЛОВО (${wLen} БУКВ)`;
+            for (let r = 0; r < maxAtt; r++) {
                 const row = document.createElement('div');
                 row.className = 'row';
                 row.id = 'row-' + r;
-                for (let c = 0; c < 5; c++) {
+                for (let c = 0; c < wLen; c++) {
                     const tile = document.createElement('div');
                     tile.className = 'tile';
                     tile.id = `tile-${r}-${c}`;
@@ -89,8 +116,8 @@
                 }
                 board.appendChild(row);
             }
+            boardInitialized = true;
         }
-        initBoard();
 
         input.addEventListener('input', () => {
             input.value = input.value.replace(/[^А-Яа-яЁё]/g, '').toUpperCase();
@@ -104,8 +131,8 @@
 
         async function submitGuess() {
             if (gameOver) return;
-            if (currentGuess.length !== 5) {
-                showMessage('Введите слово из 5 букв', '');
+            if (currentGuess.length !== wordLength) {
+                showMessage(`Введите слово из ${wordLength} букв`, '');
                 return;
             }
 
@@ -140,7 +167,7 @@
                     input.value = '';
                     currentGuess = '';
 
-                    if (currentRow >= 6) {
+                    if (currentRow >= maxAttempts) {
                         gameOver = true;
                         showMessage(`💀 Попытки закончились. Ждём остальных...`, 'lose');
                         disableInput();
@@ -171,6 +198,13 @@
                 if (!res.ok) return;
                 const data = await res.json();
 
+                // Инициализируем доску при первом получении данных
+                if (!boardInitialized || wordLength !== data.wordLength || maxAttempts !== data.maxAttempts) {
+                    wordLength = data.wordLength;
+                    maxAttempts = data.maxAttempts;
+                    initBoard(wordLength, maxAttempts);
+                }
+
                 const statsContainer = document.getElementById('players-stats');
                 statsContainer.innerHTML = '';
                 
@@ -184,6 +218,15 @@
                     div.innerHTML = `<span>👤 ${p.name}</span> <span>${statusText}</span>`;
                     statsContainer.appendChild(div);
                 });
+
+                if (data.status === 'finished' && modal.classList.contains('hidden')) {
+                    gameOver = true;
+                    disableInput();
+                    document.getElementById('final-secret-word').textContent = data.secretWord || '???';
+                    document.getElementById('final-status-text').textContent = 'Смотрите результаты в Discord!';
+                    modal.classList.remove('hidden');
+                }
+
             } catch (e) {
                 console.error(e);
             }
