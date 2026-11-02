@@ -697,6 +697,7 @@ app.post('/api/duel/:id/start', ensureAuth, async (req, res) => {
         try { await updateDuelMessage(req.app.get('botClient'), challenge._id); } catch (e) {}
         res.json({ success: true });
     } catch (e) { console.error('START DUEL:', e); res.status(500).json({ error: 'Ошибка' }); }
+});
 
     // Установить победителя матча
 app.post('/api/duel/:id/set-winner', ensureAuth, async (req, res) => {
