@@ -15,14 +15,15 @@ module.exports = {
                 hostId: interaction.user.id,
                 status: 'waiting',
                 mode: 'race',
-                totalRounds: 1
+                totalRounds: 1,
+                players: [{ userId: interaction.user.id, name: interaction.user.username }]
             });
 
             const siteUrl = `https://patchitos1234.fly.dev/wordle/lobby/${lobby._id}`;
 
             const embed = new EmbedBuilder()
                 .setTitle('📜 Свиток Иероглифов')
-                .setDescription(`Лобби создано!\n\n👑 **Хост:** <@${interaction.user.id}>\n👥 **Игроков:** 1\n\nНажмите кнопку ниже, чтобы присоединиться к игре.`)
+                .setDescription(`Лобби создано!\n\n👑 **Хост:** <@${interaction.user.id}>\n👥 **Игроков:** 1\n\nНажмите кнопку ниже, чтобы присоединиться к гонке.`)
                 .setColor('#d4af37')
                 .setFooter({ text: 'Where Winds Meet • Мини-игра' });
 
@@ -35,7 +36,6 @@ module.exports = {
 
             const message = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
             
-            // Сохраняем ID сообщения, чтобы потом обновлять
             lobby.messageId = message.id;
             await lobby.save();
 
