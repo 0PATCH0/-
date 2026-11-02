@@ -7,8 +7,21 @@
     <link rel="stylesheet" href="/css/admin.css">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
     <style>
-        .duel-hero { background: linear-gradient(160deg, rgba(18,22,28,0.95), rgba(10,12,16,0.98)); border: 1px solid #d4af37; border-radius: 16px; padding: 40px 20px; text-align: center; position: relative; overflow: hidden; box-shadow: 0 0 50px rgba(212,175,55,0.1); margin-bottom: 20px; }
-        .duel-hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, #d4af37, transparent); }
+        .duel-hero {
+            background: linear-gradient(160deg, rgba(18, 22, 28, 0.95), rgba(10, 12, 16, 0.98));
+            border: 1px solid #d4af37;
+            border-radius: 16px;
+            padding: 40px 20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(212, 175, 55, 0.1);
+            margin-bottom: 20px;
+        }
+        .duel-hero::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, #d4af37, transparent);
+        }
         .vs-badge { font-family: 'Cinzel', serif; font-size: 24px; color: #e74c3c; text-shadow: 0 0 10px rgba(231,76,60,0.5); margin: 0 15px; }
         .guild-side { flex: 1; padding: 15px; }
         .guild-name { font-family: 'Cinzel', serif; font-size: 18px; color: #d4af37; margin-bottom: 5px; word-break: break-word; }
@@ -35,8 +48,6 @@
     <div class="bg-ink"></div>
     <div class="fog"></div>
 
-    <pre id="debug" style="position:fixed; top:0; left:0; right:0; color:#e74c3c; background:rgba(0,0,0,0.9); padding:8px; font-size:11px; z-index:99999; margin:0; white-space:pre-wrap; display:none;"></pre>
-
     <div class="container" style="max-width: 800px;">
         <nav class="top-nav">
             <div class="logo">WHERE WINDS MEET</div>
@@ -50,17 +61,7 @@
     <script>
         const challengeId = window.location.pathname.split('/')[2];
         const content = document.getElementById('content');
-        const debugEl = document.getElementById('debug');
         let currentDuelData = null;
-
-        function showDebug(msg) {
-            debugEl.style.display = 'block';
-            debugEl.textContent += msg + '\n';
-        }
-
-        window.onerror = function(message, source, lineno, colno) {
-            showDebug('ОШИБКА: ' + message + ' (строка ' + lineno + ')');
-        };
 
         function escapeHtml(s) {
             return String(s || '').replace(/[&<>"']/g, function(m) {
@@ -70,21 +71,16 @@
 
         async function loadDuel() {
             try {
-                showDebug('Загрузка вызова: ' + challengeId);
                 const res = await fetch('/api/duel/' + challengeId, { credentials: 'include' });
-                showDebug('Ответ сервера: ' + res.status);
-                
                 if (!res.ok) {
                     const errData = await res.json().catch(() => ({}));
                     throw new Error(errData.error || ('HTTP ' + res.status));
                 }
-                
                 const data = await res.json();
                 currentDuelData = data;
                 renderDuel(data);
             } catch (e) {
                 content.innerHTML = `<div class="empty-state" style="color:#e74c3c;">❌ Ошибка: ${escapeHtml(e.message)}</div>`;
-                showDebug('Ошибка загрузки: ' + e.message);
             }
         }
 
@@ -119,8 +115,13 @@
                         ${challenge.matches.map(m => {
                             const cName = m.challengerPlayer ? m.challengerPlayer.name : '— Не выбран —';
                             const oName = m.opponentPlayer ? m.opponentPlayer.name : '— Не выбран —';
+                            
                             const canSelectC = canManageChallenger && challenge.status === 'accepted' && !m.challengerPlayer;
                             const canSelectO = canManageOpponent && challenge.status === 'accepted' && !m.opponentPlayer;
+                            
+                            const canWinC = canManageChallenger && challenge.status === 'in_progress' && !m.winner;
+                            const canWinO = canManageOpponent && challenge.status === 'in_progress' && !m.winner;
+
                             const cWinner = m.winner === 'challenger' ? 'winner' : '';
                             const oWinner = m.winner === 'opponent' ? 'winner' : '';
 
@@ -130,12 +131,14 @@
                                         <div class="guild-role">${escapeHtml(challengerGuild.name)}</div>
                                         <div class="player-name ${cWinner} ${!m.challengerPlayer ? 'empty' : ''}">${escapeHtml(cName)}</div>
                                         ${canSelectC ? `<button class="btn btn-secondary btn-small" onclick="openPlayerModal(${m.matchIndex}, 'challenger')">Выбрать</button>` : ''}
+                                        ${canWinC ? `<button class="btn btn-success btn-small" style="margin-top:5px;" onclick="setWinner(${m.matchIndex}, 'challenger')">🏆 Победа</button>` : ''}
                                     </div>
                                     <div class="vs-small">VS</div>
                                     <div class="player-slot">
                                         <div class="guild-role">${escapeHtml(opponentGuild.name)}</div>
                                         <div class="player-name ${oWinner} ${!m.opponentPlayer ? 'empty' : ''}">${escapeHtml(oName)}</div>
                                         ${canSelectO ? `<button class="btn btn-secondary btn-small" onclick="openPlayerModal(${m.matchIndex}, 'opponent')">Выбрать</button>` : ''}
+                                        ${canWinO ? `<button class="btn btn-success btn-small" style="margin-top:5px;" onclick="setWinner(${m.matchIndex}, 'opponent')">🏆 Победа</button>` : ''}
                                     </div>
                                 </div>
                             `;
@@ -149,6 +152,15 @@
                 startButton = `
                     <div style="margin-top: 20px; text-align: center;">
                         <button class="btn btn-primary" style="padding: 12px 30px; font-size: 16px;" onclick="startDuel()">🔥 Начать бой!</button>
+                    </div>
+                `;
+            }
+
+            let deleteBtn = '';
+            if ((challenge.status === 'completed' || challenge.status === 'declined') && (canManageChallenger || canManageOpponent)) {
+                deleteBtn = `
+                    <div style="margin-top: 20px; text-align: center;">
+                        <button class="btn btn-danger" onclick="deleteDuel()">🗑 Удалить вызов</button>
                     </div>
                 `;
             }
@@ -179,6 +191,7 @@
                 </div>
                 ${matchesHtml}
                 ${startButton}
+                ${deleteBtn}
             `;
         }
 
@@ -206,6 +219,34 @@
                 const res = await fetch('/api/duel/' + challengeId + '/start', { method: 'POST', credentials: 'include' });
                 if (res.ok) { alert('⚔️ Бой начался!'); loadDuel(); }
                 else { const d = await res.json(); alert('❌ Ошибка: ' + d.error); }
+            } catch (e) { alert('❌ Ошибка сети'); }
+        }
+
+        async function setWinner(matchIndex, winnerSide) {
+            if (!confirm('Зафиксировать победу?')) return;
+            try {
+                const res = await fetch('/api/duel/' + challengeId + '/set-winner', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ matchIndex, winnerSide })
+                });
+                if (res.ok) { loadDuel(); }
+                else { const d = await res.json(); alert('❌ Ошибка: ' + d.error); }
+            } catch (e) { alert('❌ Ошибка сети'); }
+        }
+
+        async function deleteDuel() {
+            if (!confirm('Удалить этот вызов навсегда?')) return;
+            try {
+                const res = await fetch('/api/duel/' + challengeId, { method: 'DELETE', credentials: 'include' });
+                if (res.ok) {
+                    alert('Вызов удален');
+                    window.location.href = '/dashboard';
+                } else {
+                    const d = await res.json();
+                    alert('❌ Ошибка: ' + d.error);
+                }
             } catch (e) { alert('❌ Ошибка сети'); }
         }
 
