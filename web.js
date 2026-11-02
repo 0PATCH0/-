@@ -956,7 +956,6 @@ app.post('/api/wordle/lobby/:id/guess', ensureAuth, async (req, res) => {
         const lobby = await WordleLobby.findById(req.params.id);
         if (!lobby || lobby.status !== 'playing') return res.status(400).json({ error: 'Игра не идет' });
 
-        
         const player = lobby.players.find(p => p.userId === req.user.id);
         if (!player) return res.status(403).json({ error: 'Вы не в лобби' });
         if (player.isWinner || player.attempts.length >= 6) return res.status(400).json({ error: 'Вы уже закончили' });
@@ -991,9 +990,63 @@ app.post('/api/wordle/lobby/:id/guess', ensureAuth, async (req, res) => {
         await lobby.save();
 
         const allFinished = lobby.players.every(p => p.isWinner || p.attempts.length >= 6);
+        
+        // ─── ЛОГИКА ОКОНЧАНИЯ ИГРЫ ───
         if (allFinished) {
             lobby.status = 'finished';
             await lobby.save();
+
+            const client = req.app.get('botClient');
+            const channel = await client.channels.fetch(lobby.channelId).catch(() => null);
+            if (channel) {
+                // Сортируем: победители (по времени) -> остальные (по кол-ву попыток)
+                const sortedPlayers = [...lobby.players].sort((a, b) => {
+                    if (a.isWinner && !b.isWinner) return -1;
+                    if (!a.isWinner && b.isWinner) return 1;
+                    if (a.isWinner && b.isWinner) return (a.finishTime || 0) - (b.finishTime || 0);
+                    return a.attempts.length - b.attempts.length;
+                });
+
+                let summaryText = `Загаданное слово: **${lobby.secretWord}**\n\n`;
+
+                for (let i = 0; i < sortedPlayers.length; i++) {
+                    const p = sortedPlayers[i];
+                    let attemptsText = p.isWinner ? `${p.attempts.length}/6` : `X/6`;
+                    let medal = i === 0 ? '🥇 ' : (i === 1 ? '🥈 ' : (i === 2 ? '🥉 ' : ''));
+                    
+                    summaryText += `${medal}**${attemptsText}** <@${p.userId}>\n`;
+                    
+                    // Рисуем эмодзи-сетку
+                    for (let r = 0; r < 6; r++) {
+                        const attempt = p.attempts[r];
+                        if (attempt) {
+                            let rowEmoji = '';
+                            for (let c = 0; c < 5; c++) {
+                                if (attempt.result[c] === 'jade') rowEmoji += '🟩';
+                                else if (attempt.result[c] === 'gold') rowEmoji += '🟨';
+                                else rowEmoji += '⬛';
+                            }
+                            summaryText += `> ${rowEmoji}\n`;
+                        }
+                    }
+                    summaryText += '\n';
+                }
+
+                const embed = new EmbedBuilder()
+                    .setTitle('📜 Свиток Иероглифов: Итоги')
+                    .setDescription(summaryText)
+                    .setColor('#d4af37')
+                    .setFooter({ text: 'Where Winds Meet • Мини-игра' });
+
+                // Отправляем результаты в канал
+                await channel.send({ embeds: [embed] });
+                
+                // И удаляем старое сообщение с лобби (опционально)
+                if (lobby.messageId) {
+                    const oldMsg = await channel.messages.fetch(lobby.messageId).catch(() => null);
+                    if (oldMsg) await oldMsg.delete().catch(() => {});
+                }
+            }
         }
 
         res.json({ success: true, result, isWinner: player.isWinner, allFinished });
