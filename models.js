@@ -65,20 +65,20 @@ const WordleLobbySchema = new mongoose.Schema({
     channelId: { type: String, required: true },
     guildId: { type: String, required: true },
     hostId: { type: String, required: true },
-    messageId: { type: String }, // ID сообщения в Discord
-    wordLength: { type: Number, default: 5 },
-maxAttempts: { type: Number, default: 6 },
+    messageId: { type: String },
     status: { type: String, enum: ['waiting', 'playing', 'finished'], default: 'waiting' },
     mode: { type: String, enum: ['race', 'coop'], default: 'race' },
     totalRounds: { type: Number, default: 1 },
     currentRound: { type: Number, default: 1 },
+    wordLength: { type: Number, default: 5 },
+    maxAttempts: { type: Number, default: 6 },
     secretWord: { type: String },
     players: [{
         userId: { type: String },
         name: { type: String },
         attempts: [{ word: String, result: [String] }],
         isWinner: { type: Boolean, default: false },
-        finishTime: { type: Number } // Время завершения в мс
+        finishTime: { type: Number }
     }]
 }, { timestamps: true });
 
