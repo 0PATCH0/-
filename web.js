@@ -1004,8 +1004,28 @@ app.post('/api/wordle/lobby/:id/start', ensureAuth, async (req, res) => {
         if (lobby.hostId !== req.user.id) return res.status(403).json({ error: 'Только хост' });
         if (lobby.status !== 'waiting') return res.status(400).json({ error: 'Уже идет игра' });
 
+        // ⚔️ ЗАЩИТА 1: Если настройки битые, ставим дефолт
+        if (!lobby.wordLength || ![4, 5, 6, 7].includes(lobby.wordLength)) {
+            lobby.wordLength = 5;
+            lobby.maxAttempts = 6;
+        }
+
+        // ⚔️ ЗАЩИТА 2: Берем слово ТОЛЬКО из словаря нужной длины
+        const dict = ALLOWED_WORDS[lobby.wordLength];
+        if (!dict || dict.size === 0) {
+            return res.status(500).json({ error: 'Ошибка сервера: словарь для этой длины пуст' });
+        }
+        
+        const wordsArray = Array.from(dict);
+        lobby.secretWord = wordsArray[Math.floor(Math.random() * wordsArray.length)];
+
+        // ⚔️ ЗАЩИТА 3: Проверяем, что длина загаданного слова СТРОГО совпадает с настройками
+        if (lobby.secretWord.length !== lobby.wordLength) {
+            console.error(`КРИТИЧЕСКАЯ ОШИБКА: Загадано слово ${lobby.secretWord} (${lobby.secretWord.length} букв), а режим ${lobby.wordLength} букв.`);
+            return res.status(500).json({ error: 'Ошибка генерации слова. Попробуйте еще раз.' });
+        }
+
         lobby.status = 'playing';
-        lobby.secretWord = getRandomWordleWord(lobby.wordLength);
         lobby.currentRound = 1;
         lobby.players.forEach(p => { p.attempts = []; p.isWinner = false; p.finishTime = null; });
         await lobby.save();
@@ -1023,7 +1043,10 @@ app.post('/api/wordle/lobby/:id/start', ensureAuth, async (req, res) => {
             }
         }
         res.json({ success: true });
-    } catch (e) { console.error('WORDLE START:', e); res.status(500).json({ error: 'Ошибка' }); }
+    } catch (e) { 
+        console.error('WORDLE START:', e); 
+        res.status(500).json({ error: 'Ошибка' }); 
+    }
 });
 
 // API: Проверка попытки
