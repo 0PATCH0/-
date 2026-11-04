@@ -178,16 +178,22 @@
 
         async function init() {
             try {
-                const res = await fetch(`/api/guild/${guildId}/channels`, { credentials: 'include' });
-                if (res.ok) {
-                    channelsData = await res.json();
-                    document.getElementById('set-channel').innerHTML = '<option value="">-- Не выбран --</option>' + 
-                        channelsData.channels.map(c => `<option value="${c.id}">#${c.name}</option>`).join('');
-                    document.getElementById('set-role').innerHTML = '<option value="">-- Без тега --</option>' + 
-                        channelsData.roles.map(r => `<option value="${r.id}">@${r.name}</option>`).join('');
-                }
-            } catch (e) { console.error(e); }
-
+    const res = await fetch(`/api/guild/${guildId}/channels`, { credentials: 'include' });
+    if (res.ok) {
+        channelsData = await res.json();
+        document.getElementById('set-channel').innerHTML = '<option value="">-- Не выбран --</option>' + 
+            channelsData.channels.map(c => `<option value="${c.id}">#${c.name}</option>`).join('');
+        document.getElementById('set-role').innerHTML = '<option value="">-- Без тега --</option>' + 
+            channelsData.roles.map(r => `<option value="${r.id}">@${r.name}</option>`).join('');
+    } else {
+        console.error("Ошибка API каналов:", res.status, await res.text());
+        alert("Не удалось загрузить каналы. Код: " + res.status);
+    }
+} catch (e) { 
+    console.error(e); 
+    alert("Сетевая ошибка при загрузке каналов");
+            }
+            
             try {
                 const res = await fetch(`/api/guild/${guildId}/event-settings`, { credentials: 'include' });
                 if (res.ok) {
