@@ -6,6 +6,92 @@
     <title>Редактор гайда — Where Winds Meet</title>
     <link rel="stylesheet" href="/css/admin.css">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
+    <style>
+        /* Локальные стили для карточек глав */
+        .chapter-card {
+            background: linear-gradient(160deg, rgba(18, 22, 28, 0.95), rgba(10, 12, 16, 0.98));
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            position: relative;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .chapter-card:hover {
+            border-color: rgba(212, 175, 55, 0.5);
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.1);
+        }
+        .chapter-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            opacity: 0.5;
+        }
+        .chapter-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 16px;
+            background: rgba(0,0,0,0.4);
+            cursor: pointer;
+            user-select: none;
+            transition: 0.2s;
+        }
+        .chapter-header:hover { background: rgba(0,0,0,0.6); }
+        .chapter-header .ch-num {
+            color: var(--gold);
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+            font-size: 16px;
+            min-width: 24px;
+        }
+        .chapter-header .ch-preview {
+            flex: 1;
+            font-family: 'Cinzel', serif;
+            color: var(--text-main);
+            font-size: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .chapter-header .ch-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .chapter-header .ch-btn {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .chapter-header .ch-btn:hover { color: var(--gold); border-color: var(--gold); }
+        .chapter-header .ch-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .chapter-body {
+            display: none;
+            padding: 16px;
+            border-top: 1px solid rgba(212,175,55,0.1);
+        }
+        .chapter-card.open .chapter-body { display: block; animation: fadeInDown 0.3s ease; }
+        
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .btn-loading { opacity: 0.7; cursor: wait !important; }
+    </style>
 </head>
 <body class="admin-page">
     <div class="bg-ink"></div>
@@ -31,97 +117,39 @@
                 <input type="text" id="guide-name" placeholder="Например: ГВГ Полный гайд">
             </div>
             <div class="form-group">
-                <label>Краткое описание (для меню)</label>
+                <label>Краткое описание (для меню в Discord)</label>
                 <input type="text" id="guide-desc" placeholder="Тактики, сборки и советы">
             </div>
         </div>
 
         <div class="panel">
-            <div class="panel-title">
+            <div class="panel-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <span>Главы гайда</span>
-                <button class="btn btn-primary btn-small" onclick="addChapter()">+ Добавить главу</button>
+                <button type="button" class="btn btn-primary btn-small" onclick="addChapter()">+ Добавить главу</button>
             </div>
             <div id="chapters-container"></div>
         </div>
 
         <div style="display: flex; gap: 15px; margin-top: 30px; flex-wrap: wrap;">
-            <button class="btn btn-primary" onclick="saveGuide()" id="btn-save" style="flex: 1; min-width: 200px;">💾 Сохранить гайд</button>
-            <button class="btn btn-danger" onclick="deleteGuide()" id="btn-delete" style="display: none;">🗑 Удалить гайд</button>
+            <button type="button" class="btn btn-primary" onclick="saveGuide()" id="btn-save" style="flex: 1; min-width: 200px; font-size: 16px; padding: 15px;">💾 Сохранить гайд</button>
+            <button type="button" class="btn btn-danger" onclick="deleteGuide()" id="btn-delete" style="display: none;">🗑 Удалить гайд</button>
         </div>
     </div>
 
-    <style>
-        .chapter-card {
-            background: linear-gradient(160deg, rgba(18, 22, 28, 0.9), rgba(10, 12, 16, 0.95));
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            margin-bottom: 12px;
-            overflow: hidden;
-            position: relative;
-        }
-        .chapter-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--gold), transparent);
-        }
-        .chapter-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 14px 16px;
-            background: rgba(0,0,0,0.3);
-            cursor: pointer;
-            user-select: none;
-        }
-        .chapter-header:hover { background: rgba(0,0,0,0.4); }
-        .chapter-header .ch-num {
-            color: var(--gold);
-            font-family: 'Cinzel', serif;
-            font-weight: bold;
-            font-size: 14px;
-            min-width: 24px;
-        }
-        .chapter-header .ch-preview {
-            flex: 1;
-            font-family: 'Cinzel', serif;
-            color: var(--text-main);
-            font-size: 14px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .chapter-header .ch-actions {
-            display: flex;
-            gap: 4px;
-            flex-shrink: 0;
-        }
-        .chapter-header .ch-btn {
-            background: rgba(0,0,0,0.4);
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: 0.2s;
-        }
-        .chapter-header .ch-btn:hover { color: var(--gold); border-color: var(--gold); }
-        .chapter-header .ch-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-        .chapter-body {
-            display: none;
-            padding: 16px;
-            border-top: 1px solid rgba(212,175,55,0.1);
-        }
-        .chapter-card.open .chapter-body { display: block; }
-    </style>
-
     <script>
+        // ⚠️ ИСПРАВЛЕНА КРИТИЧЕСКАЯ ОШИБКА ЗДЕСЬ
+        function escapeHtml(str) {
+            return String(str || '').replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m];
+            });
+        }
+
         const pathParts = window.location.pathname.split('/');
         const guildId = pathParts[2];
         const guideId = pathParts[4];
@@ -132,72 +160,79 @@
 
         let isDirty = false;
         document.addEventListener('input', () => { isDirty = true; });
+        
         if (backLink) {
             backLink.addEventListener('click', (e) => {
                 if (isDirty && !confirm('Вы не сохранили изменения. Выйти?')) e.preventDefault();
             });
         }
 
-        function escapeHtml(s) {
-            return String(s || '').replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[m]));
-        }
-
-        function addChapter(data = { title: '', content: '', color: '#d4af37', imageUrl: '', attachmentUrl: '', attachmentName: '' }, position) {
+        function addChapter(data = {}, position) {
             const container = document.getElementById('chapters-container');
             const card = document.createElement('div');
             card.className = 'chapter-card';
+            
+            // Дефолтные значения, если приходит пустой объект
+            const d = {
+                title: data.title || '',
+                content: data.content || '',
+                color: data.color || '#d4af37',
+                imageUrl: data.imageUrl || '',
+                attachmentUrl: data.attachmentUrl || '',
+                attachmentName: data.attachmentName || ''
+            };
+
             card.innerHTML = `
                 <div class="chapter-header">
                     <span class="ch-num">1.</span>
-                    <span class="ch-preview">${escapeHtml(data.title || 'Без заголовка')}</span>
+                    <span class="ch-preview">${escapeHtml(d.title || 'Без заголовка')}</span>
                     <div class="ch-actions">
-                        <button class="ch-btn" title="Выше" onclick="event.stopPropagation(); moveChapter(this, -1)">↑</button>
-                        <button class="ch-btn" title="Ниже" onclick="event.stopPropagation(); moveChapter(this, 1)">↓</button>
-                        <button class="ch-btn" title="Дублировать" onclick="event.stopPropagation(); duplicateChapter(this)">📋</button>
+                        <button type="button" class="ch-btn" title="Выше" onclick="event.stopPropagation(); moveChapter(this, -1)">↑</button>
+                        <button type="button" class="ch-btn" title="Ниже" onclick="event.stopPropagation(); moveChapter(this, 1)">↓</button>
+                        <button type="button" class="ch-btn" title="Дублировать" onclick="event.stopPropagation(); duplicateChapter(this)">📋</button>
                     </div>
                 </div>
                 <div class="chapter-body">
                     <div class="form-group">
                         <label>Заголовок главы</label>
-                        <input type="text" class="ch-title" value="${escapeHtml(data.title || '')}" placeholder="Название главы">
+                        <input type="text" class="ch-title" value="${escapeHtml(d.title)}" placeholder="Название главы">
                     </div>
                     <div class="form-group">
-                        <label>Текст главы (поддерживает Markdown)</label>
-                        <textarea class="ch-content" style="min-height: 120px;" placeholder="## Заголовок&#10;&#10;Текст...">${escapeHtml(data.content || '')}</textarea>
+                        <label>Текст главы (Markdown)</label>
+                        <textarea class="ch-content" style="min-height: 150px; line-height: 1.5;" placeholder="## Подзаголовок&#10;&#10;Ваш текст здесь...">${escapeHtml(d.content)}</textarea>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Цвет главы</label>
-                            <input type="color" class="ch-color" value="${data.color || '#d4af37'}" style="height: 45px; padding: 5px;">
+                    <div class="form-row" style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 120px;">
+                            <label>Цвет полосы</label>
+                            <input type="color" class="ch-color" value="${d.color}" style="height: 45px; padding: 5px; cursor: pointer; width: 100%;">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="flex: 3; min-width: 200px;">
                             <label>Картинка (URL)</label>
-                            <input type="text" class="ch-image" value="${escapeHtml(data.imageUrl || '')}" placeholder="https://...">
+                            <input type="text" class="ch-image" value="${escapeHtml(d.imageUrl)}" placeholder="https://i.imgur.com/...">
                         </div>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Ссылка на вложение</label>
-                            <input type="text" class="ch-attachment-url" value="${escapeHtml(data.attachmentUrl || '')}" placeholder="https://...">
+                    <div class="form-row" style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 2; min-width: 200px;">
+                            <label>Ссылка на файл (PDF/архив)</label>
+                            <input type="text" class="ch-attachment-url" value="${escapeHtml(d.attachmentUrl)}" placeholder="https://...">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="flex: 1; min-width: 120px;">
                             <label>Текст кнопки</label>
-                            <input type="text" class="ch-attachment-name" value="${escapeHtml(data.attachmentName || '')}" placeholder="Скачать PDF">
+                            <input type="text" class="ch-attachment-name" value="${escapeHtml(d.attachmentName)}" placeholder="Скачать">
                         </div>
                     </div>
-                    <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px;">
-                        <button class="btn btn-danger btn-small" onclick="removeChapter(this)">🗑 Удалить главу</button>
+                    <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 15px;">
+                        <button type="button" class="btn btn-danger btn-small" onclick="removeChapter(this)">🗑 Удалить главу</button>
                     </div>
                 </div>
             `;
 
-            // Открытие по клику на header
+            // Обработчики
             card.querySelector('.chapter-header').addEventListener('click', (e) => {
                 if (e.target.closest('.ch-btn')) return;
                 card.classList.toggle('open');
             });
 
-            // Обновление превью при вводе
             card.querySelector('.ch-title').addEventListener('input', (e) => {
                 card.querySelector('.ch-preview').textContent = e.target.value || 'Без заголовка';
             });
@@ -210,13 +245,14 @@
 
             if (container.children.length === 1) card.classList.add('open');
             renumberChapters();
+            isDirty = true;
         }
 
         function renumberChapters() {
             document.querySelectorAll('#chapters-container .chapter-card').forEach((card, i) => {
                 const numEl = card.querySelector('.ch-num');
                 if (numEl) numEl.textContent = (i + 1) + '.';
-                // Дизейблим кнопки вверх/вниз на краях
+                
                 const upBtn = card.querySelector('.ch-btn[title="Выше"]');
                 const downBtn = card.querySelector('.ch-btn[title="Ниже"]');
                 if (upBtn) upBtn.disabled = (i === 0);
@@ -248,7 +284,6 @@
             };
             const idx = Array.from(card.parentElement.children).indexOf(card);
             addChapter(data, idx + 1);
-            isDirty = true;
         }
 
         function removeChapter(btn) {
@@ -258,7 +293,7 @@
             isDirty = true;
         }
 
-        // Загрузка
+        // Инициализация
         if (!isNew) {
             document.getElementById('page-title').innerHTML = '✍️ Редактирование гайда';
             document.getElementById('btn-delete').style.display = 'block';
@@ -271,12 +306,18 @@
                 .then(guide => {
                     document.getElementById('guide-name').value = guide.name || '';
                     document.getElementById('guide-desc').value = guide.description || '';
-                    (guide.chapters || []).forEach(ch => addChapter(ch));
+                    
+                    if (guide.chapters && guide.chapters.length > 0) {
+                        guide.chapters.forEach(ch => addChapter(ch));
+                    } else {
+                        addChapter();
+                    }
                     isDirty = false;
                 })
-                .catch(err => alert('Не удалось загрузить гайд: ' + err.message));
+                .catch(err => alert('Ошибка загрузки гайда: ' + err.message));
         } else {
             addChapter();
+            isDirty = false;
         }
 
         function saveGuide() {
@@ -286,7 +327,7 @@
 
             document.querySelectorAll('#chapters-container .chapter-card').forEach(card => {
                 chapters.push({
-                    title: card.querySelector('.ch-title').value.trim(),
+                    title: card.querySelector('.ch-title').value.trim() || 'Без названия',
                     content: card.querySelector('.ch-content').value,
                     color: card.querySelector('.ch-color').value,
                     imageUrl: card.querySelector('.ch-image').value.trim(),
@@ -304,7 +345,10 @@
                 : '/api/guild/' + guildId + '/guides/' + guideId;
 
             const btn = document.getElementById('btn-save');
-            btn.innerHTML = 'Сохранение...'; btn.disabled = true;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Сохранение...'; 
+            btn.disabled = true;
+            btn.classList.add('btn-loading');
 
             fetch(url, {
                 method,
@@ -312,31 +356,43 @@
                 credentials: 'include',
                 body: JSON.stringify({ name, description, chapters })
             })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('✅ Гайд сохранён!');
-                        isDirty = false;
-                        setTimeout(() => window.location.href = '/manage/' + guildId + '/guides', 500);
-                    } else {
-                        alert('❌ Ошибка: ' + (data.error || 'неизвестно'));
-                        btn.innerHTML = '💾 Сохранить гайд'; btn.disabled = false;
-                    }
+                .then(async res => {
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Ошибка сервера');
+                    return data;
                 })
-                .catch(() => {
-                    alert('❌ Ошибка сети');
-                    btn.innerHTML = '💾 Сохранить гайд'; btn.disabled = false;
+                .then(data => {
+                    isDirty = false;
+                    btn.innerHTML = '✅ Сохранено!';
+                    btn.style.background = '#2ecc71';
+                    setTimeout(() => window.location.href = '/manage/' + guildId + '/guides', 1000);
+                })
+                .catch(err => {
+                    alert('❌ Ошибка при сохранении: ' + err.message);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    btn.classList.remove('btn-loading');
                 });
         }
 
         function deleteGuide() {
-            if (!confirm('Удалить этот гайд навсегда?')) return;
+            if (!confirm('Вы уверены, что хотите удалить этот гайд навсегда?')) return;
+            
+            const btn = document.getElementById('btn-delete');
+            btn.innerHTML = '⏳ Удаление...';
+            btn.disabled = true;
+
             fetch('/api/guild/' + guildId + '/guides/' + guideId, {
                 method: 'DELETE',
                 credentials: 'include'
-            }).then(() => {
+            }).then(res => {
+                if (!res.ok) throw new Error('Ошибка');
                 isDirty = false;
                 window.location.href = '/manage/' + guildId + '/guides';
+            }).catch(() => {
+                alert('Не удалось удалить гайд');
+                btn.innerHTML = '🗑 Удалить гайд';
+                btn.disabled = false;
             });
         }
     </script>
