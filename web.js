@@ -468,6 +468,29 @@ app.get('/api/profiles-global', async (req, res) => {
     } catch (e) { console.error('PROFILES GLOBAL:', e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
 });
 
+app.get('/api/guild/:id/channels', isModerator, async (req, res) => {
+    try {
+        const client = req.app.get('botClient');
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Бот не на сервере' });
+        
+        // Берем текстовые каналы
+        const channels = guild.channels.cache
+            .filter(ch => ch.isTextBased && ch.isTextBased() && !ch.isThread() && ch.type !== 4)
+            .map(ch => ({ id: ch.id, name: ch.name }));
+            
+        // Берем роли (кроме @everyone и ботов)
+        const roles = guild.roles.cache
+            .filter(r => r.id !== guild.id && !r.managed && !r.name.startsWith('@'))
+            .map(r => ({ id: r.id, name: r.name }));
+            
+        res.json({ channels, roles });
+    } catch (e) { 
+        console.error('GUILD CHANNELS:', e); 
+        res.status(500).json({ error: 'Ошибка' }); 
+    }
+});
+
 // ─── СОБЫТИЯ ──────────────────────────────────────────────
 app.get('/api/events/:guildId', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
@@ -536,6 +559,45 @@ app.post('/api/guild/:id/event-settings', isModerator, async (req, res) => {
         );
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// ─── КАНАЛЫ ДЛЯ СОБЫТИЙ (ИЗОЛИРОВАННЫЙ) ──────────────────
+app.get('/api/event-channels/:id', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
+    try {
+        const client = req.app.get('botClient');
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Бот не на сервере' });
+
+        // Проверяем, что пользователь модератор или админ
+        const settings = await Settings.findOne({ guildId: req.params.id });
+        const userGuildInfo = req.user.guilds.find(g => g.id === req.params.id);
+        const isDiscordAdmin = userGuildInfo && (BigInt(userGuildInfo.permissions) & BigInt(0x8)) === BigInt(0x8);
+        const isBotOwner = req.user.id === OWNER_ID;
+
+        let hasAccess = isBotOwner || isDiscordAdmin;
+        if (!hasAccess && settings) {
+            const member = await guild.members.fetch(req.user.id).catch(() => null);
+            if (member && settings.modRoles && member.roles.cache.some(r => settings.modRoles.includes(r.id))) {
+                hasAccess = true;
+            }
+        }
+
+        if (!hasAccess) return res.status(403).json({ error: 'Доступ запрещен' });
+
+        const channels = guild.channels.cache
+            .filter(ch => ch.isTextBased && ch.isTextBased() && !ch.isThread() && ch.type !== 4)
+            .map(ch => ({ id: ch.id, name: ch.name }));
+            
+        const roles = guild.roles.cache
+            .filter(r => r.id !== guild.id && !r.managed && !r.name.startsWith('@'))
+            .map(r => ({ id: r.id, name: r.name }));
+            
+        res.json({ channels, roles });
+    } catch (e) { 
+        console.error('EVENT CHANNELS:', e); 
+        res.status(500).json({ error: 'Ошибка' }); 
+    }
 });
 
 // ─── ДУЭЛИ ────────────────────────────────────────────────
