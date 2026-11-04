@@ -534,6 +534,27 @@ app.get('/api/guild/:id/channels', isModerator, async (req, res) => {
     } catch (e) { console.error('GUILD CHANNELS:', e); res.status(500).json({ error: 'Ошибка' }); }
 });
 
+// ─── НАСТРОЙКИ СОБЫТИЙ ───────────────────────────────────
+app.get('/api/guild/:id/event-settings', isModerator, async (req, res) => {
+    try {
+        let s = await EventSettings.findOne({ guildId: req.params.id });
+        if (!s) s = await EventSettings.create({ guildId: req.params.id });
+        res.json(s);
+    } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.post('/api/guild/:id/event-settings', isModerator, async (req, res) => {
+    try {
+        const { eventChannelId, pingRoleId, timezoneOffset, eventTypes } = req.body;
+        await EventSettings.findOneAndUpdate(
+            { guildId: req.params.id },
+            { eventChannelId, pingRoleId, timezoneOffset, eventTypes },
+            { upsert: true }
+        );
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
 // ─── ДУЭЛИ ────────────────────────────────────────────────
 app.get('/api/duel/:id', ensureAuth, async (req, res) => {
     try {
@@ -1451,11 +1472,71 @@ app.delete('/api/guild/:id/roster/setup', isModerator, async (req, res) => {
     } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
 
+// ─── ТАЙМЕР УВЕДОМЛЕНИЙ О СОБЫТИЯХ ───────────────────────
+function startEventNotifier(client) {
+    // Проверяем каждую минуту
+    setInterval(async () => {
+        try {
+            const now = Date.now();
+            // Ищем события, которые начнутся в ближайшие 5 минут (или только что начались) и по которым нет уведомления
+            const upcomingEvents = await Event.find({
+                reminded: false,
+                date: { $gt: now - 60000, $lt: now + 300000 } // от -1 минуты до +5 минут
+            });
+
+            for (const event of upcomingEvents) {
+                const settings = await EventSettings.findOne({ guildId: event.guildId });
+                if (!settings || !settings.eventChannelId) continue;
+
+                const channel = await client.channels.fetch(settings.eventChannelId).catch(() => null);
+                if (!channel) continue;
+
+                // Формируем дату с учетом часового пояса
+                const dateObj = new Date(event.date);
+                const formattedDate = dateObj.toLocaleString('ru-RU', {
+                    timeZone: `Etc/GMT${event.timezoneOffset >= 0 ? '-' : '+'}${Math.abs(event.timezoneOffset)}`,
+                    day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+                });
+
+                // Пингуем роль
+                const content = settings.pingRoleId ? `<@&${settings.pingRoleId}>` : undefined;
+
+                const embed = new EmbedBuilder()
+                    .setTitle(`🎉 Начинается событие: ${event.title}`)
+                    .setColor('#d4af37')
+                    .setDescription(event.description || 'Пора собираться!')
+                    .addFields(
+                        { name: '🏷️ Тип', value: event.type || 'Другое', inline: true },
+                        { name: '🕒 Время', value: formattedDate, inline: true }
+                    )
+                    .setFooter({ text: 'Where Winds Meet • Календарь событий' })
+                    .setTimestamp();
+
+                // Кнопка на сайт
+                const siteUrl = `https://patchitos1234.fly.dev/manage/${event.guildId}/events`;
+                const btn = new ButtonBuilder()
+                    .setLabel('Открыть на сайте')
+                    .setURL(siteUrl)
+                    .setStyle(ButtonStyle.Link);
+
+                await channel.send({ content, embeds: [embed], components: [new ActionRowBuilder().addComponents(btn)] });
+                
+                // Отмечаем, что уведомление отправлено
+                event.reminded = true;
+                await event.save();
+            }
+        } catch (e) {
+            console.error('EVENT NOTIFIER ERROR:', e);
+        }
+    }, 60000); // 1 минута
+}
+
 // ─── 404 ──────────────────────────────────────────────────
 app.use((req, res) => { res.status(404).sendFile(path.join(__dirname, 'public', '404.html')); });
 
 function startWebServer(botClient) {
     app.set('botClient', botClient);
+    startEventNotifier(botClient);
     app.listen(process.env.PORT || 8080, () => console.log('🌐 Веб-панель запущена'));
 }
 
