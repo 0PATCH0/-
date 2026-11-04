@@ -24,7 +24,21 @@ const RosterConfigSchema = new mongoose.Schema({
 });
 const RosterMessageSchema = new mongoose.Schema({ guildId: String, channelId: String, messageId: String });
 const LogSchema = new mongoose.Schema({ guildId: String, userId: String, username: String, action: String, details: String, date: { type: Date, default: Date.now } });
-const GuideSchema = new mongoose.Schema({ guildId: String, name: String, description: String, chapters: [{ title: String, content: String, color: String, imageUrl: String, attachmentUrl: String, attachmentName: String }], date: { type: Date, default: Date.now } });
+const GuideSchema = new mongoose.Schema({ 
+    guildId: String, 
+    name: String, 
+    description: String, 
+    chapters: [{ 
+        title: String, 
+        content: String, 
+        color: String, 
+        imageUrl: String, 
+        imageUrls: { type: [String], default: [] }, // ← ДОБАВЛЕНО СЮДА
+        attachmentUrl: String, 
+        attachmentName: String 
+    }], 
+    date: { type: Date, default: Date.now } 
+});
 const EventSchema = new mongoose.Schema({ guildId: String, title: String, description: String, date: Number, creatorId: String, attendees: [{ type: String }] });
 
 const PlayerProfileSchema = new mongoose.Schema({
