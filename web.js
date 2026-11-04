@@ -1168,21 +1168,53 @@ app.get('/api/guild/:id/guides', isModerator, async (req, res) => {
     try { res.json(await Guide.find({ guildId: req.params.id }).sort({ date: -1 })); }
     catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
+
 app.get('/api/guild/:id/guides/:guideId', isModerator, async (req, res) => {
-    try { res.json(await Guide.findById(req.params.guideId)); }
-    catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+    try {
+        // Если в URL стоит "new", сразу отдаем пустой каркас для нового гайда
+        if (req.params.guideId === 'new') {
+            return res.json({ name: '', description: '', chapters: [] });
+        }
+
+        // Проверяем, что ID валидный (24 символа), чтобы Mongoose не падал
+        if (!req.params.guideId.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Неверный формат ID гайда' });
+        }
+
+        const guide = await Guide.findById(req.params.guideId);
+        if (!guide) return res.status(404).json({ error: 'Гайд не найден' });
+        
+        res.json(guide);
+    } catch (e) { 
+        console.error('GUIDE GET:', e); 
+        res.status(500).json({ error: 'Ошибка сервера' }); 
+    }
 });
+
 app.post('/api/guild/:id/guides', isModerator, async (req, res) => {
-    try { await Guide.create({ guildId: req.params.id, ...req.body }); res.json({ success: true }); }
-    catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+    try { 
+        const guide = await Guide.create({ guildId: req.params.id, ...req.body }); 
+        res.json({ success: true, guideId: guide._id }); 
+    }
+    catch (e) { console.error('GUIDE POST:', e); res.status(500).json({ error: 'Ошибка' }); }
 });
+
 app.put('/api/guild/:id/guides/:guideId', isModerator, async (req, res) => {
-    try { await Guide.findByIdAndUpdate(req.params.guideId, req.body); res.json({ success: true }); }
-    catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+    try { 
+        if (!req.params.guideId.match(/^[0-9a-fA-F]{24}$/)) return res.status(400).json({ error: 'Неверный ID' });
+        await Guide.findByIdAndUpdate(req.params.guideId, req.body); 
+        res.json({ success: true }); 
+    }
+    catch (e) { console.error('GUIDE PUT:', e); res.status(500).json({ error: 'Ошибка' }); }
 });
+
 app.delete('/api/guild/:id/guides/:guideId', isModerator, async (req, res) => {
-    try { await Guide.findByIdAndDelete(req.params.guideId); res.json({ success: true }); }
-    catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+    try { 
+        if (!req.params.guideId.match(/^[0-9a-fA-F]{24}$/)) return res.status(400).json({ error: 'Неверный ID' });
+        await Guide.findByIdAndDelete(req.params.guideId); 
+        res.json({ success: true }); 
+    }
+    catch (e) { console.error('GUIDE DELETE:', e); res.status(500).json({ error: 'Ошибка' }); }
 });
 
 // ─── ЛОГИ ─────────────────────────────────────────────────
