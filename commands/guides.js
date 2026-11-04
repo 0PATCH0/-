@@ -16,7 +16,6 @@ module.exports = {
         .setDescription('Посмотреть список гайдов сервера'),
 
     async execute(interaction) {
-        // Скрываем меню от других
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const guides = await Guide.find({ guildId: interaction.guild.id }).sort({ date: -1 });
@@ -56,54 +55,70 @@ module.exports = {
                 return i.update({ content: 'Гайд не найден или был удален.', components: [] });
             }
 
-            await i.update({ content: `✅ Гайд **${selectedGuide.name}** отправлен в чат!`, components: [] });
+            // Скрываем меню, чтобы не мешало
+            await i.update({ content: '⏳ Загрузка гайда...', components: [] });
 
             if (selectedGuide.chapters.length === 0) {
-                return interaction.channel.send({ content: 'В этом гайде пока нет глав.' });
+                return i.editReply({ content: 'В этом гайде пока нет глав.' });
             }
 
-            // Отправляем главы
-            for (const ch of selectedGuide.chapters) {
-                const embed = new EmbedBuilder()
-                    .setTitle(ch.title || 'Без названия')
-                    .setDescription(ch.content ? ch.content.substring(0, 4000) : '*Пустая глава*')
-                    .setColor(ch.color || '#d4af37');
+            // Discord позволяет максимум 10 эмбедов в одном сообщении
+            // Разбиваем главы на пачки по 10
+            const chunks = [];
+            for (let c = 0; c < selectedGuide.chapters.length; c += 10) {
+                chunks.push(selectedGuide.chapters.slice(c, c + 10));
+            }
 
-                // Настройка автора
-                if (ch.author) {
-                    embed.setAuthor({ 
-                        name: ch.author, 
-                        iconURL: ch.authorImg || undefined 
-                    });
+            // Отправляем скрытые сообщения
+            for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+                const chunk = chunks[chunkIndex];
+                const embeds = [];
+                const allComponents = [];
+
+                for (const ch of chunk) {
+                    const embed = new EmbedBuilder()
+                        .setTitle(ch.title || 'Без названия')
+                        .setDescription(ch.content ? ch.content.substring(0, 4000) : '*Пустая глава*')
+                        .setColor(ch.color || '#d4af37');
+
+                    if (ch.author) {
+                        embed.setAuthor({ 
+                            name: ch.author, 
+                            iconURL: ch.authorImg || undefined 
+                        });
+                    }
+
+                    if (ch.footer) {
+                        embed.setFooter({ text: ch.footer });
+                    }
+
+                    if (ch.thumbnail) {
+                        try { embed.setThumbnail(ch.thumbnail); } catch (e) {}
+                    }
+
+                    if (ch.imageUrls && ch.imageUrls.length > 0) {
+                        try { embed.setImage(ch.imageUrls[0]); } catch (e) {}
+                    } else if (ch.imageUrl) {
+                        try { embed.setImage(ch.imageUrl); } catch (e) {}
+                    }
+
+                    if (ch.attachmentUrl) {
+                        const btn = new ButtonBuilder()
+                            .setLabel(ch.attachmentName || '📄 Скачать вложение')
+                            .setURL(ch.attachmentUrl)
+                            .setStyle(ButtonStyle.Link);
+                        allComponents.push(new ActionRowBuilder().addComponents(btn));
+                    }
+
+                    embeds.push(embed);
                 }
 
-                // Настройка футера
-                if (ch.footer) {
-                    embed.setFooter({ text: ch.footer });
-                }
-
-                // Настройка миниатюры (справа сверху)
-                if (ch.thumbnail) {
-                    try { embed.setThumbnail(ch.thumbnail); } catch (e) {}
-                }
-
-                // Основные изображения (если их несколько, ставим первое в image, остальные отправляем вложением или просто в тексте)
-                if (ch.imageUrls && ch.imageUrls.length > 0) {
-                    try { embed.setImage(ch.imageUrls[0]); } catch (e) {}
-                } else if (ch.imageUrl) {
-                    try { embed.setImage(ch.imageUrl); } catch (e) {}
-                }
-
-                const components = [];
-                if (ch.attachmentUrl) {
-                    const btn = new ButtonBuilder()
-                        .setLabel(ch.attachmentName || '📄 Скачать вложение')
-                        .setURL(ch.attachmentUrl)
-                        .setStyle(ButtonStyle.Link);
-                    components.push(new ActionRowBuilder().addComponents(btn));
-                }
-
-                await interaction.channel.send({ embeds: [embed], components: components });
+                // Отправляем как скрытое сообщение (видит только вызвавший)
+                await i.followUp({ 
+                    embeds: embeds, 
+                    components: allComponents.slice(0, 5), // Discord разрешает максимум 5 рядов с кнопками
+                    flags: MessageFlags.Ephemeral 
+                });
             }
         });
     },
