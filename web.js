@@ -472,36 +472,30 @@ app.get('/api/profiles-global', async (req, res) => {
 app.get('/api/events/:guildId', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
     try { res.json(await Event.find({ guildId: req.params.guildId }).sort({ date: 1 })); }
-    catch (e) { console.error('EVENTS LIST:', e); res.status(500).json({ error: 'Ошибка' }); }
+    catch (e) { res.status(500).json({ error: 'Ошибка' }); }
 });
 
 app.post('/api/events/:guildId', isModerator, async (req, res) => {
     try {
-        const { title, description, date, channelId, pingRoleId, imageUrl } = req.body || {};
-        if (!title || !date) return res.status(400).json({ error: 'title и date обязательны' });
-        const event = await Event.create({ guildId: req.params.guildId, title, description: description || '', date: Number(date), creatorId: req.user.id, attendees: [] });
-        let discordMessageId = null;
-        if (channelId) {
-            const client = req.app.get('botClient');
-            const channel = await client.channels.fetch(channelId).catch(() => null);
-            if (channel && channel.isTextBased && channel.isTextBased()) {
-                const dateUnix = Math.floor(Number(date) / 1000);
-                const embed = new EmbedBuilder()
-                    .setTitle('📅 ' + title)
-                    .setColor('#d4af37')
-                    .setDescription((description || 'Событие создано.') + '\n\n🕒 **Начало:** <t:' + dateUnix + ':F> (<t:' + dateUnix + ':R>)')
-                    .addFields({ name: '✍️ Записаться', value: 'Открой сайт → События → «Записаться»', inline: false })
-                    .setFooter({ text: 'Where Winds Meet • События' })
-                    .setTimestamp();
-                if (imageUrl) embed.setImage(imageUrl);
-                const button = new ButtonBuilder().setLabel('Открыть события на сайте').setURL('https://patchitos1234.fly.dev/manage/' + req.params.guildId + '/events').setStyle(ButtonStyle.Link);
-                const row = new ActionRowBuilder().addComponents(button);
-                const content = pingRoleId ? '<@&' + pingRoleId + '>' : undefined;
-                const msg = await channel.send({ content, embeds: [embed], components: [row] }).catch(() => null);
-                if (msg) discordMessageId = msg.id;
-            }
-        }
-        res.json({ success: true, event, discordMessageId });
+        const { title, description, date, type, timezoneOffset, isRecurring, recurrenceType, recurrenceDays, timeOfDay } = req.body || {};
+        if (!title) return res.status(400).json({ error: 'title обязателен' });
+        
+        const event = await Event.create({ 
+            guildId: req.params.guildId, 
+            title, 
+            description: description || '', 
+            type: type || 'Другое',
+            date: date ? Number(date) : Date.now(), 
+            timezoneOffset: Number(timezoneOffset) || 3,
+            creatorId: req.user.id, 
+            attendees: [],
+            isRecurring: !!isRecurring,
+            recurrenceType: recurrenceType || 'none',
+            recurrenceDays: recurrenceDays || [],
+            timeOfDay: timeOfDay || '20:00'
+        });
+        
+        res.json({ success: true, event });
     } catch (e) { console.error('EVENT CREATE:', e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
 });
 
@@ -515,23 +509,12 @@ app.post('/api/guild/:id/events/:eventId/join', async (req, res) => {
         else event.attendees.push(userId);
         await event.save();
         res.json({ success: true });
-    } catch (e) { console.error('EVENT JOIN:', e); res.status(500).json({ error: 'Ошибка' }); }
+    } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
 });
 
 app.delete('/api/events/:guildId/:eventId', isModerator, async (req, res) => {
     try { await Event.findByIdAndDelete(req.params.eventId); res.json({ success: true }); }
-    catch (e) { console.error('EVENT DELETE:', e); res.status(500).json({ error: 'Ошибка' }); }
-});
-
-app.get('/api/guild/:id/channels', isModerator, async (req, res) => {
-    try {
-        const client = req.app.get('botClient');
-        const guild = client.guilds.cache.get(req.params.id);
-        if (!guild) return res.status(404).json({ error: 'Бот не на сервере' });
-        const channels = guild.channels.cache.filter(ch => ch.isTextBased && ch.isTextBased() && !ch.isThread() && ch.type !== 4).map(ch => ({ id: ch.id, name: ch.name }));
-        const roles = guild.roles.cache.filter(r => r.id !== guild.id && !r.managed && !r.name.startsWith('@')).map(r => ({ id: r.id, name: r.name }));
-        res.json({ channels, roles });
-    } catch (e) { console.error('GUILD CHANNELS:', e); res.status(500).json({ error: 'Ошибка' }); }
+    catch (e) { res.status(500).json({ error: 'Ошибка' }); }
 });
 
 // ─── НАСТРОЙКИ СОБЫТИЙ ───────────────────────────────────
@@ -545,10 +528,10 @@ app.get('/api/guild/:id/event-settings', isModerator, async (req, res) => {
 
 app.post('/api/guild/:id/event-settings', isModerator, async (req, res) => {
     try {
-        const { eventChannelId, pingRoleId, timezoneOffset, eventTypes } = req.body;
+        const { eventChannelId, pingRoleId, timezoneOffset } = req.body;
         await EventSettings.findOneAndUpdate(
             { guildId: req.params.id },
-            { eventChannelId, pingRoleId, timezoneOffset, eventTypes },
+            { eventChannelId, pingRoleId, timezoneOffset },
             { upsert: true }
         );
         res.json({ success: true });
