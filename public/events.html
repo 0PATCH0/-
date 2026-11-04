@@ -21,6 +21,14 @@
         .event-form { background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; }
         .form-row { display: flex; gap: 15px; flex-wrap: wrap; }
         .form-row .form-group { flex: 1; min-width: 200px; }
+        
+        .days-grid { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+        .day-checkbox { position: relative; }
+        .day-checkbox input { position: absolute; opacity: 0; }
+        .day-checkbox label { display: inline-block; padding: 8px 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 14px; color: var(--text-muted); transition: 0.2s; }
+        .day-checkbox input:checked + label { background: var(--gold); color: #000; border-color: var(--gold); font-weight: bold; }
+        
+        .hidden { display: none !important; }
     </style>
 </head>
 <body class="admin-page">
@@ -39,14 +47,15 @@
         </div>
 
         <div class="tabs-nav">
-            <button class="tab-btn active" onclick="switchTab('events')">События</button>
-            <button class="tab-btn" onclick="switchTab('settings')">Настройки</button>
+            <button type="button" class="tab-btn active" onclick="switchTab('events', this)">События</button>
+            <button type="button" class="tab-btn" onclick="switchTab('settings', this)">Настройки</button>
         </div>
 
         <!-- Вкладка: События -->
         <div id="tab-events" class="tab-content active">
             <div class="event-form">
-                <h3 style="margin-top: 0; color: var(--gold); font-family: 'Cinzel', serif;">Создать событие</h3>
+                <h3 style="margin-top: 0; color: var(--gold); font-family: 'Cinzel', serif;">Добавить событие</h3>
+                
                 <div class="form-row">
                     <div class="form-group">
                         <label>Название *</label>
@@ -63,10 +72,15 @@
                         </select>
                     </div>
                 </div>
+
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Дата и время</label>
-                        <input type="datetime-local" id="ev-date">
+                        <label>Режим</label>
+                        <select id="ev-recurring" onchange="toggleRecurrence()">
+                            <option value="none">Разовое</option>
+                            <option value="daily">Ежедневное</option>
+                            <option value="weekly">Еженедельное</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Часовой пояс</label>
@@ -75,18 +89,42 @@
                             <option value="0">UTC</option>
                             <option value="2">UTC+2</option>
                             <option value="4">UTC+4</option>
-                            <option value="5">UTC+5</option>
                         </select>
                     </div>
                 </div>
+
+                <div id="recurrence-fields" class="hidden">
+                    <div class="form-group">
+                        <label>Время начала (HH:MM)</label>
+                        <input type="time" id="ev-time" value="20:00">
+                    </div>
+                    <div id="weekly-days" class="form-group hidden">
+                        <label>Дни недели</label>
+                        <div class="days-grid">
+                            <div class="day-checkbox"><input type="checkbox" id="d1" value="1"><label for="d1">Пн</label></div>
+                            <div class="day-checkbox"><input type="checkbox" id="d2" value="2"><label for="d2">Вт</label></div>
+                            <div class="day-checkbox"><input type="checkbox" id="d3" value="3"><label for="d3">Ср</label></div>
+                            <div class="day-checkbox"><input type="checkbox" id="d4" value="4"><label for="d4">Чт</label></div>
+                            <div class="day-checkbox"><input type="checkbox" id="d5" value="5"><label for="d5">Пт</label></div>
+                            <div class="day-checkbox"><input type="checkbox" id="d6" value="6"><label for="d6">Сб</label></div>
+                            <div class="day-checkbox"><input type="checkbox" id="d0" value="0"><label for="d0">Вс</label></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="date-field" class="form-group">
+                    <label>Дата и время (для разового)</label>
+                    <input type="datetime-local" id="ev-date">
+                </div>
+
                 <div class="form-group">
                     <label>Описание</label>
                     <textarea id="ev-desc" style="min-height: 80px;" placeholder="Детали события..."></textarea>
                 </div>
-                <button class="btn btn-primary" onclick="createEvent()">Создать</button>
+                <button type="button" class="btn btn-primary" onclick="createEvent()">Создать событие</button>
             </div>
 
-            <h3 style="color: var(--gold); font-family: 'Cinzel', serif;">Предстоящие события</h3>
+            <h3 style="color: var(--gold); font-family: 'Cinzel', serif;">Список событий</h3>
             <div id="events-list"></div>
         </div>
 
@@ -94,7 +132,7 @@
         <div id="tab-settings" class="tab-content">
             <div class="event-form">
                 <h3 style="margin-top: 0; color: var(--gold); font-family: 'Cinzel', serif;">Настройки уведомлений</h3>
-                <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 15px;">Бот будет присылать красивое сообщение с пингом роли за 5 минут до начала события.</p>
+                <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 15px;">Бот будет присылать сообщение с тегом роли ровно в момент начала события.</p>
                 
                 <div class="form-group">
                     <label>Канал для анонсов</label>
@@ -104,17 +142,8 @@
                     <label>Роль для пинга (тега)</label>
                     <select id="set-role"><option>Загрузка...</option></select>
                 </div>
-                <div class="form-group">
-                    <label>Часовой пояс по умолчанию</label>
-                    <select id="set-tz">
-                        <option value="3">МСК (UTC+3)</option>
-                        <option value="0">UTC</option>
-                        <option value="2">UTC+2</option>
-                        <option value="4">UTC+4</option>
-                    </select>
-                </div>
                 
-                <button class="btn btn-primary" onclick="saveSettings()">Сохранить настройки</button>
+                <button type="button" class="btn btn-primary" onclick="saveSettings()">Сохранить настройки</button>
             </div>
         </div>
     </div>
@@ -123,40 +152,50 @@
         const guildId = window.location.pathname.split('/')[2];
         let channelsData = { channels: [], roles: [] };
 
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            event.target.classList.add('active');
+            btn.classList.add('active');
             document.getElementById('tab-' + tabId).classList.add('active');
         }
 
-        // Инициализация
+        function toggleRecurrence() {
+            const mode = document.getElementById('ev-recurring').value;
+            const recurFields = document.getElementById('recurrence-fields');
+            const dateField = document.getElementById('date-field');
+            const weeklyDays = document.getElementById('weekly-days');
+
+            if (mode === 'none') {
+                recurFields.classList.add('hidden');
+                dateField.classList.remove('hidden');
+            } else {
+                recurFields.classList.remove('hidden');
+                dateField.classList.add('hidden');
+                if (mode === 'weekly') weeklyDays.classList.remove('hidden');
+                else weeklyDays.classList.add('hidden');
+            }
+        }
+
         async function init() {
-            // Загружаем каналы и роли
             try {
                 const res = await fetch(`/api/guild/${guildId}/channels`, { credentials: 'include' });
                 if (res.ok) {
                     channelsData = await res.json();
-                    const chSelect = document.getElementById('set-channel');
-                    chSelect.innerHTML = '<option value="">-- Не выбран --</option>' + 
+                    document.getElementById('set-channel').innerHTML = '<option value="">-- Не выбран --</option>' + 
                         channelsData.channels.map(c => `<option value="${c.id}">#${c.name}</option>`).join('');
-                    
-                    const roleSelect = document.getElementById('set-role');
-                    roleSelect.innerHTML = '<option value="">-- Без тега --</option>' + 
+                    document.getElementById('set-role').innerHTML = '<option value="">-- Без тега --</option>' + 
                         channelsData.roles.map(r => `<option value="${r.id}">@${r.name}</option>`).join('');
                 }
-            } catch (e) { console.error('Ошибка загрузки каналов:', e); }
+            } catch (e) { console.error(e); }
 
-            // Загружаем настройки
             try {
                 const res = await fetch(`/api/guild/${guildId}/event-settings`, { credentials: 'include' });
                 if (res.ok) {
                     const set = await res.json();
                     if (set.eventChannelId) document.getElementById('set-channel').value = set.eventChannelId;
                     if (set.pingRoleId) document.getElementById('set-role').value = set.pingRoleId;
-                    if (set.timezoneOffset !== undefined) document.getElementById('set-tz').value = set.timezoneOffset;
                 }
-            } catch (e) { console.error('Ошибка загрузки настроек:', e); }
+            } catch (e) { console.error(e); }
 
             loadEvents();
         }
@@ -174,16 +213,25 @@
                 }
 
                 list.innerHTML = events.map(ev => {
-                    const d = new Date(ev.date);
-                    const dateStr = d.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                    let timeStr = '';
+                    if (ev.isRecurring) {
+                        if (ev.recurrenceType === 'daily') timeStr = `Ежедневно в ${ev.timeOfDay}`;
+                        else {
+                            const daysMap = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+                            const days = (ev.recurrenceDays || []).map(d => daysMap[d]).join(', ');
+                            timeStr = `Еженедельно (${days}) в ${ev.timeOfDay}`;
+                        }
+                    } else {
+                        timeStr = new Date(ev.date).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                    }
+
                     return `
                         <div class="event-card">
                             <div class="event-info">
                                 <h3>${ev.title}</h3>
                                 <div class="event-meta">
                                     <span>🏷️ ${ev.type || 'Другое'}</span>
-                                    <span>🕒 ${dateStr}</span>
-                                    <span>👥 ${ev.attendees.length} участников</span>
+                                    <span>🕒 ${timeStr}</span>
                                 </div>
                             </div>
                             <button class="btn btn-danger btn-small" onclick="deleteEvent('${ev._id}')">Удалить</button>
@@ -197,24 +245,41 @@
 
         async function createEvent() {
             const title = document.getElementById('ev-title').value.trim();
-            const dateStr = document.getElementById('ev-date').value;
             const type = document.getElementById('ev-type').value;
             const tz = document.getElementById('ev-tz').value;
             const description = document.getElementById('ev-desc').value.trim();
+            const mode = document.getElementById('ev-recurring').value;
 
-            if (!title || !dateStr) return alert('Заполните название и время!');
+            if (!title) return alert('Введите название!');
 
-            // Парсим дату как локальную, но переводим в Unix timestamp
-            // Учитываем выбранный часовой пояс
-            const date = new Date(dateStr);
-            // Нужно скорректировать на часовой пояс, чтобы дата была правильной
-            const utcTimestamp = date.getTime() - (date.getTimezoneOffset() * 60000) - (Number(tz) * 3600000);
+            const payload = {
+                title, description, type, timezoneOffset: Number(tz),
+                isRecurring: mode !== 'none',
+                recurrenceType: mode,
+                timeOfDay: document.getElementById('ev-time').value || '20:00',
+                recurrenceDays: []
+            };
+
+            if (mode === 'weekly') {
+                document.querySelectorAll('.days-grid input:checked').forEach(cb => {
+                    payload.recurrenceDays.push(Number(cb.value));
+                });
+                if (payload.recurrenceDays.length === 0) return alert('Выберите хотя бы один день недели!');
+            }
+
+            if (mode === 'none') {
+                const dateStr = document.getElementById('ev-date').value;
+                if (!dateStr) return alert('Выберите дату и время!');
+                const date = new Date(dateStr);
+                // Переводим в UTC с учетом часового пояса
+                payload.date = date.getTime() - (date.getTimezoneOffset() * 60000) - (Number(tz) * 3600000);
+            }
 
             const res = await fetch(`/api/events/${guildId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ title, description, type, date: utcTimestamp, timezoneOffset: Number(tz) })
+                body: JSON.stringify(payload)
             });
             
             if (res.ok) {
@@ -237,13 +302,12 @@
         async function saveSettings() {
             const eventChannelId = document.getElementById('set-channel').value;
             const pingRoleId = document.getElementById('set-role').value;
-            const timezoneOffset = Number(document.getElementById('set-tz').value);
 
             const res = await fetch(`/api/guild/${guildId}/event-settings`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ eventChannelId, pingRoleId, timezoneOffset })
+                body: JSON.stringify({ eventChannelId, pingRoleId, timezoneOffset: 3 })
             });
 
             if (res.ok) alert('Настройки сохранены!');
