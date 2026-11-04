@@ -100,6 +100,14 @@ const WordleLobbySchema = new mongoose.Schema({
     }]
 }, { timestamps: true });
 
+const EventSettingsSchema = new mongoose.Schema({
+    guildId: { type: String, required: true, unique: true },
+    eventChannelId: { type: String, default: null }, // Канал для анонсов
+    pingRoleId: { type: String, default: null },     // Роль для тега
+    timezoneOffset: { type: Number, default: 3 },    // Часовой пояс (например, +3 для МСК)
+    eventTypes: { type: [String], default: ['ГВГ', 'Вечеринка', 'Арена', 'Реイド', 'Другое'] } // Типы событий
+});
+
 
 module.exports = {
     Settings: mongoose.model('Settings', SettingsSchema),
@@ -114,5 +122,6 @@ module.exports = {
     Event: mongoose.model('Event', EventSchema),
     Challenge: mongoose.model('Challenge', ChallengeSchema),
     WordleLobby: mongoose.model('WordleLobby', WordleLobbySchema),
-    PlayerProfile: mongoose.model('PlayerProfile', PlayerProfileSchema)
+    PlayerProfile: mongoose.model('PlayerProfile', PlayerProfileSchema),
+    EventSettings: mongoose.model('EventSettings', EventSettingsSchema)
 };
