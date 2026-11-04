@@ -16,10 +16,10 @@ module.exports = {
         .setDescription('Посмотреть список гайдов сервера'),
 
     async execute(interaction) {
-        // Используем MessageFlags для скрытого сообщения
+        // Скрываем меню от других
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        const guides = await Guide.find({ guildId: interaction.guild.id });
+        const guides = await Guide.find({ guildId: interaction.guild.id }).sort({ date: -1 });
 
         if (guides.length === 0) {
             return interaction.editReply({ content: 'На этом сервере пока нет гайдов. Администраторы могут добавить их на сайте.' });
@@ -58,19 +58,39 @@ module.exports = {
 
             await i.update({ content: `✅ Гайд **${selectedGuide.name}** отправлен в чат!`, components: [] });
 
-            // Отправляем каждую главу отдельным сообщением
             if (selectedGuide.chapters.length === 0) {
                 return interaction.channel.send({ content: 'В этом гайде пока нет глав.' });
             }
 
+            // Отправляем главы
             for (const ch of selectedGuide.chapters) {
                 const embed = new EmbedBuilder()
                     .setTitle(ch.title || 'Без названия')
                     .setDescription(ch.content ? ch.content.substring(0, 4000) : '*Пустая глава*')
                     .setColor(ch.color || '#d4af37');
-                
-                if (ch.imageUrl) {
-                    // Проверка на валидность URL картинки
+
+                // Настройка автора
+                if (ch.author) {
+                    embed.setAuthor({ 
+                        name: ch.author, 
+                        iconURL: ch.authorImg || undefined 
+                    });
+                }
+
+                // Настройка футера
+                if (ch.footer) {
+                    embed.setFooter({ text: ch.footer });
+                }
+
+                // Настройка миниатюры (справа сверху)
+                if (ch.thumbnail) {
+                    try { embed.setThumbnail(ch.thumbnail); } catch (e) {}
+                }
+
+                // Основные изображения (если их несколько, ставим первое в image, остальные отправляем вложением или просто в тексте)
+                if (ch.imageUrls && ch.imageUrls.length > 0) {
+                    try { embed.setImage(ch.imageUrls[0]); } catch (e) {}
+                } else if (ch.imageUrl) {
                     try { embed.setImage(ch.imageUrl); } catch (e) {}
                 }
 
