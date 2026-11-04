@@ -1457,61 +1457,66 @@ app.delete('/api/guild/:id/roster/setup', isModerator, async (req, res) => {
 
 // ─── ТАЙМЕР УВЕДОМЛЕНИЙ О СОБЫТИЯХ ───────────────────────
 function startEventNotifier(client) {
-    // Проверяем каждую минуту
     setInterval(async () => {
         try {
-            const now = Date.now();
-            // Ищем события, которые начнутся в ближайшие 5 минут (или только что начались) и по которым нет уведомления
-            const upcomingEvents = await Event.find({
-                reminded: false,
-                date: { $gt: now - 60000, $lt: now + 300000 } // от -1 минуты до +5 минут
-            });
-
-            for (const event of upcomingEvents) {
+            const now = new Date();
+            const events = await Event.find({});
+            
+            for (const event of events) {
                 const settings = await EventSettings.findOne({ guildId: event.guildId });
                 if (!settings || !settings.eventChannelId) continue;
+
+                // Вычисляем, должно ли событие начаться прямо сейчас
+                let shouldNotify = false;
+                
+                // Формируем текущее время в часовом поясе события
+                const utcNow = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
+                const localNow = new Date(utcNow.getTime() + event.timezoneOffset * 3600000);
+                
+                const currentHHMM = localNow.toISOString().slice(11, 16); // "20:00"
+                const currentDay = localNow.getDay(); // 0-6
+                const currentDateStr = localNow.toISOString().slice(0, 10); // "YYYY-MM-DD"
+
+                if (event.isRecurring) {
+                    if (event.lastRemindedDate === currentDateStr) continue; // Уже присылали сегодня
+                    
+                    if (event.timeOfDay === currentHHMM) {
+                        if (event.recurrenceType === 'daily') shouldNotify = true;
+                        if (event.recurrenceType === 'weekly' && event.recurrenceDays.includes(currentDay)) shouldNotify = true;
+                    }
+                } else {
+                    // Для разовых событий проверяем, что время подошло (в пределах минуты)
+                    const diff = Math.abs(event.date - now.getTime());
+                    if (diff < 60000) shouldNotify = true;
+                }
+
+                if (!shouldNotify) continue;
 
                 const channel = await client.channels.fetch(settings.eventChannelId).catch(() => null);
                 if (!channel) continue;
 
-                // Формируем дату с учетом часового пояса
-                const dateObj = new Date(event.date);
-                const formattedDate = dateObj.toLocaleString('ru-RU', {
-                    timeZone: `Etc/GMT${event.timezoneOffset >= 0 ? '-' : '+'}${Math.abs(event.timezoneOffset)}`,
-                    day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
-                });
-
-                // Пингуем роль
                 const content = settings.pingRoleId ? `<@&${settings.pingRoleId}>` : undefined;
+                const typeEmoji = event.type === 'ГВГ' ? '⚔️' : (event.type === 'Арена' ? '🏟️' : '🎉');
 
                 const embed = new EmbedBuilder()
-                    .setTitle(`🎉 Начинается событие: ${event.title}`)
+                    .setTitle(`${typeEmoji} Событие началось: ${event.title}`)
                     .setColor('#d4af37')
                     .setDescription(event.description || 'Пора собираться!')
-                    .addFields(
-                        { name: '🏷️ Тип', value: event.type || 'Другое', inline: true },
-                        { name: '🕒 Время', value: formattedDate, inline: true }
-                    )
-                    .setFooter({ text: 'Where Winds Meet • Календарь событий' })
+                    .setFooter({ text: 'Where Winds Meet • Календарь' })
                     .setTimestamp();
 
-                // Кнопка на сайт
-                const siteUrl = `https://patchitos1234.fly.dev/manage/${event.guildId}/events`;
-                const btn = new ButtonBuilder()
-                    .setLabel('Открыть на сайте')
-                    .setURL(siteUrl)
-                    .setStyle(ButtonStyle.Link);
-
-                await channel.send({ content, embeds: [embed], components: [new ActionRowBuilder().addComponents(btn)] });
+                await channel.send({ content, embeds: [embed] });
                 
-                // Отмечаем, что уведомление отправлено
-                event.reminded = true;
-                await event.save();
+                // Запоминаем, что сегодня уже отправили
+                if (event.isRecurring) {
+                    event.lastRemindedDate = currentDateStr;
+                    await event.save();
+                }
             }
         } catch (e) {
             console.error('EVENT NOTIFIER ERROR:', e);
         }
-    }, 60000); // 1 минута
+    }, 60000); // Проверка каждую минуту
 }
 
 // ─── 404 ──────────────────────────────────────────────────
