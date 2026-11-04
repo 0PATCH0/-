@@ -1,4 +1,13 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
+const { 
+    SlashCommandBuilder, 
+    EmbedBuilder, 
+    ActionRowBuilder, 
+    StringSelectMenuBuilder, 
+    ButtonBuilder, 
+    ButtonStyle, 
+    ComponentType,
+    MessageFlags
+} = require('discord.js');
 const { Guide } = require('../models');
 
 module.exports = {
@@ -7,7 +16,8 @@ module.exports = {
         .setDescription('Посмотреть список гайдов сервера'),
 
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        // Используем MessageFlags для скрытого сообщения
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const guides = await Guide.find({ guildId: interaction.guild.id });
 
@@ -19,7 +29,7 @@ module.exports = {
             .setCustomId('select_guide')
             .setPlaceholder('Выберите гайд для чтения')
             .addOptions(guides.slice(0, 25).map(g => ({
-                label: g.name,
+                label: g.name.substring(0, 100),
                 description: g.description ? g.description.substring(0, 100) : 'Без описания',
                 value: g._id.toString(),
                 emoji: '📖'
@@ -35,7 +45,9 @@ module.exports = {
         const collector = response.createMessageComponentCollector({ componentType: ComponentType.StringSelect, time: 60000 });
 
         collector.on('collect', async i => {
-            if (i.user.id !== interaction.user.id) return i.reply({ content: 'Это меню не для вас.', ephemeral: true });
+            if (i.user.id !== interaction.user.id) {
+                return i.reply({ content: 'Это меню открыто не вами.', flags: MessageFlags.Ephemeral });
+            }
 
             const guideId = i.values[0];
             const selectedGuide = await Guide.findById(guideId);
@@ -47,16 +59,22 @@ module.exports = {
             await i.update({ content: `✅ Гайд **${selectedGuide.name}** отправлен в чат!`, components: [] });
 
             // Отправляем каждую главу отдельным сообщением
+            if (selectedGuide.chapters.length === 0) {
+                return interaction.channel.send({ content: 'В этом гайде пока нет глав.' });
+            }
+
             for (const ch of selectedGuide.chapters) {
                 const embed = new EmbedBuilder()
                     .setTitle(ch.title || 'Без названия')
-                    .setDescription(ch.content || 'Пусто')
+                    .setDescription(ch.content ? ch.content.substring(0, 4000) : '*Пустая глава*')
                     .setColor(ch.color || '#d4af37');
                 
-                if (ch.imageUrl) embed.setImage(ch.imageUrl);
+                if (ch.imageUrl) {
+                    // Проверка на валидность URL картинки
+                    try { embed.setImage(ch.imageUrl); } catch (e) {}
+                }
 
                 const components = [];
-                // Если есть ссылка на файл, создаем красивую кнопку
                 if (ch.attachmentUrl) {
                     const btn = new ButtonBuilder()
                         .setLabel(ch.attachmentName || '📄 Скачать вложение')
