@@ -178,7 +178,7 @@
 
         async function init() {
             try {
-    const res = await fetch(`/api/guild/${guildId}/channels`, { credentials: 'include' });
+    const res = await fetch(`/api/event-channels/${guildId}`, { credentials: 'include' });
     if (res.ok) {
         channelsData = await res.json();
         document.getElementById('set-channel').innerHTML = '<option value="">-- Не выбран --</option>' + 
