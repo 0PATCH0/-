@@ -32,8 +32,12 @@ const GuideSchema = new mongoose.Schema({
         title: String, 
         content: String, 
         color: String, 
+        author: String,           // ← Новое
+        authorImg: String,        // ← Новое
+        footer: String,           // ← Новое
+        thumbnail: String,        // ← Новое
         imageUrl: String, 
-        imageUrls: { type: [String], default: [] }, // ← ДОБАВЛЕНО СЮДА
+        imageUrls: { type: [String], default: [] }, 
         attachmentUrl: String, 
         attachmentName: String 
     }], 
