@@ -48,12 +48,17 @@ const EventSchema = new mongoose.Schema({
     guildId: String, 
     title: String, 
     description: String, 
-    type: { type: String, default: 'Другое' }, // Тип события (ГВГ, Арена и т.д.)
-    date: Number,                             // Unix timestamp в миллисекундах
-    timezoneOffset: { type: Number, default: 3 }, // Смещение UTC (например, 3 для МСК)
+    type: { type: String, default: 'Другое' },
+    date: Number, // Основная дата (для разовых)
+    timezoneOffset: { type: Number, default: 3 },
     creatorId: String, 
     attendees: [{ type: String }],
-    reminded: { type: Boolean, default: false } // Отправлено ли уведомление
+    // Новые поля для цикличности
+    isRecurring: { type: Boolean, default: false },
+    recurrenceType: { type: String, enum: ['daily', 'weekly', 'none'], default: 'none' },
+    recurrenceDays: { type: [Number], default: [] }, // 0 - Вс, 1 - Пн, ... 6 - Сб
+    timeOfDay: { type: String, default: '20:00' }, // Формат HH:MM
+    lastRemindedDate: { type: String, default: null } // Чтобы не спамить в один день (YYYY-MM-DD)
 });
 
 const PlayerProfileSchema = new mongoose.Schema({
