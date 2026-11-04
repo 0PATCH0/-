@@ -43,7 +43,18 @@ const GuideSchema = new mongoose.Schema({
     }], 
     date: { type: Date, default: Date.now } 
 });
-const EventSchema = new mongoose.Schema({ guildId: String, title: String, description: String, date: Number, creatorId: String, attendees: [{ type: String }] });
+
+const EventSchema = new mongoose.Schema({ 
+    guildId: String, 
+    title: String, 
+    description: String, 
+    type: { type: String, default: 'Другое' }, // Тип события (ГВГ, Арена и т.д.)
+    date: Number,                             // Unix timestamp в миллисекундах
+    timezoneOffset: { type: Number, default: 3 }, // Смещение UTC (например, 3 для МСК)
+    creatorId: String, 
+    attendees: [{ type: String }],
+    reminded: { type: Boolean, default: false } // Отправлено ли уведомление
+});
 
 const PlayerProfileSchema = new mongoose.Schema({
     userId: { type: String, required: true },
