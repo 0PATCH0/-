@@ -299,6 +299,11 @@ app.get('/api/events/:guildId', async (req, res) => {
 app.post('/api/events/:guildId', isModerator, async (req, res) => {
     try {
         const { title, description, date, type, timezoneOffset, isRecurring, recurrenceType, recurrenceDays, timeOfDay } = req.body || {};
+
+// Костыль для HTML-формы: превращаем строку 'true' в boolean, а строку '[]' в массив
+const isRec = isRecurring === 'true';
+let recDays = [];
+try { recDays = typeof recurrenceDays === 'string' ? JSON.parse(recurrenceDays) : (recurrenceDays || []); } catch(e) {}
         if (!title) return res.status(400).json({ error: 'title обязателен' });
         
         const event = await Event.create({ 
