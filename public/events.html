@@ -60,7 +60,6 @@
             <div class="event-form">
                 <h3 style="margin-top: 0; color: var(--gold); font-family: 'Cinzel', serif;">Добавить событие</h3>
                 
-                <!-- Форма отправляется нативно, это гарантирует работу на любом телефоне -->
                 <form action="/api/events/1482704899739975803" method="POST" id="eventForm">
                     <div class="form-row">
                         <div class="form-group">
@@ -163,7 +162,6 @@
     <script>
         const guildId = window.location.pathname.split('/')[2];
 
-        // Переключение вкладок
         function switchTab(tabId, btn) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -171,7 +169,6 @@
             document.getElementById('tab-' + tabId).classList.add('active');
         }
 
-        // Переключение режимов (Разовое/Ежедневное/Еженедельное)
         function toggleRecurrence() {
             const mode = document.getElementById('modeSelect').value;
             const recurFields = document.getElementById('recurrence-fields');
@@ -192,7 +189,6 @@
             }
         }
 
-        // Сбор выбранных дней перед отправкой
         function prepareForm() {
             const days = [];
             document.querySelectorAll('.day-cb:checked').forEach(cb => {
@@ -200,7 +196,6 @@
             });
             document.getElementById('h_recurrenceDays').value = JSON.stringify(days);
             
-            // Если разовое, переводим дату из локального формата в timestamp
             const dateInput = document.querySelector('input[name="date"]');
             if (dateInput && dateInput.value) {
                 const d = new Date(dateInput.value);
@@ -208,9 +203,9 @@
             }
         }
 
-        // Загрузка страницы
+        // ИСПРАВЛЕННАЯ ЗАГРУЗКА (Последовательная, чтобы настройки применились ПОСЛЕ каналов)
         window.onload = function() {
-            // 1. Загружаем каналы
+            // Сначала загружаем каналы
             fetch('/api/event-channels/' + guildId)
                 .then(r => r.json())
                 .then(data => {
@@ -220,33 +215,31 @@
                     chSelect.innerHTML = '<option value="">-- Не выбран --</option>';
                     roleSelect.innerHTML = '<option value="">-- Без тега --</option>';
                     
-                    if (data.channels && data.channels.length > 0) {
+                    if (data.channels) {
                         data.channels.forEach(c => {
                             chSelect.innerHTML += `<option value="${c.id}">#${c.name}</option>`;
                         });
                     }
-                    if (data.roles && data.roles.length > 0) {
+                    if (data.roles) {
                         data.roles.forEach(r => {
                             roleSelect.innerHTML += `<option value="${r.id}">@${r.name}</option>`;
                         });
                     }
-
-                    // 2. После загрузки каналов подтягиваем сохраненные настройки
+                })
+                .catch(err => console.error(err))
+                .finally(() => {
+                    // ТОЛЬКО ПОСЛЕ ТОГО, как каналы загрузились, применяем настройки
                     fetch('/api/guild/' + guildId + '/event-settings')
                         .then(r => r.json())
                         .then(set => {
-                            if (set.eventChannelId) chSelect.value = set.eventChannelId;
-                            if (set.pingRoleId) roleSelect.value = set.pingRoleId;
+                            if (set.eventChannelId) document.getElementById('set-channel').value = set.eventChannelId;
+                            if (set.pingRoleId) document.getElementById('set-role').value = set.pingRoleId;
                         })
-                        .catch(err => console.error("Ошибка настроек:", err));
-                })
-                .catch(err => {
-                    console.error("Ошибка каналов:", err);
-                    document.getElementById('set-channel').innerHTML = '<option>Ошибка загрузки</option>';
+                        .catch(err => console.error(err));
                 });
 
-            // 3. Загружаем список событий
-            fetch('/api/events/' + guildId)
+            // Параллельно загружаем список событий (с защитой от кэша)
+            fetch('/api/events/' + guildId + '?t=' + Date.now())
                 .then(r => r.json())
                 .then(events => {
                     const list = document.getElementById('events-list');
@@ -281,7 +274,6 @@
                                     <div class="event-meta">
                                         <span>${typeIcon} ${ev.type || 'Другое'}</span>
                                         <span>🕒 ${timeStr}</span>
-                                        ${ev.description ? `<span>📝 ${ev.description.substring(0, 30)}...</span>` : ''}
                                     </div>
                                 </div>
                                 <button class="btn btn-danger btn-small" onclick="deleteEvent('${ev._id}')">🗑 Удалить</button>
@@ -295,14 +287,12 @@
                 });
         };
 
-        // Удаление события
         function deleteEvent(id) {
             if (!confirm('Удалить событие?')) return;
             fetch('/api/events/' + guildId + '/' + id, { method: 'DELETE' })
                 .then(() => location.reload());
         }
 
-        // Сохранение настроек
         function saveSettings() {
             const ch = document.getElementById('set-channel').value;
             const role = document.getElementById('set-role').value;
@@ -320,7 +310,7 @@
             .then(async r => {
                 const data = await r.json();
                 if (r.ok) {
-                    alert('✅ Настройки сохранены! Бот будет присылать уведомления сюда.');
+                    alert('✅ Настройки сохранены!');
                 } else {
                     alert('❌ Ошибка сервера: ' + (data.error || r.status));
                 }
