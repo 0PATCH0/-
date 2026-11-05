@@ -501,14 +501,16 @@ app.get('/api/events/:guildId', async (req, res) => {
 app.post('/api/events/:guildId', isModerator, async (req, res) => {
     try {
         const { title, description, date, type, timezoneOffset, isRecurring, recurrenceType, recurrenceDays, timeOfDay } = req.body || {};
-        if (!title) return res.status(400).json({ error: 'title обязателен' });
+        
+        // Проверяем только название
+        if (!title) return res.status(400).json({ error: 'Название обязательно' });
         
         const event = await Event.create({ 
             guildId: req.params.guildId, 
             title, 
             description: description || '', 
             type: type || 'Другое',
-            date: date ? Number(date) : Date.now(), 
+            date: date ? Number(date) : Date.now(), // Если даты нет, ставим текущую
             timezoneOffset: Number(timezoneOffset) || 3,
             creatorId: req.user.id, 
             attendees: [],
@@ -519,7 +521,10 @@ app.post('/api/events/:guildId', isModerator, async (req, res) => {
         });
         
         res.json({ success: true, event });
-    } catch (e) { console.error('EVENT CREATE:', e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
+    } catch (e) { 
+        console.error('EVENT CREATE:', e); 
+        res.status(500).json({ error: 'Ошибка: ' + e.message }); 
+    }
 });
 
 app.post('/api/guild/:id/events/:eventId/join', async (req, res) => {
