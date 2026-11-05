@@ -223,46 +223,52 @@
         }
 
         async function loadEvents() {
-            const list = document.getElementById('events-list');
-            list.innerHTML = 'Загрузка...';
-            try {
-                const res = await fetch(`/api/events/${guildId}`, { credentials: 'include' });
-                const events = await res.json();
-                
-                if (events.length === 0) {
-                    list.innerHTML = '<p>Пока нет событий.</p>';
-                    return;
+    const list = document.getElementById('events-list');
+    list.innerHTML = 'Загрузка...';
+    try {
+        const res = await fetch(`/api/events/${guildId}`, { credentials: 'include' });
+        const events = await res.json();
+        
+        if (events.length === 0) {
+            list.innerHTML = '<p>Пока нет событий.</p>';
+            return;
+        }
+
+        list.innerHTML = events.map(ev => {
+            let timeStr = 'Дата не указана';
+            
+            // Безопасная проверка: если это старое событие без новых полей
+            if (ev.isRecurring && ev.timeOfDay) {
+                if (ev.recurrenceType === 'daily') {
+                    timeStr = `Ежедневно в ${ev.timeOfDay}`;
+                } else if (ev.recurrenceType === 'weekly' && ev.recurrenceDays) {
+                    const daysMap = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+                    const days = ev.recurrenceDays.map(d => daysMap[d]).join(', ');
+                    timeStr = `Еженедельно (${days}) в ${ev.timeOfDay}`;
+                } else {
+                    timeStr = `В ${ev.timeOfDay || '??:??'}`;
                 }
-
-                list.innerHTML = events.map(ev => {
-                    let timeStr = '';
-                    if (ev.isRecurring) {
-                        if (ev.recurrenceType === 'daily') timeStr = `Ежедневно в ${ev.timeOfDay}`;
-                        else {
-                            const daysMap = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-                            const days = (ev.recurrenceDays || []).map(d => daysMap[d]).join(', ');
-                            timeStr = `Еженедельно (${days}) в ${ev.timeOfDay}`;
-                        }
-                    } else {
-                        timeStr = new Date(ev.date).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-                    }
-
-                    return `
-                        <div class="event-card">
-                            <div class="event-info">
-                                <h3>${ev.title}</h3>
-                                <div class="event-meta">
-                                    <span>🏷️ ${ev.type || 'Другое'}</span>
-                                    <span>🕒 ${timeStr}</span>
-                                </div>
-                            </div>
-                            <button class="btn btn-danger btn-small" onclick="deleteEvent('${ev._id}')">Удалить</button>
-                        </div>
-                    `;
-                }).join('');
-            } catch (e) {
-                list.innerHTML = 'Ошибка загрузки: ' + e.message;
+            } else if (ev.date) {
+                // Для разовых (или старых событий) берем дату
+                timeStr = new Date(ev.date).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
             }
+
+            return `
+                <div class="event-card">
+                    <div class="event-info">
+                        <h3>${ev.title || 'Без названия'}</h3>
+                        <div class="event-meta">
+                            <span>🏷️ ${ev.type || 'Другое'}</span>
+                            <span>🕒 ${timeStr}</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-danger btn-small" onclick="deleteEvent('${ev._id}')">Удалить</button>
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        list.innerHTML = 'Ошибка загрузки: ' + e.message;
+    }
         }
 
         async function deleteEvent(id) {
