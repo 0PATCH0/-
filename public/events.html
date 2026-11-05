@@ -1,15 +1,335 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Тест кнопки</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>События — Where Winds Meet</title>
+    <link rel="stylesheet" href="/css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
+    <style>
+        .tabs-nav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+        .tab-btn { padding: 10px 20px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-family: 'Cinzel', serif; font-size: 16px; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .event-card { background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-left: 4px solid var(--gold); border-radius: 8px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .event-info h3 { margin: 0 0 5px 0; color: var(--gold); font-family: 'Cinzel', serif; }
+        .event-meta { font-size: 14px; color: var(--text-muted); display: flex; gap: 15px; flex-wrap: wrap; }
+        
+        .event-form { background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; }
+        .form-row { display: flex; gap: 15px; flex-wrap: wrap; }
+        .form-row .form-group { flex: 1; min-width: 200px; }
+        
+        .days-grid { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+        .day-checkbox { position: relative; }
+        .day-checkbox input { position: absolute; opacity: 0; }
+        .day-checkbox label { display: inline-block; padding: 8px 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 14px; color: var(--text-muted); transition: 0.2s; }
+        .day-checkbox input:checked + label { background: var(--gold); color: #000; border-color: var(--gold); font-weight: bold; }
+        
+        .hidden { display: none !important; }
+    </style>
 </head>
-<body style="background: #111; color: white; padding: 20px;">
-    <h1>ТЕСТ КНОПКИ</h1>
-    <p>Если ты видишь этот текст, значит HTML загрузился.</p>
-    
-    <button onclick="alert('Кнопка работает!')" style="padding: 20px; font-size: 20px; background: gold;">
-        НАЖМИ МЕНЯ
-    </button>
+<body class="admin-page">
+    <div class="bg-ink"></div>
+    <div class="fog"></div>
+
+    <div class="container">
+        <nav class="top-nav">
+            <div class="logo">WHERE WINDS MEET</div>
+            <a href="#" class="back-link" onclick="history.back(); return false;">← Назад</a>
+        </nav>
+
+        <div class="page-title">
+            <h1>📅 Календарь событий</h1>
+            <p>Планируйте ГВГ, вечеринки и арены</p>
+        </div>
+
+        <div class="tabs-nav">
+            <button type="button" class="tab-btn active" onclick="switchTab('events', this)">События</button>
+            <button type="button" class="tab-btn" onclick="switchTab('settings', this)">Настройки</button>
+        </div>
+
+        <!-- Вкладка: События -->
+        <div id="tab-events" class="tab-content active">
+            <div class="event-form">
+                <h3 style="margin-top: 0; color: var(--gold); font-family: 'Cinzel', serif;">Добавить событие</h3>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Название *</label>
+                        <input type="text" id="ev-title" placeholder="ГВГ с гильдией X">
+                    </div>
+                    <div class="form-group">
+                        <label>Тип</label>
+                        <select id="ev-type">
+                            <option value="ГВГ">ГВГ</option>
+                            <option value="Вечеринка">Вечеринка</option>
+                            <option value="Арена">Арена</option>
+                            <option value="Рейд">Рейд</option>
+                            <option value="Другое">Другое</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Режим</label>
+                        <select id="ev-recurring" onchange="toggleRecurrence()">
+                            <option value="none">Разовое</option>
+                            <option value="daily">Ежедневное</option>
+                            <option value="weekly">Еженедельное</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Часовой пояс</label>
+                        <select id="ev-tz">
+                            <option value="3">МСК (UTC+3)</option>
+                            <option value="0">UTC</option>
+                            <option value="2">UTC+2</option>
+                            <option value="4">UTC+4</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="recurrence-fields" class="hidden">
+                    <div class="form-group">
+                        <label>Время начала (HH:MM)</label>
+                        <input type="time" id="ev-time" value="20:00">
+                    </div>
+                    <div id="weekly-days" class="form-group hidden">
+                        <label>Дни недели</label>
+                        <div class="days-grid">
+                            <div class="day-checkbox"><input type="checkbox" id="d1" value="1"><label for="d1">Пн</label></div>
+                            <div class="day-checkbox"><input type="checkbox" id="d2" value="2"><label for="d2">Вт</label></div>
+                            <div class="day-checkbox"><input type="checkbox" id="d3" value="3"><label for="d3">Ср</label></div>
+                            <div class="day-checkbox"><input type="checkbox" id="d4" value="4"><label for="d4">Чт</label></div>
+                            <div class="day-checkbox"><input type="checkbox" id="d5" value="5"><label for="d5">Пт</label></div>
+                            <div class="day-checkbox"><input type="checkbox" id="d6" value="6"><label for="d6">Сб</label></div>
+                            <div class="day-checkbox"><input type="checkbox" id="d0" value="0"><label for="d0">Вс</label></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="date-field" class="form-group">
+                    <label>Дата и время (для разового)</label>
+                    <input type="datetime-local" id="ev-date">
+                </div>
+
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea id="ev-desc" style="min-height: 80px;" placeholder="Детали события..."></textarea>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="createEvent()">Создать событие</button>
+            </div>
+
+            <h3 style="color: var(--gold); font-family: 'Cinzel', serif;">Список событий</h3>
+            <div id="events-list"></div>
+        </div>
+
+        <!-- Вкладка: Настройки -->
+        <div id="tab-settings" class="tab-content">
+            <div class="event-form">
+                <h3 style="margin-top: 0; color: var(--gold); font-family: 'Cinzel', serif;">Настройки уведомлений</h3>
+                <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 15px;">Бот будет присылать сообщение с тегом роли ровно в момент начала события.</p>
+                
+                <div class="form-group">
+                    <label>Канал для анонсов</label>
+                    <select id="set-channel"><option>Загрузка...</option></select>
+                </div>
+                <div class="form-group">
+                    <label>Роль для пинга (тега)</label>
+                    <select id="set-role"><option>Загрузка...</option></select>
+                </div>
+                
+                <button type="button" class="btn btn-primary" onclick="saveSettings()">Сохранить настройки</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const guildId = window.location.pathname.split('/')[2];
+
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        function toggleRecurrence() {
+            const mode = document.getElementById('ev-recurring').value;
+            const recurFields = document.getElementById('recurrence-fields');
+            const dateField = document.getElementById('date-field');
+            const weeklyDays = document.getElementById('weekly-days');
+
+            if (mode === 'none') {
+                recurFields.classList.add('hidden');
+                dateField.classList.remove('hidden');
+            } else {
+                recurFields.classList.remove('hidden');
+                dateField.classList.add('hidden');
+                if (mode === 'weekly') weeklyDays.classList.remove('hidden');
+                else weeklyDays.classList.add('hidden');
+            }
+        }
+
+        async function init() {
+            try {
+                const res = await fetch(`/api/event-channels/${guildId}`, { credentials: 'include' });
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('set-channel').innerHTML = '<option value="">-- Не выбран --</option>' + 
+                        data.channels.map(c => `<option value="${c.id}">#${c.name}</option>`).join('');
+                    document.getElementById('set-role').innerHTML = '<option value="">-- Без тега --</option>' + 
+                        data.roles.map(r => `<option value="${r.id}">@${r.name}</option>`).join('');
+                }
+            } catch (e) { console.error(e); }
+
+            try {
+                const res = await fetch(`/api/guild/${guildId}/event-settings`, { credentials: 'include' });
+                if (res.ok) {
+                    const set = await res.json();
+                    if (set.eventChannelId) document.getElementById('set-channel').value = set.eventChannelId;
+                    if (set.pingRoleId) document.getElementById('set-role').value = set.pingRoleId;
+                }
+            } catch (e) { console.error(e); }
+
+            loadEvents();
+        }
+
+        async function loadEvents() {
+            const list = document.getElementById('events-list');
+            list.innerHTML = 'Загрузка...';
+            try {
+                const res = await fetch(`/api/events/${guildId}`, { credentials: 'include' });
+                const events = await res.json();
+                
+                if (events.length === 0) {
+                    list.innerHTML = '<p>Пока нет событий.</p>';
+                    return;
+                }
+
+                list.innerHTML = events.map(ev => {
+                    let timeStr = '';
+                    if (ev.isRecurring) {
+                        if (ev.recurrenceType === 'daily') timeStr = `Ежедневно в ${ev.timeOfDay}`;
+                        else {
+                            const daysMap = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+                            const days = (ev.recurrenceDays || []).map(d => daysMap[d]).join(', ');
+                            timeStr = `Еженедельно (${days}) в ${ev.timeOfDay}`;
+                        }
+                    } else {
+                        timeStr = new Date(ev.date).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                    }
+
+                    return `
+                        <div class="event-card">
+                            <div class="event-info">
+                                <h3>${ev.title}</h3>
+                                <div class="event-meta">
+                                    <span>🏷️ ${ev.type || 'Другое'}</span>
+                                    <span>🕒 ${timeStr}</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-danger btn-small" onclick="deleteEvent('${ev._id}')">Удалить</button>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                list.innerHTML = 'Ошибка загрузки: ' + e.message;
+            }
+        }
+
+        async function createEvent() {
+            const title = document.getElementById('ev-title').value.trim();
+            const type = document.getElementById('ev-type').value;
+            const tz = document.getElementById('ev-tz').value;
+            const description = document.getElementById('ev-desc').value.trim();
+            const mode = document.getElementById('ev-recurring').value;
+
+            if (!title) {
+                alert('Введите название события!');
+                return;
+            }
+
+            const payload = {
+                title: title,
+                description: description,
+                type: type,
+                timezoneOffset: Number(tz),
+                isRecurring: mode !== 'none',
+                recurrenceType: mode,
+                timeOfDay: document.getElementById('ev-time').value || '20:00',
+                recurrenceDays: [],
+                date: Date.now() 
+            };
+
+            if (mode === 'weekly') {
+                document.querySelectorAll('.days-grid input:checked').forEach(cb => {
+                    payload.recurrenceDays.push(Number(cb.value));
+                });
+                if (payload.recurrenceDays.length === 0) {
+                    alert('Выберите хотя бы один день недели!');
+                    return;
+                }
+            }
+
+            if (mode === 'none') {
+                const dateStr = document.getElementById('ev-date').value;
+                if (!dateStr) {
+                    alert('Выберите дату и время!');
+                    return;
+                }
+                const date = new Date(dateStr);
+                payload.date = date.getTime() - (date.getTimezoneOffset() * 60000) - (Number(tz) * 3600000);
+            }
+
+            try {
+                const res = await fetch('/api/events/' + guildId, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    alert('✅ Событие успешно создано!');
+                    document.getElementById('ev-title').value = '';
+                    document.getElementById('ev-desc').value = '';
+                    loadEvents();
+                } else {
+                    const data = await res.json();
+                    alert('❌ Ошибка сервера: ' + (data.error || res.status));
+                }
+            } catch (e) {
+                alert('❌ Ошибка сети: ' + e.message);
+            }
+        }
+
+        async function deleteEvent(id) {
+            if (!confirm('Удалить событие?')) return;
+            await fetch(`/api/events/${guildId}/${id}`, { method: 'DELETE', credentials: 'include' });
+            loadEvents();
+        }
+
+        async function saveSettings() {
+            const eventChannelId = document.getElementById('set-channel').value;
+            const pingRoleId = document.getElementById('set-role').value;
+
+            const res = await fetch(`/api/guild/${guildId}/event-settings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ eventChannelId, pingRoleId, timezoneOffset: 3 })
+            });
+
+            if (res.ok) alert('✅ Настройки сохранены!');
+            else alert('❌ Ошибка сохранения');
+        }
+
+        init();
+    </script>
 </body>
 </html>
