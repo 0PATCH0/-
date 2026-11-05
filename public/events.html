@@ -177,7 +177,6 @@
         }
 
         async function init() {
-            // Загрузка каналов и ролей
             try {
                 const res = await fetch(`/api/event-channels/${guildId}`, { credentials: 'include' });
                 if (res.ok) {
@@ -186,12 +185,9 @@
                         channelsData.channels.map(c => `<option value="${c.id}">#${c.name}</option>`).join('');
                     document.getElementById('set-role').innerHTML = '<option value="">-- Без тега --</option>' + 
                         channelsData.roles.map(r => `<option value="${r.id}">@${r.name}</option>`).join('');
-                } else {
-                    console.error("Ошибка API каналов:", res.status);
                 }
             } catch (e) { console.error(e); }
 
-            // Загрузка настроек
             try {
                 const res = await fetch(`/api/guild/${guildId}/event-settings`, { credentials: 'include' });
                 if (res.ok) {
@@ -247,83 +243,60 @@
             }
         }
 
-        // ИСПРАВЛЕННАЯ ФУНКЦИЯ СОЗДАНИЯ
+        // ИСПРАВЛЕННАЯ ФУНКЦИЯ С ПОДРОБНЫМИ ОШИБКАМИ
         async function createEvent() {
-    console.log("=== НАЖАТА КНОПКА СОЗДАНИЯ ===");
-    
-    const title = document.getElementById('ev-title').value.trim();
-    const type = document.getElementById('ev-type').value;
-    const tz = document.getElementById('ev-tz').value;
-    const description = document.getElementById('ev-desc').value.trim();
-    const mode = document.getElementById('ev-recurring').value;
+            const title = document.getElementById('ev-title').value.trim();
+            const type = document.getElementById('ev-type').value;
+            const tz = document.getElementById('ev-tz').value;
+            const description = document.getElementById('ev-desc').value.trim();
+            const mode = document.getElementById('ev-recurring').value;
 
-    console.log("Данные формы:", { title, type, tz, mode });
+            if (!title) return alert('⚠️ Введите название события!');
 
-    if (!title) {
-        alert('⚠️ Введите название события!');
-        return;
-    }
+            const payload = {
+                title,
+                description,
+                type,
+                timezoneOffset: Number(tz),
+                isRecurring: mode !== 'none',
+                recurrenceType: mode,
+                timeOfDay: document.getElementById('ev-time').value || '20:00',
+                recurrenceDays: [],
+                date: Date.now() 
+            };
 
-    const payload = {
-        title,
-        description,
-        type,
-        timezoneOffset: Number(tz),
-        isRecurring: mode !== 'none',
-        recurrenceType: mode,
-        timeOfDay: document.getElementById('ev-time').value || '20:00',
-        recurrenceDays: [],
-        date: Date.now() 
-    };
+            if (mode === 'weekly') {
+                document.querySelectorAll('.days-grid input:checked').forEach(cb => {
+                    payload.recurrenceDays.push(Number(cb.value));
+                });
+                if (payload.recurrenceDays.length === 0) return alert('⚠️ Выберите хотя бы один день недели!');
+            }
 
-    if (mode === 'weekly') {
-        document.querySelectorAll('.days-grid input:checked').forEach(cb => {
-            payload.recurrenceDays.push(Number(cb.value));
-        });
-        if (payload.recurrenceDays.length === 0) {
-            alert('⚠️ Выберите хотя бы один день недели!');
-            return;
+            if (mode === 'none') {
+                const dateStr = document.getElementById('ev-date').value;
+                if (!dateStr) return alert('⚠️ Выберите дату и время!');
+                const date = new Date(dateStr);
+                payload.date = date.getTime() - (date.getTimezoneOffset() * 60000) - (Number(tz) * 3600000);
+            }
+
+            const res = await fetch(`/api/events/${guildId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            });
+            
+            if (res.ok) {
+                alert('✅ Событие успешно создано!');
+                document.getElementById('ev-title').value = '';
+                document.getElementById('ev-desc').value = '';
+                loadEvents();
+            } else {
+                const text = await res.text();
+                alert('❌ Ошибка сервера (' + res.status + '):\n' + text);
+            }
         }
-    }
 
-    if (mode === 'none') {
-        const dateStr = document.getElementById('ev-date').value;
-        if (!dateStr) {
-            alert('⚠️ Выберите дату и время!');
-            return;
-        }
-        const date = new Date(dateStr);
-        payload.date = date.getTime() - (date.getTimezoneOffset() * 60000) - (Number(tz) * 3600000);
-    }
-
-    console.log("Отправляем на сервер:", payload);
-
-    try {
-        const res = await fetch(`/api/events/${guildId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(payload)
-        });
-        
-        console.log("Ответ сервера, статус:", res.status);
-        
-        const responseText = await res.text();
-        console.log("Текст ответа от сервера:", responseText);
-
-        if (res.ok) {
-            alert('✅ Событие успешно создано!');
-            document.getElementById('ev-title').value = '';
-            document.getElementById('ev-desc').value = '';
-            loadEvents();
-        } else {
-            alert('❌ Сервер вернул ошибку ' + res.status + ':\n' + responseText);
-        }
-    } catch (err) {
-        console.error("Критическая ошибка fetch:", err);
-        alert('❌ Ошибка сети: ' + err.message);
-    }
-        }
         async function deleteEvent(id) {
             if (!confirm('Удалить событие?')) return;
             await fetch(`/api/events/${guildId}/${id}`, { method: 'DELETE', credentials: 'include' });
