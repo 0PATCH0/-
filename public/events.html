@@ -249,66 +249,81 @@
 
         // ИСПРАВЛЕННАЯ ФУНКЦИЯ СОЗДАНИЯ
         async function createEvent() {
-            const title = document.getElementById('ev-title').value.trim();
-            const type = document.getElementById('ev-type').value;
-            const tz = document.getElementById('ev-tz').value;
-            const description = document.getElementById('ev-desc').value.trim();
-            const mode = document.getElementById('ev-recurring').value;
+    console.log("=== НАЖАТА КНОПКА СОЗДАНИЯ ===");
+    
+    const title = document.getElementById('ev-title').value.trim();
+    const type = document.getElementById('ev-type').value;
+    const tz = document.getElementById('ev-tz').value;
+    const description = document.getElementById('ev-desc').value.trim();
+    const mode = document.getElementById('ev-recurring').value;
 
-            if (!title) return alert('Введите название события!');
+    console.log("Данные формы:", { title, type, tz, mode });
 
-            // Базовый объект, который всегда отправляем
-            const payload = {
-                title,
-                description,
-                type,
-                timezoneOffset: Number(tz),
-                isRecurring: mode !== 'none',
-                recurrenceType: mode,
-                timeOfDay: document.getElementById('ev-time').value || '20:00',
-                recurrenceDays: [],
-                date: Date.now() // <-- ВАЖНО: по умолчанию ставим текущее время, чтобы Mongoose не ругался
-            };
+    if (!title) {
+        alert('⚠️ Введите название события!');
+        return;
+    }
 
-            // Если событие еженедельное, собираем отмеченные дни
-            if (mode === 'weekly') {
-                document.querySelectorAll('.days-grid input:checked').forEach(cb => {
-                    payload.recurrenceDays.push(Number(cb.value));
-                });
-                if (payload.recurrenceDays.length === 0) return alert('Выберите хотя бы один день недели!');
-            }
+    const payload = {
+        title,
+        description,
+        type,
+        timezoneOffset: Number(tz),
+        isRecurring: mode !== 'none',
+        recurrenceType: mode,
+        timeOfDay: document.getElementById('ev-time').value || '20:00',
+        recurrenceDays: [],
+        date: Date.now() 
+    };
 
-            // Если разовое, берем дату из календаря
-            if (mode === 'none') {
-                const dateStr = document.getElementById('ev-date').value;
-                if (!dateStr) return alert('Выберите дату и время!');
-                const date = new Date(dateStr);
-                // Переводим в UTC с учетом часового пояса пользователя
-                payload.date = date.getTime() - (date.getTimezoneOffset() * 60000) - (Number(tz) * 3600000);
-            }
-
-            try {
-                const res = await fetch(`/api/events/${guildId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify(payload)
-                });
-                
-                if (res.ok) {
-                    alert('✅ Событие успешно создано!');
-                    document.getElementById('ev-title').value = '';
-                    document.getElementById('ev-desc').value = '';
-                    loadEvents();
-                } else {
-                    const data = await res.json();
-                    alert('❌ Ошибка сервера: ' + (data.error || 'Неизвестная ошибка'));
-                }
-            } catch (err) {
-                alert('❌ Ошибка сети: ' + err.message);
-            }
+    if (mode === 'weekly') {
+        document.querySelectorAll('.days-grid input:checked').forEach(cb => {
+            payload.recurrenceDays.push(Number(cb.value));
+        });
+        if (payload.recurrenceDays.length === 0) {
+            alert('⚠️ Выберите хотя бы один день недели!');
+            return;
         }
+    }
 
+    if (mode === 'none') {
+        const dateStr = document.getElementById('ev-date').value;
+        if (!dateStr) {
+            alert('⚠️ Выберите дату и время!');
+            return;
+        }
+        const date = new Date(dateStr);
+        payload.date = date.getTime() - (date.getTimezoneOffset() * 60000) - (Number(tz) * 3600000);
+    }
+
+    console.log("Отправляем на сервер:", payload);
+
+    try {
+        const res = await fetch(`/api/events/${guildId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload)
+        });
+        
+        console.log("Ответ сервера, статус:", res.status);
+        
+        const responseText = await res.text();
+        console.log("Текст ответа от сервера:", responseText);
+
+        if (res.ok) {
+            alert('✅ Событие успешно создано!');
+            document.getElementById('ev-title').value = '';
+            document.getElementById('ev-desc').value = '';
+            loadEvents();
+        } else {
+            alert('❌ Сервер вернул ошибку ' + res.status + ':\n' + responseText);
+        }
+    } catch (err) {
+        console.error("Критическая ошибка fetch:", err);
+        alert('❌ Ошибка сети: ' + err.message);
+    }
+        }
         async function deleteEvent(id) {
             if (!confirm('Удалить событие?')) return;
             await fetch(`/api/events/${guildId}/${id}`, { method: 'DELETE', credentials: 'include' });
