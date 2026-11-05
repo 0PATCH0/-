@@ -94,7 +94,6 @@
                         </div>
                     </div>
 
-                    <!-- Поля для цикличных событий -->
                     <div id="recurrence-fields" class="hidden">
                         <div class="form-group">
                             <label>Время начала (HH:MM)</label>
@@ -114,7 +113,6 @@
                         </div>
                     </div>
 
-                    <!-- Скрытые поля для отправки данных -->
                     <input type="hidden" name="isRecurring" id="h_isRecurring" value="false">
                     <input type="hidden" name="recurrenceType" id="h_recurrenceType" value="none">
                     <input type="hidden" name="recurrenceDays" id="h_recurrenceDays" value="[]">
@@ -129,7 +127,6 @@
                         <textarea name="description" style="min-height: 80px;" placeholder="Детали события..."></textarea>
                     </div>
                     
-                    <!-- Кнопка с обработчиком, который соберет чекбоксы перед отправкой -->
                     <button type="submit" class="btn btn-primary" onclick="prepareForm()" style="margin-top: 15px;">✅ Создать событие</button>
                 </form>
             </div>
@@ -174,7 +171,6 @@
             const dateField = document.getElementById('date-field');
             const weeklyDays = document.getElementById('weekly-days');
 
-            // Скрытые поля
             document.getElementById('h_isRecurring').value = (mode !== 'none').toString();
             document.getElementById('h_recurrenceType').value = mode;
 
@@ -189,7 +185,6 @@
             }
         }
 
-        // Функция собирает выбранные дни в JSON-массив перед отправкой
         function prepareForm() {
             const days = [];
             document.querySelectorAll('.day-cb:checked').forEach(cb => {
@@ -198,83 +193,81 @@
             document.getElementById('h_recurrenceDays').value = JSON.stringify(days);
         }
 
-        async function init() {
-            try {
-                const res = await fetch(`/api/event-channels/${guildId}`, { credentials: 'include' });
-                if (res.ok) {
-                    const data = await res.json();
-                    document.getElementById('set-channel').innerHTML = '<option value="">-- Не выбран --</option>' + 
-                        data.channels.map(c => `<option value="${c.id}">#${c.name}</option>`).join('');
-                    document.getElementById('set-role').innerHTML = '<option value="">-- Без тега --</option>' + 
-                        data.roles.map(r => `<option value="${r.id}">@${r.name}</option>`).join('');
-                }
-            } catch (e) { console.error(e); }
+        // Загрузка настроек
+        window.onload = function() {
+            fetch('/api/event-channels/' + guildId)
+                .then(r => r.json())
+                .then(data => {
+                    const chSelect = document.getElementById('set-channel');
+                    const roleSelect = document.getElementById('set-role');
+                    
+                    chSelect.innerHTML = '<option value="">-- Не выбран --</option>';
+                    roleSelect.innerHTML = '<option value="">-- Без тега --</option>';
+                    
+                    if (data.channels) {
+                        data.channels.forEach(function(c) {
+                            chSelect.innerHTML += '<option value="' + c.id + '">#' + c.name + '</option>';
+                        });
+                    }
+                    if (data.roles) {
+                        data.roles.forEach(function(r) {
+                            roleSelect.innerHTML += '<option value="' + r.id + '">@' + r.name + '</option>';
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                });
 
-            try {
-                const res = await fetch(`/api/guild/${guildId}/event-settings`, { credentials: 'include' });
-                if (res.ok) {
-                    const set = await res.json();
-                    if (set.eventChannelId) document.getElementById('set-channel').value = set.eventChannelId;
-                    if (set.pingRoleId) document.getElementById('set-role').value = set.pingRoleId;
-                }
-            } catch (e) { console.error(e); }
+            // Загрузка списка событий
+            fetch('/api/events/' + guildId)
+                .then(r => r.json())
+                .then(events => {
+                    const list = document.getElementById('events-list');
+                    if (events.length === 0) {
+                        list.innerHTML = '<p>Пока нет событий.</p>';
+                        return;
+                    }
+                    let html = '';
+                    events.forEach(function(ev) {
+                        let timeStr = 'Время не указано';
+                        if (ev.isRecurring) {
+                            if (ev.recurrenceType === 'daily') timeStr = `Ежедневно в ${ev.timeOfDay || '20:00'}`;
+                            else if (ev.recurrenceType === 'weekly') {
+                                const daysMap = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+                                const days = (ev.recurrenceDays || []).map(d => daysMap[d]).join(', ');
+                                timeStr = `Еженедельно (${days}) в ${ev.timeOfDay || '20:00'}`;
+                            }
+                        } else if (ev.date) {
+                            timeStr = new Date(ev.date).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                        }
 
-            loadEvents();
-        }
+                        html += '<div class="event-card">';
+                        html += '<div class="event-info"><h3>' + (ev.title || 'Без названия') + '</h3>';
+                        html += '<div class="event-meta"><span>🏷️ ' + (ev.type || 'Другое') + '</span><span>🕒 ' + timeStr + '</span></div></div>';
+                        html += '<button class="btn btn-danger btn-small" onclick="fetch(\'/api/events/' + guildId + '/' + ev._id + '\', {method:\'DELETE\'}).then(()=>location.reload())">Удалить</button>';
+                        html += '</div>';
+                    });
+                    list.innerHTML = html;
+                })
+                .catch(err => {
+                    document.getElementById('events-list').innerHTML = 'Ошибка загрузки: ' + err.message;
+                });
+        };
 
-        async function loadEvents() {
-    const list = document.getElementById('events-list');
-    list.innerHTML = 'Загрузка...';
-    try {
-        const res = await fetch(`/api/events/${guildId}`, { credentials: 'include' });
-        const events = await res.json();
-        
-        if (events.length === 0) {
-            list.innerHTML = '<p>Пока нет событий.</p>';
-            return;
-        }
-
-        list.innerHTML = events.map(ev => {
-            // Просто выводим то, что есть
-            let timeStr = ev.timeOfDay ? `В ${ev.timeOfDay}` : 'Время не указано';
-            if (!ev.isRecurring && ev.date) {
-                timeStr = new Date(ev.date).toLocaleString('ru-RU');
-            }
-
-            return `
-                <div class="event-card" style="border: 1px solid #d4af37; padding: 10px; margin-bottom: 10px; border-radius: 5px; background: rgba(0,0,0,0.5);">
-                    <h3 style="color: #d4af37; margin: 0 0 5px 0;">${ev.title}</h3>
-                    <p style="margin: 0; color: #ccc;">Тип: ${ev.type} | ${timeStr}</p>
-                    <button onclick="deleteEvent('${ev._id}')" style="margin-top: 10px; background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 3px;">Удалить</button>
-                </div>
-            `;
-        }).join('');
-    } catch (e) {
-        list.innerHTML = 'Ошибка загрузки: ' + e.message;
-    }
-        }
-        async function deleteEvent(id) {
-            if (!confirm('Удалить событие?')) return;
-            await fetch(`/api/events/${guildId}/${id}`, { method: 'DELETE', credentials: 'include' });
-            loadEvents();
-        }
-
-        async function saveSettings() {
-            const eventChannelId = document.getElementById('set-channel').value;
-            const pingRoleId = document.getElementById('set-role').value;
-
-            const res = await fetch(`/api/guild/${guildId}/event-settings`, {
+        function saveSettings() {
+            const ch = document.getElementById('set-channel').value;
+            const role = document.getElementById('set-role').value;
+            
+            fetch('/api/guild/' + guildId + '/event-settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ eventChannelId, pingRoleId, timezoneOffset: 3 })
+                body: JSON.stringify({ eventChannelId: ch, pingRoleId: role })
+            }).then(r => {
+                if (r.ok) alert('✅ Настройки сохранены!');
+                else alert('❌ Ошибка сохранения');
             });
-
-            if (res.ok) alert('✅ Настройки сохранены!');
-            else alert('❌ Ошибка сохранения');
         }
-
-        init();
     </script>
 </body>
 </html>
