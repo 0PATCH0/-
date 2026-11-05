@@ -150,7 +150,6 @@
 
     <script>
         const guildId = window.location.pathname.split('/')[2];
-        let channelsData = { channels: [], roles: [] };
 
         function switchTab(tabId, btn) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -180,11 +179,11 @@
             try {
                 const res = await fetch(`/api/event-channels/${guildId}`, { credentials: 'include' });
                 if (res.ok) {
-                    channelsData = await res.json();
+                    const data = await res.json();
                     document.getElementById('set-channel').innerHTML = '<option value="">-- Не выбран --</option>' + 
-                        channelsData.channels.map(c => `<option value="${c.id}">#${c.name}</option>`).join('');
+                        data.channels.map(c => `<option value="${c.id}">#${c.name}</option>`).join('');
                     document.getElementById('set-role').innerHTML = '<option value="">-- Без тега --</option>' + 
-                        channelsData.roles.map(r => `<option value="${r.id}">@${r.name}</option>`).join('');
+                        data.roles.map(r => `<option value="${r.id}">@${r.name}</option>`).join('');
                 }
             } catch (e) { console.error(e); }
 
@@ -243,7 +242,6 @@
             }
         }
 
-        // ИСПРАВЛЕННАЯ ФУНКЦИЯ С ПОДРОБНЫМИ ОШИБКАМИ
         async function createEvent() {
             const title = document.getElementById('ev-title').value.trim();
             const type = document.getElementById('ev-type').value;
@@ -251,12 +249,15 @@
             const description = document.getElementById('ev-desc').value.trim();
             const mode = document.getElementById('ev-recurring').value;
 
-            if (!title) return alert('⚠️ Введите название события!');
+            if (!title) {
+                alert('Введите название события!');
+                return;
+            }
 
             const payload = {
-                title,
-                description,
-                type,
+                title: title,
+                description: description,
+                type: type,
                 timezoneOffset: Number(tz),
                 isRecurring: mode !== 'none',
                 recurrenceType: mode,
@@ -269,31 +270,41 @@
                 document.querySelectorAll('.days-grid input:checked').forEach(cb => {
                     payload.recurrenceDays.push(Number(cb.value));
                 });
-                if (payload.recurrenceDays.length === 0) return alert('⚠️ Выберите хотя бы один день недели!');
+                if (payload.recurrenceDays.length === 0) {
+                    alert('Выберите хотя бы один день недели!');
+                    return;
+                }
             }
 
             if (mode === 'none') {
                 const dateStr = document.getElementById('ev-date').value;
-                if (!dateStr) return alert('⚠️ Выберите дату и время!');
+                if (!dateStr) {
+                    alert('Выберите дату и время!');
+                    return;
+                }
                 const date = new Date(dateStr);
                 payload.date = date.getTime() - (date.getTimezoneOffset() * 60000) - (Number(tz) * 3600000);
             }
 
-            const res = await fetch(`/api/events/${guildId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(payload)
-            });
-            
-            if (res.ok) {
-                alert('✅ Событие успешно создано!');
-                document.getElementById('ev-title').value = '';
-                document.getElementById('ev-desc').value = '';
-                loadEvents();
-            } else {
-                const text = await res.text();
-                alert('❌ Ошибка сервера (' + res.status + '):\n' + text);
+            try {
+                const res = await fetch('/api/events/' + guildId, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    alert('✅ Событие успешно создано!');
+                    document.getElementById('ev-title').value = '';
+                    document.getElementById('ev-desc').value = '';
+                    loadEvents();
+                } else {
+                    const data = await res.json();
+                    alert('Ошибка сервера: ' + (data.error || res.status));
+                }
+            } catch (e) {
+                alert('Ошибка сети: ' + e.message);
             }
         }
 
