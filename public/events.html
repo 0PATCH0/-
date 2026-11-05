@@ -3,31 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тест создания события</title>
+    <title>События — Where Winds Meet</title>
     <link rel="stylesheet" href="/css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
+    <style>
+        .event-form { background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; }
+        .form-row { display: flex; gap: 15px; flex-wrap: wrap; }
+        .form-row .form-group { flex: 1; min-width: 200px; }
+    </style>
 </head>
 <body class="admin-page">
-    <div class="container" style="padding: 20px;">
-        <h1>📅 Создание события</h1>
-        <p>Введите название и нажмите кнопку. Это обычная HTML-форма, без JavaScript.</p>
-        
-        <!-- Форма отправляет POST запрос на сервер -->
-        <form action="/api/events/1482704899739975803" method="POST" style="margin-top: 20px;">
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px;">Название события:</label>
-                <!-- Атрибут name="title" критически важен! -->
-                <input type="text" name="title" value="Событие через форму" required style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid var(--border); background: #000; color: #fff;">
-            </div>
-            
-            <!-- Скрытые поля, чтобы сервер их принял -->
-            <input type="hidden" name="date" value="1730000000000">
-            <input type="hidden" name="type" value="Другое">
-            <input type="hidden" name="description" value="Создано через HTML-форму">
-            
-            <button type="submit" class="btn btn-primary" style="padding: 15px 30px; font-size: 16px;">
-                🚀 ОТПРАВИТЬ НА СЕРВЕР
-            </button>
-        </form>
+    <div class="bg-ink"></div>
+    <div class="fog"></div>
+
+    <div class="container">
+        <nav class="top-nav">
+            <div class="logo">WHERE WINDS MEET</div>
+            <a href="#" class="back-link" onclick="history.back(); return false;">← Назад</a>
+        </nav>
+
+        <div class="page-title">
+            <h1>📅 Календарь событий</h1>
+            <p>Добавление события (HTML-форма)</p>
+        </div>
+
+        <div class="event-form">
+            <!-- Обычная форма, которая отправляет данные на сервер -->
+            <form action="/api/events/1482704899739975803" method="POST">
+                <div class="form-group">
+                    <label>Название *</label>
+                    <input type="text" name="title" required placeholder="ГВГ с гильдией X">
+                </div>
+                
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea name="description" style="min-height: 80px;" placeholder="Детали..."></textarea>
+                </div>
+                
+                <input type="hidden" name="date" value="1730000000000">
+                <input type="hidden" name="type" value="ГВГ">
+                
+                <button type="submit" class="btn btn-primary" style="margin-top: 15px;">✅ Создать событие</button>
+            </form>
+        </div>
     </div>
 </body>
 </html>
