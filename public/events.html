@@ -3,58 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>События — Where Winds Meet</title>
+    <title>Тест создания события</title>
     <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body class="admin-page">
-    <div class="container">
-        <h1>📅 Календарь событий</h1>
+    <div class="container" style="padding: 20px;">
+        <h1>📅 Создание события</h1>
+        <p>Введите название и нажмите кнопку. Это обычная HTML-форма, без JavaScript.</p>
         
-        <div class="panel" style="padding: 20px; margin-top: 20px;">
-            <div class="form-group">
-                <label>Название</label>
-                <input type="text" id="ev-title" value="Тест" style="width: 100%; padding: 10px;">
+        <!-- Форма отправляет POST запрос на сервер -->
+        <form action="/api/events/1482704899739975803" method="POST" style="margin-top: 20px;">
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px;">Название события:</label>
+                <!-- Атрибут name="title" критически важен! -->
+                <input type="text" name="title" value="Событие через форму" required style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid var(--border); background: #000; color: #fff;">
             </div>
-            <!-- Кнопка вызывает функцию с принудительным алертом -->
-            <button type="button" class="btn btn-primary" onclick="alert('Кнопка нажата!'); createEvent();" style="margin-top: 15px; padding: 15px 30px;">
-                СОЗДАТЬ (ТЕСТ)
+            
+            <!-- Скрытые поля, чтобы сервер их принял -->
+            <input type="hidden" name="date" value="1730000000000">
+            <input type="hidden" name="type" value="Другое">
+            <input type="hidden" name="description" value="Создано через HTML-форму">
+            
+            <button type="submit" class="btn btn-primary" style="padding: 15px 30px; font-size: 16px;">
+                🚀 ОТПРАВИТЬ НА СЕРВЕР
             </button>
-        </div>
-
-        <div id="events-list" style="margin-top: 20px;">События не загружены</div>
+        </form>
     </div>
-
-    <script>
-        const guildId = window.location.pathname.split('/')[2];
-
-        async function createEvent() {
-            alert('Функция createEvent начала работу. Сейчас отправлю на сервер.');
-            
-            const title = document.getElementById('ev-title').value.trim();
-            
-            try {
-                const res = await fetch('/api/events/' + guildId, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        title: title, 
-                        description: 'Тестовое описание', 
-                        date: Date.now(), 
-                        type: 'Другое' 
-                    })
-                });
-
-                const text = await res.text();
-                
-                if (res.ok) {
-                    alert('✅ УСПЕХ! Сервер создал событие.');
-                } else {
-                    alert('❌ ОШИБКА СЕРВЕРА:\nСтатус: ' + res.status + '\nОтвет: ' + text);
-                }
-            } catch (e) {
-                alert('❌ ОШИБКА СЕТИ: ' + e.message);
-            }
-        }
-    </script>
 </body>
 </html>
