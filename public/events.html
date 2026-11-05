@@ -256,17 +256,30 @@
         };
 
         function saveSettings() {
-            const ch = document.getElementById('set-channel').value;
-            const role = document.getElementById('set-role').value;
-            
-            fetch('/api/guild/' + guildId + '/event-settings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ eventChannelId: ch, pingRoleId: role })
-            }).then(r => {
-                if (r.ok) alert('✅ Настройки сохранены!');
-                else alert('❌ Ошибка сохранения');
-            });
+    const ch = document.getElementById('set-channel').value;
+    const role = document.getElementById('set-role').value;
+    
+    if (!ch) {
+        alert('Выберите канал для уведомлений!');
+        return;
+    }
+
+    fetch('/api/guild/' + guildId + '/event-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }, // <-- Вот это важно!
+        body: JSON.stringify({ eventChannelId: ch, pingRoleId: role })
+    })
+    .then(async r => {
+        const data = await r.json();
+        if (r.ok) {
+            alert('✅ Настройки сохранены! Теперь бот знает, куда писать.');
+        } else {
+            alert('❌ Ошибка сервера: ' + (data.error || r.status));
+        }
+    })
+    .catch(err => {
+        alert('❌ Ошибка сети: ' + err.message);
+    });
         }
     </script>
 </body>
