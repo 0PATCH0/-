@@ -292,8 +292,25 @@ app.get('/api/guild/:id', isModerator, async (req, res) => {
 // ─── СОБЫТИЯ ──────────────────────────────────────────────
 app.get('/api/events/:guildId', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Не авторизован' });
-    try { res.json(await Event.find({ guildId: req.params.guildId }).sort({ date: 1 })); }
-    catch (e) { console.error('EVENTS LIST:', e); res.status(500).json({ error: 'Ошибка' }); }
+    try {
+        const events = await Event.find({ guildId: req.params.guildId }).sort({ date: 1 });
+        
+        // Проходимся по каждому событию и чиним битые данные
+        const fixedEvents = events.map(e => {
+            const obj = e.toObject();
+            // Если это цикличное событие и нет времени, ставим 20:00
+            if (obj.isRecurring && !obj.timeOfDay) obj.timeOfDay = '20:00';
+            // Если это разовое событие и нет даты, ставим текущую
+            if (!obj.isRecurring && !obj.date) obj.date = Date.now();
+            return obj;
+        });
+        
+        res.json(fixedEvents); 
+    }
+    catch (e) { 
+        console.error('EVENTS LIST:', e); 
+        res.status(500).json({ error: 'Ошибка' }); 
+    }
 });
 
 app.post('/api/events/:guildId', isModerator, async (req, res) => {
@@ -382,13 +399,26 @@ app.get('/api/guild/:id/event-settings', isModerator, async (req, res) => {
 app.post('/api/guild/:id/event-settings', isModerator, async (req, res) => {
     try {
         const { eventChannelId, pingRoleId, timezoneOffset } = req.body;
-        await EventSettings.findOneAndUpdate(
+        
+        // Используем findOneAndUpdate с upsert, чтобы запись точно создалась
+        const updated = await EventSettings.findOneAndUpdate(
             { guildId: req.params.id },
-            { eventChannelId, pingRoleId, timezoneOffset },
-            { upsert: true }
+            { 
+                $set: { 
+                    eventChannelId: eventChannelId || null, 
+                    pingRoleId: pingRoleId || null, 
+                    timezoneOffset: Number(timezoneOffset) || 3 
+                } 
+            },
+            { upsert: true, new: true }
         );
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
+        
+        console.log("Сохранены настройки:", updated);
+        res.json({ success: true, settings: updated });
+    } catch (e) { 
+        console.error("Ошибка сохранения настроек:", e);
+        res.status(500).json({ error: 'Ошибка сохранения' }); 
+    }
 });
 
 // ─── КАНАЛЫ ДЛЯ СОБЫТИЙ ───────────────────────────────────
