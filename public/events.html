@@ -177,23 +177,21 @@
         }
 
         async function init() {
+            // Загрузка каналов и ролей
             try {
-    const res = await fetch(`/api/event-channels/${guildId}`, { credentials: 'include' });
-    if (res.ok) {
-        channelsData = await res.json();
-        document.getElementById('set-channel').innerHTML = '<option value="">-- Не выбран --</option>' + 
-            channelsData.channels.map(c => `<option value="${c.id}">#${c.name}</option>`).join('');
-        document.getElementById('set-role').innerHTML = '<option value="">-- Без тега --</option>' + 
-            channelsData.roles.map(r => `<option value="${r.id}">@${r.name}</option>`).join('');
-    } else {
-        console.error("Ошибка API каналов:", res.status, await res.text());
-        alert("Не удалось загрузить каналы. Код: " + res.status);
-    }
-} catch (e) { 
-    console.error(e); 
-    alert("Сетевая ошибка при загрузке каналов");
-            }
-            
+                const res = await fetch(`/api/event-channels/${guildId}`, { credentials: 'include' });
+                if (res.ok) {
+                    channelsData = await res.json();
+                    document.getElementById('set-channel').innerHTML = '<option value="">-- Не выбран --</option>' + 
+                        channelsData.channels.map(c => `<option value="${c.id}">#${c.name}</option>`).join('');
+                    document.getElementById('set-role').innerHTML = '<option value="">-- Без тега --</option>' + 
+                        channelsData.roles.map(r => `<option value="${r.id}">@${r.name}</option>`).join('');
+                } else {
+                    console.error("Ошибка API каналов:", res.status);
+                }
+            } catch (e) { console.error(e); }
+
+            // Загрузка настроек
             try {
                 const res = await fetch(`/api/guild/${guildId}/event-settings`, { credentials: 'include' });
                 if (res.ok) {
@@ -249,6 +247,7 @@
             }
         }
 
+        // ИСПРАВЛЕННАЯ ФУНКЦИЯ СОЗДАНИЯ
         async function createEvent() {
             const title = document.getElementById('ev-title').value.trim();
             const type = document.getElementById('ev-type').value;
@@ -256,16 +255,22 @@
             const description = document.getElementById('ev-desc').value.trim();
             const mode = document.getElementById('ev-recurring').value;
 
-            if (!title) return alert('Введите название!');
+            if (!title) return alert('Введите название события!');
 
+            // Базовый объект, который всегда отправляем
             const payload = {
-                title, description, type, timezoneOffset: Number(tz),
+                title,
+                description,
+                type,
+                timezoneOffset: Number(tz),
                 isRecurring: mode !== 'none',
                 recurrenceType: mode,
                 timeOfDay: document.getElementById('ev-time').value || '20:00',
-                recurrenceDays: []
+                recurrenceDays: [],
+                date: Date.now() // <-- ВАЖНО: по умолчанию ставим текущее время, чтобы Mongoose не ругался
             };
 
+            // Если событие еженедельное, собираем отмеченные дни
             if (mode === 'weekly') {
                 document.querySelectorAll('.days-grid input:checked').forEach(cb => {
                     payload.recurrenceDays.push(Number(cb.value));
@@ -273,29 +278,34 @@
                 if (payload.recurrenceDays.length === 0) return alert('Выберите хотя бы один день недели!');
             }
 
+            // Если разовое, берем дату из календаря
             if (mode === 'none') {
                 const dateStr = document.getElementById('ev-date').value;
                 if (!dateStr) return alert('Выберите дату и время!');
                 const date = new Date(dateStr);
-                // Переводим в UTC с учетом часового пояса
+                // Переводим в UTC с учетом часового пояса пользователя
                 payload.date = date.getTime() - (date.getTimezoneOffset() * 60000) - (Number(tz) * 3600000);
             }
 
-            const res = await fetch(`/api/events/${guildId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(payload)
-            });
-            
-            if (res.ok) {
-                alert('Событие создано!');
-                document.getElementById('ev-title').value = '';
-                document.getElementById('ev-desc').value = '';
-                loadEvents();
-            } else {
-                const data = await res.json();
-                alert('Ошибка: ' + (data.error || 'неизвестно'));
+            try {
+                const res = await fetch(`/api/events/${guildId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    alert('✅ Событие успешно создано!');
+                    document.getElementById('ev-title').value = '';
+                    document.getElementById('ev-desc').value = '';
+                    loadEvents();
+                } else {
+                    const data = await res.json();
+                    alert('❌ Ошибка сервера: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            } catch (err) {
+                alert('❌ Ошибка сети: ' + err.message);
             }
         }
 
@@ -316,8 +326,8 @@
                 body: JSON.stringify({ eventChannelId, pingRoleId, timezoneOffset: 3 })
             });
 
-            if (res.ok) alert('Настройки сохранены!');
-            else alert('Ошибка сохранения');
+            if (res.ok) alert('✅ Настройки сохранены!');
+            else alert('❌ Ошибка сохранения');
         }
 
         init();
