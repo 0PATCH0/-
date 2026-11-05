@@ -3,43 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>События — Where Winds Meet</title>
+    <title>Календарь событий — Where Winds Meet</title>
     <link rel="stylesheet" href="/css/admin.css">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
     <style>
-        .tabs-nav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
-        .tab-btn { padding: 10px 20px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-family: 'Cinzel', serif; font-size: 16px; border-bottom: 2px solid transparent; transition: 0.2s; }
+        :root {
+            --gold: #d4af37;
+            --border: rgba(212, 175, 55, 0.2);
+            --text-muted: #8a8578;
+            --bg-card: rgba(18, 22, 28, 0.8);
+        }
+        
+        .tabs-nav { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 1px solid var(--border); }
+        .tab-btn { padding: 12px 24px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-family: 'Cinzel', serif; font-size: 16px; border-bottom: 2px solid transparent; transition: all 0.3s ease; }
         .tab-btn:hover { color: var(--gold); }
         .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
-        .event-card { background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-left: 4px solid var(--gold); border-radius: 8px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; transition: 0.2s; }
-        .event-card:hover { border-color: rgba(212, 175, 55, 0.5); box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .event-info h3 { margin: 0 0 5px 0; color: var(--gold); font-family: 'Cinzel', serif; }
-        .event-meta { font-size: 14px; color: var(--text-muted); display: flex; gap: 15px; flex-wrap: wrap; }
-        .event-meta span { display: flex; align-items: center; gap: 5px; }
+        .tab-content { display: none; opacity: 0; transform: translateY(10px); transition: all 0.4s ease; }
+        .tab-content.active { display: block; opacity: 1; transform: translateY(0); }
         
-        .event-form { background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; }
-        .form-row { display: flex; gap: 15px; flex-wrap: wrap; }
-        .form-row .form-group { flex: 1; min-width: 200px; }
+        .event-card { background: var(--bg-card); border: 1px solid var(--border); border-left: 4px solid var(--gold); border-radius: 10px; padding: 20px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; transition: transform 0.2s, box-shadow 0.2s; backdrop-filter: blur(10px); }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.4); border-color: rgba(212, 175, 55, 0.5); }
+        .event-info h3 { margin: 0 0 8px 0; color: var(--gold); font-family: 'Cinzel', serif; font-size: 18px; }
+        .event-meta { font-size: 14px; color: #ccc; display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
+        .event-meta span { display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.3); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); }
         
-        .days-grid { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+        .event-form { background: rgba(0,0,0,0.4); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 30px; backdrop-filter: blur(10px); }
+        .form-row { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 15px; }
+        .form-group { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 8px; }
+        .form-group label { font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px; background: rgba(0,0,0,0.6); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 6px; color: #fff; font-family: 'Marcellus', serif; outline: none; transition: border-color 0.3s; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--gold); }
+        
+        .days-grid { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
         .day-checkbox { position: relative; }
-        .day-checkbox input { position: absolute; opacity: 0; }
-        .day-checkbox label { display: inline-block; padding: 8px 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 14px; color: var(--text-muted); transition: 0.2s; }
+        .day-checkbox input { position: absolute; opacity: 0; width: 0; height: 0; }
+        .day-checkbox label { display: inline-block; padding: 8px 14px; background: rgba(0,0,0,0.5); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 6px; cursor: pointer; font-size: 14px; color: var(--text-muted); transition: all 0.2s; }
         .day-checkbox input:checked + label { background: var(--gold); color: #000; border-color: var(--gold); font-weight: bold; }
         
         .hidden { display: none !important; }
-        .empty-state { text-align: center; padding: 30px; color: var(--text-muted); font-style: italic; }
+        .empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-style: italic; font-size: 16px; }
+        .btn-create { width: 100%; padding: 15px; background: linear-gradient(135deg, var(--gold), #aa8624); color: #000; border: none; border-radius: 8px; font-family: 'Cinzel', serif; font-weight: bold; font-size: 16px; cursor: pointer; transition: filter 0.2s; margin-top: 10px; }
+        .btn-create:hover { filter: brightness(1.1); }
+        
+        .settings-panel { max-width: 600px; margin: 0 auto; }
+        .status-msg { margin-top: 10px; font-size: 14px; text-align: center; }
     </style>
 </head>
 <body class="admin-page">
     <div class="bg-ink"></div>
     <div class="fog"></div>
 
-    <div class="container">
+    <div class="container" style="max-width: 1000px; margin: 0 auto;">
         <nav class="top-nav">
             <div class="logo">WHERE WINDS MEET</div>
             <a href="#" class="back-link" onclick="history.back(); return false;">← Назад</a>
@@ -47,7 +62,7 @@
 
         <div class="page-title">
             <h1>📅 Календарь событий</h1>
-            <p>Планируйте ГВГ, вечеринки и арены</p>
+            <p>Управление расписанием гильдии</p>
         </div>
 
         <div class="tabs-nav">
@@ -58,12 +73,12 @@
         <!-- Вкладка: События -->
         <div id="tab-events" class="tab-content active">
             <div class="event-form">
-                <h3 style="margin-top: 0; color: var(--gold); font-family: 'Cinzel', serif;">Добавить событие</h3>
+                <h3 style="margin-top: 0; color: var(--gold); font-family: 'Cinzel', serif; margin-bottom: 20px;">Создать событие</h3>
                 
                 <form action="/api/events/1482704899739975803" method="POST" id="eventForm">
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Название *</label>
+                            <label>Название события *</label>
                             <input type="text" name="title" required placeholder="ГВГ с гильдией X">
                         </div>
                         <div class="form-group">
@@ -99,20 +114,22 @@
                     </div>
 
                     <div id="recurrence-fields" class="hidden">
-                        <div class="form-group">
-                            <label>Время начала (HH:MM)</label>
-                            <input type="time" name="timeOfDay" value="20:00">
-                        </div>
-                        <div id="weekly-days" class="hidden">
-                            <label>Дни недели</label>
-                            <div class="days-grid">
-                                <div class="day-checkbox"><input type="checkbox" id="d1" value="1" class="day-cb"><label for="d1">Пн</label></div>
-                                <div class="day-checkbox"><input type="checkbox" id="d2" value="2" class="day-cb"><label for="d2">Вт</label></div>
-                                <div class="day-checkbox"><input type="checkbox" id="d3" value="3" class="day-cb"><label for="d3">Ср</label></div>
-                                <div class="day-checkbox"><input type="checkbox" id="d4" value="4" class="day-cb"><label for="d4">Чт</label></div>
-                                <div class="day-checkbox"><input type="checkbox" id="d5" value="5" class="day-cb"><label for="d5">Пт</label></div>
-                                <div class="day-checkbox"><input type="checkbox" id="d6" value="6" class="day-cb"><label for="d6">Сб</label></div>
-                                <div class="day-checkbox"><input type="checkbox" id="d0" value="0" class="day-cb"><label for="d0">Вс</label></div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Время начала (HH:MM)</label>
+                                <input type="time" name="timeOfDay" value="20:00">
+                            </div>
+                            <div id="weekly-days" class="form-group hidden">
+                                <label>Дни недели</label>
+                                <div class="days-grid">
+                                    <div class="day-checkbox"><input type="checkbox" id="d1" value="1" class="day-cb"><label for="d1">Пн</label></div>
+                                    <div class="day-checkbox"><input type="checkbox" id="d2" value="2" class="day-cb"><label for="d2">Вт</label></div>
+                                    <div class="day-checkbox"><input type="checkbox" id="d3" value="3" class="day-cb"><label for="d3">Ср</label></div>
+                                    <div class="day-checkbox"><input type="checkbox" id="d4" value="4" class="day-cb"><label for="d4">Чт</label></div>
+                                    <div class="day-checkbox"><input type="checkbox" id="d5" value="5" class="day-cb"><label for="d5">Пт</label></div>
+                                    <div class="day-checkbox"><input type="checkbox" id="d6" value="6" class="day-cb"><label for="d6">Сб</label></div>
+                                    <div class="day-checkbox"><input type="checkbox" id="d0" value="0" class="day-cb"><label for="d0">Вс</label></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -121,40 +138,41 @@
                     <input type="hidden" name="recurrenceType" id="h_recurrenceType" value="none">
                     <input type="hidden" name="recurrenceDays" id="h_recurrenceDays" value="[]">
 
-                    <div id="date-field" class="form-group">
+                    <div id="date-field" class="form-group" style="margin-bottom: 15px;">
                         <label>Дата и время (для разового)</label>
                         <input type="datetime-local" name="date">
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group" style="margin-bottom: 15px;">
                         <label>Описание</label>
-                        <textarea name="description" style="min-height: 80px;" placeholder="Детали события..."></textarea>
+                        <textarea name="description" style="min-height: 100px; resize: vertical;" placeholder="Детали события..."></textarea>
                     </div>
                     
-                    <button type="submit" class="btn btn-primary" onclick="prepareForm()" style="margin-top: 15px; font-size: 16px; padding: 12px 25px;">✅ Создать событие</button>
+                    <button type="submit" class="btn-create" onclick="prepareForm()">✅ Создать событие</button>
                 </form>
             </div>
 
-            <h3 style="color: var(--gold); font-family: 'Cinzel', serif;">Список событий</h3>
-            <div id="events-list"><div class="empty-state">Загрузка...</div></div>
+            <h3 style="color: var(--gold); font-family: 'Cinzel', serif; margin-bottom: 15px;">Предстоящие события</h3>
+            <div id="events-list"><div class="empty-state">Загрузка расписания...</div></div>
         </div>
 
         <!-- Вкладка: Настройки -->
         <div id="tab-settings" class="tab-content">
-            <div class="event-form">
-                <h3 style="margin-top: 0; color: var(--gold); font-family: 'Cinzel', serif;">Настройки уведомлений</h3>
-                <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 15px;">Бот будет присылать сообщение с тегом роли ровно в момент начала события.</p>
+            <div class="event-form settings-panel">
+                <h3 style="margin-top: 0; color: var(--gold); font-family: 'Cinzel', serif; margin-bottom: 10px;">Настройки уведомлений</h3>
+                <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 25px;">Бот будет присылать сообщение с тегом выбранной роли ровно в момент начала события.</p>
                 
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom: 20px;">
                     <label>Канал для анонсов</label>
-                    <select id="set-channel"><option>Загрузка...</option></select>
+                    <select id="set-channel"><option>Загрузка данных...</option></select>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom: 20px;">
                     <label>Роль для пинга (тега)</label>
-                    <select id="set-role"><option>Загрузка...</option></select>
+                    <select id="set-role"><option>Загрузка данных...</option></select>
                 </div>
                 
-                <button type="button" class="btn btn-primary" onclick="saveSettings()" style="margin-top: 10px;">💾 Сохранить настройки</button>
+                <button type="button" class="btn-create" onclick="saveSettings()">💾 Сохранить настройки</button>
+                <div id="settings-status" class="status-msg"></div>
             </div>
         </div>
     </div>
@@ -203,92 +221,103 @@
             }
         }
 
-        // ИСПРАВЛЕННАЯ ЗАГРУЗКА (Последовательная, чтобы настройки применились ПОСЛЕ каналов)
-        window.onload = function() {
-            // Сначала загружаем каналы
-            fetch('/api/event-channels/' + guildId)
-                .then(r => r.json())
-                .then(data => {
-                    const chSelect = document.getElementById('set-channel');
-                    const roleSelect = document.getElementById('set-role');
-                    
-                    chSelect.innerHTML = '<option value="">-- Не выбран --</option>';
-                    roleSelect.innerHTML = '<option value="">-- Без тега --</option>';
-                    
-                    if (data.channels) {
-                        data.channels.forEach(c => {
-                            chSelect.innerHTML += `<option value="${c.id}">#${c.name}</option>`;
-                        });
-                    }
-                    if (data.roles) {
-                        data.roles.forEach(r => {
-                            roleSelect.innerHTML += `<option value="${r.id}">@${r.name}</option>`;
-                        });
-                    }
-                })
-                .catch(err => console.error(err))
-                .finally(() => {
-                    // ТОЛЬКО ПОСЛЕ ТОГО, как каналы загрузились, применяем настройки
-                    fetch('/api/guild/' + guildId + '/event-settings')
-                        .then(r => r.json())
-                        .then(set => {
-                            if (set.eventChannelId) document.getElementById('set-channel').value = set.eventChannelId;
-                            if (set.pingRoleId) document.getElementById('set-role').value = set.pingRoleId;
-                        })
-                        .catch(err => console.error(err));
-                });
+        // УМНАЯ И БЕЗОПАСНАЯ ЗАГРУЗКА ДАННЫХ
+        async function initPage() {
+            try {
+                // Загружаем каналы и настройки параллельно
+                const [channelsRes, settingsRes, eventsRes] = await Promise.all([
+                    fetch('/api/event-channels/' + guildId),
+                    fetch('/api/guild/' + guildId + '/event-settings'),
+                    fetch('/api/events/' + guildId)
+                ]);
 
-            // Параллельно загружаем список событий (с защитой от кэша)
-            fetch('/api/events/' + guildId + '?t=' + Date.now())
-                .then(r => r.json())
-                .then(events => {
-                    const list = document.getElementById('events-list');
-                    if (events.length === 0) {
-                        list.innerHTML = '<div class="empty-state">Пока нет событий. Создайте первое!</div>';
-                        return;
+                const channelsData = channelsRes.ok ? await channelsRes.json() : { channels: [], roles: [] };
+                const settingsData = settingsRes.ok ? await settingsRes.json() : {};
+                const eventsData = eventsRes.ok ? await eventsRes.json() : [];
+
+                // 1. Заполняем каналы
+                const chSelect = document.getElementById('set-channel');
+                const roleSelect = document.getElementById('set-role');
+                
+                let chHtml = '<option value="">-- Не выбран --</option>';
+                let roleHtml = '<option value="">-- Без тега --</option>';
+                
+                if (channelsData.channels) {
+                    channelsData.channels.forEach(c => chHtml += `<option value="${c.id}">#${c.name}</option>`);
+                }
+                if (channelsData.roles) {
+                    channelsData.roles.forEach(r => roleHtml += `<option value="${r.id}">@${r.name}</option>`);
+                }
+                
+                chSelect.innerHTML = chHtml;
+                roleSelect.innerHTML = roleHtml;
+
+                // 2. Применяем сохраненные настройки (теперь каналы уже в списке, и мы можем их выбрать)
+                if (settingsData.eventChannelId) chSelect.value = settingsData.eventChannelId;
+                if (settingsData.pingRoleId) roleSelect.value = settingsData.pingRoleId;
+
+                // 3. Отрисовываем события (с защитой от неполных данных)
+                renderEvents(eventsData);
+
+            } catch (err) {
+                console.error("Ошибка инициализации:", err);
+                document.getElementById('events-list').innerHTML = '<div class="empty-state" style="color: #e74c3c;">Ошибка загрузки данных. Проверьте соединение.</div>';
+            }
+        }
+
+        function renderEvents(events) {
+            const list = document.getElementById('events-list');
+            if (!events || events.length === 0) {
+                list.innerHTML = '<div class="empty-state">На данный момент событий нет.</div>';
+                return;
+            }
+
+            // Сортируем события по времени
+            events.sort((a, b) => {
+                const timeA = a.date || 0;
+                const timeB = b.date || 0;
+                return timeA - timeB;
+            });
+
+            let html = '';
+            events.forEach(ev => {
+                let timeStr = 'Время не указано';
+                let typeIcon = '📌';
+                
+                if (ev.type === 'ГВГ') typeIcon = '⚔️';
+                if (ev.type === 'Вечеринка') typeIcon = '🎉';
+                if (ev.type === 'Арена') typeIcon = '🏟️';
+                if (ev.type === 'Рейд') typeIcon = '🐉';
+
+                if (ev.isRecurring) {
+                    if (ev.recurrenceType === 'daily') timeStr = `Ежедневно в ${ev.timeOfDay || '20:00'}`;
+                    else if (ev.recurrenceType === 'weekly') {
+                        const daysMap = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+                        const days = (ev.recurrenceDays || []).map(d => daysMap[d]).join(', ');
+                        timeStr = `Еженедельно (${days}) в ${ev.timeOfDay || '20:00'}`;
                     }
-                    let html = '';
-                    events.forEach(ev => {
-                        let timeStr = 'Время не указано';
-                        let typeIcon = '📌';
-                        if (ev.type === 'ГВГ') typeIcon = '⚔️';
-                        if (ev.type === 'Вечеринка') typeIcon = '🎉';
-                        if (ev.type === 'Арена') typeIcon = '🏟️';
-                        if (ev.type === 'Рейд') typeIcon = '🐉';
+                } else if (ev.date) {
+                    timeStr = new Date(ev.date).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+                }
 
-                        if (ev.isRecurring) {
-                            if (ev.recurrenceType === 'daily') timeStr = `Ежедневно в ${ev.timeOfDay || '20:00'}`;
-                            else if (ev.recurrenceType === 'weekly') {
-                                const daysMap = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-                                const days = (ev.recurrenceDays || []).map(d => daysMap[d]).join(', ');
-                                timeStr = `Еженедельно (${days}) в ${ev.timeOfDay || '20:00'}`;
-                            }
-                        } else if (ev.date) {
-                            timeStr = new Date(ev.date).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-                        }
-
-                        html += `
-                            <div class="event-card">
-                                <div class="event-info">
-                                    <h3>${ev.title || 'Без названия'}</h3>
-                                    <div class="event-meta">
-                                        <span>${typeIcon} ${ev.type || 'Другое'}</span>
-                                        <span>🕒 ${timeStr}</span>
-                                    </div>
-                                </div>
-                                <button class="btn btn-danger btn-small" onclick="deleteEvent('${ev._id}')">🗑 Удалить</button>
+                html += `
+                    <div class="event-card">
+                        <div class="event-info">
+                            <h3>${ev.title || 'Без названия'}</h3>
+                            <div class="event-meta">
+                                <span>${typeIcon} ${ev.type || 'Другое'}</span>
+                                <span>⏰ ${timeStr}</span>
                             </div>
-                        `;
-                    });
-                    list.innerHTML = html;
-                })
-                .catch(err => {
-                    document.getElementById('events-list').innerHTML = '<div class="empty-state">Ошибка загрузки: ' + err.message + '</div>';
-                });
-        };
+                        </div>
+                        <button class="btn btn-danger btn-small" onclick="deleteEvent('${ev._id}')">🗑 Удалить</button>
+                    </div>
+                `;
+            });
+            list.innerHTML = html;
+        }
 
         function deleteEvent(id) {
-            if (!confirm('Удалить событие?')) return;
+            if (!confirm('Вы уверены, что хотите удалить это событие?')) return;
             fetch('/api/events/' + guildId + '/' + id, { method: 'DELETE' })
                 .then(() => location.reload());
         }
@@ -296,27 +325,39 @@
         function saveSettings() {
             const ch = document.getElementById('set-channel').value;
             const role = document.getElementById('set-role').value;
+            const statusDiv = document.getElementById('settings-status');
             
             if (!ch) {
-                alert('Выберите канал для уведомлений!');
+                statusDiv.style.color = '#e74c3c';
+                statusDiv.textContent = 'Выберите канал для уведомлений!';
                 return;
             }
+
+            statusDiv.style.color = '#aaa';
+            statusDiv.textContent = 'Сохранение...';
 
             fetch('/api/guild/' + guildId + '/event-settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ eventChannelId: ch, pingRoleId: role, timezoneOffset: 3 })
             })
-            .then(async r => {
-                const data = await r.json();
+            .then(r => {
                 if (r.ok) {
-                    alert('✅ Настройки сохранены!');
+                    statusDiv.style.color = '#2ecc71';
+                    statusDiv.textContent = '✅ Настройки сохранены! Бот будет присылать уведомления сюда.';
                 } else {
-                    alert('❌ Ошибка сервера: ' + (data.error || r.status));
+                    statusDiv.style.color = '#e74c3c';
+                    statusDiv.textContent = '❌ Ошибка сервера при сохранении.';
                 }
             })
-            .catch(err => alert('❌ Ошибка сети: ' + err.message));
+            .catch(() => {
+                statusDiv.style.color = '#e74c3c';
+                statusDiv.textContent = '❌ Ошибка сети.';
+            });
         }
+
+        // Запуск при загрузке страницы
+        document.addEventListener('DOMContentLoaded', initPage);
     </script>
 </body>
 </html>
