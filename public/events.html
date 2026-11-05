@@ -235,34 +235,17 @@
         }
 
         list.innerHTML = events.map(ev => {
-            let timeStr = 'Дата не указана';
-            
-            // Безопасная проверка: если это старое событие без новых полей
-            if (ev.isRecurring && ev.timeOfDay) {
-                if (ev.recurrenceType === 'daily') {
-                    timeStr = `Ежедневно в ${ev.timeOfDay}`;
-                } else if (ev.recurrenceType === 'weekly' && ev.recurrenceDays) {
-                    const daysMap = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-                    const days = ev.recurrenceDays.map(d => daysMap[d]).join(', ');
-                    timeStr = `Еженедельно (${days}) в ${ev.timeOfDay}`;
-                } else {
-                    timeStr = `В ${ev.timeOfDay || '??:??'}`;
-                }
-            } else if (ev.date) {
-                // Для разовых (или старых событий) берем дату
-                timeStr = new Date(ev.date).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+            // Просто выводим то, что есть
+            let timeStr = ev.timeOfDay ? `В ${ev.timeOfDay}` : 'Время не указано';
+            if (!ev.isRecurring && ev.date) {
+                timeStr = new Date(ev.date).toLocaleString('ru-RU');
             }
 
             return `
-                <div class="event-card">
-                    <div class="event-info">
-                        <h3>${ev.title || 'Без названия'}</h3>
-                        <div class="event-meta">
-                            <span>🏷️ ${ev.type || 'Другое'}</span>
-                            <span>🕒 ${timeStr}</span>
-                        </div>
-                    </div>
-                    <button class="btn btn-danger btn-small" onclick="deleteEvent('${ev._id}')">Удалить</button>
+                <div class="event-card" style="border: 1px solid #d4af37; padding: 10px; margin-bottom: 10px; border-radius: 5px; background: rgba(0,0,0,0.5);">
+                    <h3 style="color: #d4af37; margin: 0 0 5px 0;">${ev.title}</h3>
+                    <p style="margin: 0; color: #ccc;">Тип: ${ev.type} | ${timeStr}</p>
+                    <button onclick="deleteEvent('${ev._id}')" style="margin-top: 10px; background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 3px;">Удалить</button>
                 </div>
             `;
         }).join('');
@@ -270,7 +253,6 @@
         list.innerHTML = 'Ошибка загрузки: ' + e.message;
     }
         }
-
         async function deleteEvent(id) {
             if (!confirm('Удалить событие?')) return;
             await fetch(`/api/events/${guildId}/${id}`, { method: 'DELETE', credentials: 'include' });
