@@ -14,6 +14,7 @@ const OWNER_ID = '439798786059927552';
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // <-- ДОБАВИТЬ ВОТ ЭТУ СТРОКУ
 app.use(session({ secret: 'super_secret_bot_key_123', resave: false, saveUninitialized: false, cookie: { secure: false } }));
 app.use(passport.initialize());
 app.use(passport.session());
