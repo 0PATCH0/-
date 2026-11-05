@@ -56,7 +56,7 @@
             <div class="event-form">
                 <h3 style="margin-top: 0; color: var(--gold); font-family: 'Cinzel', serif;">Добавить событие</h3>
                 
-                <form action="/api/events/1482704899739975803" method="POST">
+                <form action="/api/events/1482704899739975803" method="POST" id="eventForm">
                     <div class="form-row">
                         <div class="form-group">
                             <label>Название *</label>
@@ -77,9 +77,10 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Режим</label>
-                            <select name="isRecurring" onchange="toggleRecurrence(this)">
-                                <option value="false">Разовое</option>
-                                <option value="true">Ежедневное</option>
+                            <select name="mode" id="modeSelect" onchange="toggleRecurrence()">
+                                <option value="none">Разовое</option>
+                                <option value="daily">Ежедневное</option>
+                                <option value="weekly">Еженедельное</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -93,12 +94,30 @@
                         </div>
                     </div>
 
+                    <!-- Поля для цикличных событий -->
                     <div id="recurrence-fields" class="hidden">
                         <div class="form-group">
                             <label>Время начала (HH:MM)</label>
                             <input type="time" name="timeOfDay" value="20:00">
                         </div>
+                        <div id="weekly-days" class="hidden">
+                            <label>Дни недели</label>
+                            <div class="days-grid">
+                                <div class="day-checkbox"><input type="checkbox" id="d1" value="1" class="day-cb"><label for="d1">Пн</label></div>
+                                <div class="day-checkbox"><input type="checkbox" id="d2" value="2" class="day-cb"><label for="d2">Вт</label></div>
+                                <div class="day-checkbox"><input type="checkbox" id="d3" value="3" class="day-cb"><label for="d3">Ср</label></div>
+                                <div class="day-checkbox"><input type="checkbox" id="d4" value="4" class="day-cb"><label for="d4">Чт</label></div>
+                                <div class="day-checkbox"><input type="checkbox" id="d5" value="5" class="day-cb"><label for="d5">Пт</label></div>
+                                <div class="day-checkbox"><input type="checkbox" id="d6" value="6" class="day-cb"><label for="d6">Сб</label></div>
+                                <div class="day-checkbox"><input type="checkbox" id="d0" value="0" class="day-cb"><label for="d0">Вс</label></div>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- Скрытые поля для отправки данных -->
+                    <input type="hidden" name="isRecurring" id="h_isRecurring" value="false">
+                    <input type="hidden" name="recurrenceType" id="h_recurrenceType" value="none">
+                    <input type="hidden" name="recurrenceDays" id="h_recurrenceDays" value="[]">
 
                     <div id="date-field" class="form-group">
                         <label>Дата и время (для разового)</label>
@@ -110,7 +129,8 @@
                         <textarea name="description" style="min-height: 80px;" placeholder="Детали события..."></textarea>
                     </div>
                     
-                    <button type="submit" class="btn btn-primary" style="margin-top: 15px;">✅ Создать событие</button>
+                    <!-- Кнопка с обработчиком, который соберет чекбоксы перед отправкой -->
+                    <button type="submit" class="btn btn-primary" onclick="prepareForm()" style="margin-top: 15px;">✅ Создать событие</button>
                 </form>
             </div>
 
@@ -148,18 +168,34 @@
             document.getElementById('tab-' + tabId).classList.add('active');
         }
 
-        function toggleRecurrence(select) {
-            const isRecurring = select.value === 'true';
+        function toggleRecurrence() {
+            const mode = document.getElementById('modeSelect').value;
             const recurFields = document.getElementById('recurrence-fields');
             const dateField = document.getElementById('date-field');
-            
-            if (isRecurring) {
-                recurFields.classList.remove('hidden');
-                dateField.classList.add('hidden');
-            } else {
+            const weeklyDays = document.getElementById('weekly-days');
+
+            // Скрытые поля
+            document.getElementById('h_isRecurring').value = (mode !== 'none').toString();
+            document.getElementById('h_recurrenceType').value = mode;
+
+            if (mode === 'none') {
                 recurFields.classList.add('hidden');
                 dateField.classList.remove('hidden');
+            } else {
+                recurFields.classList.remove('hidden');
+                dateField.classList.add('hidden');
+                if (mode === 'weekly') weeklyDays.classList.remove('hidden');
+                else weeklyDays.classList.add('hidden');
             }
+        }
+
+        // Функция собирает выбранные дни в JSON-массив перед отправкой
+        function prepareForm() {
+            const days = [];
+            document.querySelectorAll('.day-cb:checked').forEach(cb => {
+                days.push(Number(cb.value));
+            });
+            document.getElementById('h_recurrenceDays').value = JSON.stringify(days);
         }
 
         async function init() {
@@ -201,7 +237,12 @@
                 list.innerHTML = events.map(ev => {
                     let timeStr = '';
                     if (ev.isRecurring) {
-                        timeStr = `Ежедневно в ${ev.timeOfDay}`;
+                        if (ev.recurrenceType === 'daily') timeStr = `Ежедневно в ${ev.timeOfDay}`;
+                        else {
+                            const daysMap = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+                            const days = (ev.recurrenceDays || []).map(d => daysMap[d]).join(', ');
+                            timeStr = `Еженедельно (${days}) в ${ev.timeOfDay}`;
+                        }
                     } else {
                         timeStr = new Date(ev.date).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
                     }
