@@ -316,7 +316,11 @@ app.post('/api/events/:guildId', isModerator, async (req, res) => {
             timeOfDay: timeOfDay || '20:00'
         });
         
-        res.json({ success: true, event });
+        // Если запрос пришел от HTML-формы (нет заголовка application/json), делаем редирект
+if (req.headers['content-type'] && req.headers['content-type'].includes('application/x-www-form-urlencoded')) {
+    return res.redirect('/manage/' + req.params.guildId + '/events');
+}
+res.json({ success: true, event });
     } catch (e) { console.error('EVENT CREATE:', e); res.status(500).json({ error: 'Ошибка: ' + e.message }); }
 });
 
