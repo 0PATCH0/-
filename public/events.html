@@ -7,164 +7,350 @@
     <link rel="stylesheet" href="/css/admin.css">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap" rel="stylesheet">
     <style>
+        .tabs-nav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+        .tab-btn { padding: 12px 24px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-family: 'Cinzel', serif; font-size: 16px; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
         .event-card { background: rgba(18, 22, 28, 0.8); border: 1px solid var(--border); border-left: 4px solid var(--gold); border-radius: 8px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
-        .event-info h3 { margin: 0 0 5px 0; color: var(--gold); }
-        .event-meta { font-size: 14px; color: #ccc; display: flex; gap: 15px; }
+        .event-info h3 { margin: 0 0 5px 0; color: var(--gold); font-family: 'Cinzel', serif; }
+        .event-meta { font-size: 14px; color: #ccc; display: flex; gap: 15px; flex-wrap: wrap; }
+        
         .event-form { background: rgba(0,0,0,0.4); padding: 20px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; color: var(--text-muted); }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 4px; }
+        .form-row { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
+        .form-group { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 13px; color: var(--text-muted); }
+        .form-group input, .form-group select, .form-group textarea { padding: 10px; background: #000; border: 1px solid var(--border); border-radius: 6px; color: #fff; font-family: 'Marcellus', serif; }
         .hidden { display: none !important; }
-        .btn { padding: 10px 20px; background: var(--gold); color: #000; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .empty-state { text-align: center; padding: 30px; color: var(--text-muted); }
+        .btn-create { width: 100%; padding: 15px; background: linear-gradient(135deg, var(--gold), #aa8624); color: #000; border: none; border-radius: 8px; font-family: 'Cinzel', serif; font-weight: bold; font-size: 16px; cursor: pointer; }
+        .status-msg { margin-top: 10px; font-size: 14px; text-align: center; }
     </style>
 </head>
 <body class="admin-page">
-    <div class="container" style="max-width: 800px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: var(--gold);">📅 Календарь событий</h1>
-        
-        <div class="event-form">
-            <h3 style="color: var(--gold);">Создать событие</h3>
-            <form id="createForm">
-                <div class="form-group">
-                    <label>Название</label>
-                    <input type="text" id="ev-title" required>
-                </div>
-                <div class="form-group">
-                    <label>Режим</label>
-                    <select id="ev-mode" onchange="toggleMode()">
-                        <option value="single">Разовое</option>
-                        <option value="daily">Ежедневное</option>
-                        <option value="weekly">Еженедельное</option>
-                    </select>
-                </div>
-                
-                <!-- Блок для разового -->
-                <div id="block-single">
-                    <div class="form-group">
-                        <label>Дата и время</label>
-                        <input type="datetime-local" id="ev-date">
-                    </div>
-                </div>
+    <div class="bg-ink"></div>
+    <div class="fog"></div>
 
-                <!-- Блок для циклических -->
-                <div id="block-recurring" class="hidden">
-                    <div class="form-group">
-                        <label>Время (HH:MM)</label>
-                        <input type="time" id="ev-time" value="20:00">
-                    </div>
-                    <div id="block-weekly" class="hidden">
+    <div class="container" style="max-width: 1000px; margin: 0 auto;">
+        <nav class="top-nav">
+            <div class="logo">WHERE WINDS MEET</div>
+            <a href="#" class="back-link" onclick="history.back(); return false;">← Назад</a>
+        </nav>
+
+        <div class="page-title">
+            <h1>📅 Календарь событий</h1>
+        </div>
+
+        <div class="tabs-nav">
+            <button type="button" class="tab-btn active" onclick="switchTab('events', this)">События</button>
+            <button type="button" class="tab-btn" onclick="switchTab('settings', this)">Настройки</button>
+        </div>
+
+        <!-- Вкладка: События -->
+        <div id="tab-events" class="tab-content active">
+            <div class="event-form">
+                <h3 style="margin-top: 0; color: var(--gold);">Создать событие</h3>
+                
+                <form id="eventForm">
+                    <div class="form-row">
                         <div class="form-group">
-                            <label>Дни недели</label>
-                            <select id="ev-days" multiple style="height: 100px;">
-                                <option value="1">Пн</option>
-                                <option value="2">Вт</option>
-                                <option value="3">Ср</option>
-                                <option value="4">Чт</option>
-                                <option value="5">Пт</option>
-                                <option value="6">Сб</option>
-                                <option value="0">Вс</option>
+                            <label>Название *</label>
+                            <input type="text" id="ev-title" required placeholder="ГВГ с гильдией X">
+                        </div>
+                        <div class="form-group">
+                            <label>Тип</label>
+                            <select id="ev-type">
+                                <option value="ГВГ">⚔️ ГВГ</option>
+                                <option value="Вечеринка">🎉 Вечеринка</option>
+                                <option value="Арена">🏟️ Арена</option>
+                                <option value="Рейд">🐉 Рейд</option>
+                                <option value="Другое">📌 Другое</option>
                             </select>
                         </div>
                     </div>
-                </div>
 
-                <button type="submit" class="btn">Создать</button>
-            </form>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Режим</label>
+                            <select id="ev-mode" onchange="toggleRecurrence()">
+                                <option value="none">Разовое</option>
+                                <option value="daily">Ежедневное</option>
+                                <option value="weekly">Еженедельное</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Часовой пояс</label>
+                            <select id="ev-tz">
+                                <option value="3">МСК (UTC+3)</option>
+                                <option value="0">UTC</option>
+                                <option value="2">UTC+2</option>
+                                <option value="4">UTC+4</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="recurrence-fields" class="hidden">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Время начала (HH:MM)</label>
+                                <input type="time" id="ev-time" value="20:00">
+                            </div>
+                            <div id="weekly-days" class="form-group hidden">
+                                <label>Дни недели</label>
+                                <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                    <label><input type="checkbox" value="1" class="day-cb"> Пн</label>
+                                    <label><input type="checkbox" value="2" class="day-cb"> Вт</label>
+                                    <label><input type="checkbox" value="3" class="day-cb"> Ср</label>
+                                    <label><input type="checkbox" value="4" class="day-cb"> Чт</label>
+                                    <label><input type="checkbox" value="5" class="day-cb"> Пт</label>
+                                    <label><input type="checkbox" value="6" class="day-cb"> Сб</label>
+                                    <label><input type="checkbox" value="0" class="day-cb"> Вс</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="date-field" class="form-group" style="margin-bottom: 15px;">
+                        <label>Дата и время (для разового)</label>
+                        <input type="datetime-local" id="ev-date">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label>Описание</label>
+                        <textarea id="ev-desc" style="min-height: 80px;"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn-create">✅ Создать событие</button>
+                </form>
+            </div>
+
+            <h3 style="color: var(--gold);">Список событий</h3>
+            <div id="events-list"><div class="empty-state">Загрузка...</div></div>
         </div>
 
-        <h3 style="color: var(--gold);">Список событий</h3>
-        <div id="events-list"></div>
+        <!-- Вкладка: Настройки -->
+        <div id="tab-settings" class="tab-content">
+            <div class="event-form">
+                <h3 style="margin-top: 0; color: var(--gold);">Настройки уведомлений</h3>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Канал</label>
+                    <select id="set-channel"><option>Загрузка...</option></select>
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Роль</label>
+                    <select id="set-role"><option>Загрузка...</option></select>
+                </div>
+                <button type="button" class="btn-create" onclick="saveSettings()">💾 Сохранить</button>
+                <div id="settings-status" class="status-msg"></div>
+            </div>
+        </div>
     </div>
 
     <script>
         const guildId = window.location.pathname.split('/')[2];
 
-        function toggleMode() {
-            const mode = document.getElementById('ev-mode').value;
-            const blockSingle = document.getElementById('block-single');
-            const blockRecurring = document.getElementById('block-recurring');
-            const blockWeekly = document.getElementById('block-weekly');
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
 
-            if (mode === 'single') {
-                blockSingle.classList.remove('hidden');
-                blockRecurring.classList.add('hidden');
+        function toggleRecurrence() {
+            const mode = document.getElementById('ev-mode').value;
+            const recurFields = document.getElementById('recurrence-fields');
+            const dateField = document.getElementById('date-field');
+            const weeklyDays = document.getElementById('weekly-days');
+
+            if (mode === 'none') {
+                recurFields.classList.add('hidden');
+                dateField.classList.remove('hidden');
             } else {
-                blockSingle.classList.add('hidden');
-                blockRecurring.classList.remove('hidden');
-                if (mode === 'weekly') blockWeekly.classList.remove('hidden');
-                else blockWeekly.classList.add('hidden');
+                recurFields.classList.remove('hidden');
+                dateField.classList.add('hidden');
+                if (mode === 'weekly') weeklyDays.classList.remove('hidden');
+                else weeklyDays.classList.add('hidden');
             }
         }
 
-        document.getElementById('createForm').onsubmit = async (e) => {
+        // ОТПРАВКА ФОРМЫ
+        document.getElementById('eventForm').onsubmit = async function(e) {
             e.preventDefault();
-            const mode = document.getElementById('ev-mode').value;
             
-            const payload = {
-                title: document.getElementById('ev-title').value,
-                type: 'Другое',
-                isRecurring: mode !== 'single',
-                date: Date.now(), // По умолчанию
-                timeOfDay: '20:00'
-            };
+            const title = document.getElementById('ev-title').value.trim();
+            if (!title) return alert('Введите название события!');
 
-            if (mode === 'single') {
-                const d = document.getElementById('ev-date').value;
-                if (!d) return alert('Выберите дату');
-                payload.date = new Date(d).getTime();
-            } else {
-                payload.recurrenceType = mode;
-                payload.timeOfDay = document.getElementById('ev-time').value;
-                if (mode === 'weekly') {
-                    const days = [];
-                    const select = document.getElementById('ev-days');
-                    for (let opt of select.options) {
-                        if (opt.selected) days.push(Number(opt.value));
-                    }
-                    payload.recurrenceDays = days;
-                }
+            const mode = document.getElementById('ev-mode').value;
+            const type = document.getElementById('ev-type').value;
+            const tz = Number(document.getElementById('ev-tz').value);
+            
+            const days = [];
+            if (mode === 'weekly') {
+                document.querySelectorAll('.day-cb:checked').forEach(cb => days.push(Number(cb.value)));
+                if (days.length === 0) return alert('Выберите хотя бы один день недели!');
             }
 
-            const res = await fetch('/api/events/' + guildId, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            
-            if (res.ok) {
-                alert('Создано!');
-                document.getElementById('createForm').reset();
-                loadEvents();
-            } else {
-                alert('Ошибка');
+            let dateTimestamp = Date.now();
+            if (mode === 'none') {
+                const dateVal = document.getElementById('ev-date').value;
+                if (!dateVal) return alert('Выберите дату и время!');
+                dateTimestamp = new Date(dateVal).getTime();
+            }
+
+            const payload = {
+                title: title,
+                description: document.getElementById('ev-desc').value.trim(),
+                type: type,
+                timezoneOffset: tz,
+                isRecurring: mode !== 'none',
+                recurrenceType: mode,
+                recurrenceDays: days,
+                timeOfDay: document.getElementById('ev-time').value || '20:00',
+                date: dateTimestamp
+            };
+
+            const btn = document.querySelector('#eventForm button[type="submit"]');
+            btn.textContent = '⏳ Отправка...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/events/' + guildId, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    alert('✅ Событие создано!');
+                    document.getElementById('eventForm').reset();
+                    loadEvents();
+                } else {
+                    alert('❌ Ошибка сервера: ' + (data.error || res.status));
+                }
+            } catch (err) {
+                alert('❌ Ошибка сети: ' + err.message);
+            } finally {
+                btn.textContent = '✅ Создать событие';
+                btn.disabled = false;
             }
         };
 
-        async function loadEvents() {
-            const res = await fetch('/api/events/' + guildId);
-            const events = await res.json();
-            const list = document.getElementById('events-list');
+        // СПИСОК СОБЫТИЙ
+        function loadEvents() {
+            fetch('/api/events/' + guildId + '?t=' + Date.now())
+                .then(res => res.json())
+                .then(events => {
+                    const list = document.getElementById('events-list');
+                    if (!events || events.length === 0) {
+                        list.innerHTML = '<div class="empty-state">Нет событий.</div>';
+                        return;
+                    }
+                    let html = '';
+                    events.forEach(ev => {
+                        let timeStr = 'Время не указано';
+                        let icon = '📌';
+                        if (ev.type === 'ГВГ') icon = '⚔️';
+                        if (ev.type === 'Вечеринка') icon = '🎉';
+                        if (ev.type === 'Арена') icon = '🏟️';
+                        if (ev.type === 'Рейд') icon = '🐉';
+
+                        if (ev.isRecurring) {
+                            if (ev.recurrenceType === 'daily') timeStr = `Ежедневно в ${ev.timeOfDay || '20:00'}`;
+                            else if (ev.recurrenceType === 'weekly') {
+                                const daysMap = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+                                const days = (ev.recurrenceDays || []).map(d => daysMap[d]).join(', ');
+                                timeStr = `(${days}) в ${ev.timeOfDay || '20:00'}`;
+                            }
+                        } else if (ev.date) {
+                            timeStr = new Date(ev.date).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                        }
+
+                        html += `<div class="event-card">
+                            <div class="event-info">
+                                <h3>${ev.title}</h3>
+                                <div class="event-meta"><span>${icon} ${ev.type || 'Другое'}</span><span>⏰ ${timeStr}</span></div>
+                            </div>
+                            <button class="btn btn-danger btn-small" onclick="deleteEvent('${ev._id}')">Удалить</button>
+                        </div>`;
+                    });
+                    list.innerHTML = html;
+                })
+                .catch(() => {
+                    document.getElementById('events-list').innerHTML = '<div class="empty-state" style="color:red;">Ошибка загрузки.</div>';
+                });
+        }
+
+        // НАСТРОЙКИ
+        async function loadSettings() {
+            try {
+                const resCh = await fetch('/api/event-channels/' + guildId);
+                const data = await resCh.json();
+                
+                let chHtml = '<option value="">-- Не выбран --</option>';
+                let roleHtml = '<option value="">-- Без тега --</option>';
+                if (data.channels) data.channels.forEach(c => chHtml += `<option value="${c.id}">#${c.name}</option>`);
+                if (data.roles) data.roles.forEach(r => roleHtml += `<option value="${r.id}">@${r.name}</option>`);
+                
+                document.getElementById('set-channel').innerHTML = chHtml;
+                document.getElementById('set-role').innerHTML = roleHtml;
+
+                const resSet = await fetch('/api/guild/' + guildId + '/event-settings');
+                const set = await resSet.json();
+                if (set.eventChannelId) document.getElementById('set-channel').value = set.eventChannelId;
+                if (set.pingRoleId) document.getElementById('set-role').value = set.pingRoleId;
+            } catch (err) {
+                console.error("Ошибка настроек:", err);
+            }
+        }
+
+        function deleteEvent(id) {
+            if (!confirm('Удалить событие?')) return;
+            fetch('/api/events/' + guildId + '/' + id, { method: 'DELETE' }).then(() => loadEvents());
+        }
+
+        async function saveSettings() {
+            const ch = document.getElementById('set-channel').value;
+            const role = document.getElementById('set-role').value;
+            const statusDiv = document.getElementById('settings-status');
             
-            if (!events || events.length === 0) {
-                list.innerHTML = '<p>Нет событий</p>';
+            if (!ch) {
+                statusDiv.style.color = 'red';
+                statusDiv.textContent = 'Выберите канал!';
                 return;
             }
 
-            let html = '';
-            events.forEach(ev => {
-                let timeStr = ev.isRecurring ? `${ev.timeOfDay}` : new Date(ev.date).toLocaleString();
-                html += `<div class="event-card">
-                    <div class="event-info">
-                        <h3>${ev.title}</h3>
-                        <div class="event-meta">⏰ ${timeStr}</div>
-                    </div>
-                    <button onclick="fetch('/api/events/${guildId}/${ev._id}', {method:'DELETE'}).then(()=>loadEvents())" class="btn" style="background:red;">Удалить</button>
-                </div>`;
-            });
-            list.innerHTML = html;
+            statusDiv.style.color = '#aaa';
+            statusDiv.textContent = 'Сохранение...';
+
+            try {
+                const res = await fetch('/api/guild/' + guildId + '/event-settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ eventChannelId: ch, pingRoleId: role, timezoneOffset: 3 })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    statusDiv.style.color = '#2ecc71';
+                    statusDiv.textContent = '✅ Настройки сохранены!';
+                } else {
+                    statusDiv.style.color = 'red';
+                    statusDiv.textContent = '❌ Ошибка сервера: ' + (data.error || res.status);
+                }
+            } catch (err) {
+                statusDiv.style.color = 'red';
+                statusDiv.textContent = '❌ Ошибка сети: ' + err.message;
+            }
         }
 
-        window.onload = loadEvents;
+        window.onload = function() {
+            loadEvents();
+            loadSettings();
+        };
     </script>
 </body>
 </html>
