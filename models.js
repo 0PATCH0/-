@@ -44,21 +44,34 @@ const GuideSchema = new mongoose.Schema({
     date: { type: Date, default: Date.now } 
 });
 
+
+const EventSettingsSchema = new mongoose.Schema({
+    guildId: { type: String, required: true, unique: true },
+    eventChannelId: { type: String, default: null },
+    pingRoleId: { type: String, default: null },
+    timezoneOffset: { type: Number, default: 3 }
+});
+
 const EventSchema = new mongoose.Schema({ 
-    guildId: String, 
-    title: String, 
-    description: String, 
+    guildId: { type: String, required: true },
+    title: { type: String, required: true },
+    description: { type: String, default: '' },
     type: { type: String, default: 'Другое' },
-    date: Number, // Основная дата (для разовых)
-    timezoneOffset: { type: Number, default: 3 },
-    creatorId: String, 
-    attendees: [{ type: String }],
-    // Новые поля для цикличности
+    
+    // Флаг, чтобы понимать, как обрабатывать событие
     isRecurring: { type: Boolean, default: false },
-    recurrenceType: { type: String, enum: ['daily', 'weekly', 'none'], default: 'none' },
-    recurrenceDays: { type: [Number], default: [] }, // 0 - Вс, 1 - Пн, ... 6 - Сб
-    timeOfDay: { type: String, default: '20:00' }, // Формат HH:MM
-    lastRemindedDate: { type: String, default: null } // Чтобы не спамить в один день (YYYY-MM-DD)
+    
+    // Поля для разового события (только если isRecurring === false)
+    date: { type: Number, required: false }, 
+    
+    // Поля для циклических событий (только если isRecurring === true)
+    recurrenceType: { type: String, enum: ['daily', 'weekly'], default: 'daily' },
+    recurrenceDays: { type: [Number], default: [] }, // 0-6
+    timeOfDay: { type: String, default: '20:00' }, // HH:MM
+    
+    timezoneOffset: { type: Number, default: 3 },
+    creatorId: String,
+    lastReminded: { type: String, default: null } // Защита от спама (YYYY-MM-DD)
 });
 
 const PlayerProfileSchema = new mongoose.Schema({
@@ -116,13 +129,7 @@ const WordleLobbySchema = new mongoose.Schema({
     }]
 }, { timestamps: true });
 
-const EventSettingsSchema = new mongoose.Schema({
-    guildId: { type: String, required: true, unique: true },
-    eventChannelId: { type: String, default: null }, // Канал для анонсов
-    pingRoleId: { type: String, default: null },     // Роль для тега
-    timezoneOffset: { type: Number, default: 3 },    // Часовой пояс (например, +3 для МСК)
-    eventTypes: { type: [String], default: ['ГВГ', 'Вечеринка', 'Арена', 'Реイド', 'Другое'] } // Типы событий
-});
+
 
 
 module.exports = {
