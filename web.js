@@ -19,6 +19,12 @@ app.use(session({ secret: 'super_secret_bot_key_123', resave: false, saveUniniti
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use((req, res, next) => {
+    if (req.path.endsWith('.html') || req.path === '/') {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    }
+    next();
+});
 
 passport.use(new DiscordStrategy({
     clientID: process.env.CLIENT_ID, clientSecret: process.env.CLIENT_SECRET,
