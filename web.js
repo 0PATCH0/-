@@ -316,59 +316,37 @@ app.get('/api/events/:guildId', async (req, res) => {
     }
 });
 
-app.post('/api/events/:guildId', isModerator, async (req, res) => {
+app.post('/api/events/:guildId', async (req, res) => {
     try {
-        let { title, description, date, type, timezoneOffset, isRecurring, recurrenceType, recurrenceDays, timeOfDay } = req.body || {};
-
-        if (!title) return res.status(400).json({ error: 'title обязателен' });
-
-        // Костыль для HTML-форм: преобразуем строки в правильные типы
-        const isRec = (isRecurring === 'true' || isRecurring === true);
+        const { title, description, type, isRecurring, date, recurrenceType, recurrenceDays, timeOfDay, timezoneOffset } = req.body;
         
-        let recDays = [];
-        if (typeof recurrenceDays === 'string') {
-            try {
-                // Пытаемся распарсить массив "[1,3,5]" из скрытого поля
-                recDays = JSON.parse(recurrenceDays);
-            } catch(e) {
-                // Если это просто строка с числом, парсим её
-                if (!isNaN(Number(recurrenceDays))) recDays = [Number(recurrenceDays)];
-            }
-        } else if (Array.isArray(recurrenceDays)) {
-            recDays = recurrenceDays;
-        }
+        if (!title) return res.status(400).json({ error: 'Название обязательно' });
 
-        // Приводим дату к числу (так как из формы она приходит строкой)
-        let parsedDate = Number(date);
-        if (isNaN(parsedDate)) parsedDate = Date.now();
-
-        const event = await Event.create({ 
-            guildId: req.params.guildId, 
-            title: title, 
-            description: description || '', 
+        const eventData = {
+            guildId: req.params.guildId,
+            title: title,
+            description: description || '',
             type: type || 'Другое',
-            date: parsedDate,
+            isRecurring: !!isRecurring,
             timezoneOffset: Number(timezoneOffset) || 3,
-            creatorId: req.user.id, 
-            attendees: [],
-            isRecurring: isRec,
-            recurrenceType: recurrenceType || 'none',
-            recurrenceDays: recDays,
-            timeOfDay: timeOfDay || '20:00'
-        });
-        
-        // Если запрос пришел от обычной HTML-формы, делаем редирект обратно на страницу
-        const contentType = req.headers['content-type'] || '';
-        if (contentType.includes('application/x-www-form-urlencoded')) {
-            return res.redirect('/manage/' + req.params.guildId + '/events');
+            creatorId: req.user ? req.user.id : null
+        };
+
+        if (isRecurring) {
+            eventData.recurrenceType = recurrenceType || 'daily';
+            eventData.recurrenceDays = recurrenceDays || [];
+            eventData.timeOfDay = timeOfDay || '20:00';
+            eventData.date = null; // Для цикличных дата не нужна
+        } else {
+            eventData.date = Number(date);
+            if (isNaN(eventData.date)) eventData.date = Date.now();
         }
 
-        // Иначе (если запрос пришел через fetch) отдаем JSON
+        const event = await Event.create(eventData);
         res.json({ success: true, event });
-
     } catch (e) { 
-        console.error('EVENT CREATE:', e); 
-        res.status(500).json({ error: 'Ошибка: ' + e.message }); 
+        console.error(e); 
+        res.status(500).json({ error: e.message }); 
     }
 });
 
