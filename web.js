@@ -421,45 +421,55 @@ function startEventNotifier(client) {
             const events = await Event.find({});
             
             for (const event of events) {
-                // Получаем настройки для гильдии
+                // Получаем настройки для гильдии (канал и роль)
                 const settings = await EventSettings.findOne({ guildId: event.guildId });
                 if (!settings || !settings.eventChannelId) continue;
 
                 let shouldNotify = false;
-                const currentDateStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
+                const currentDateStr = now.toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+
+                // --- РАСЧЕТ ВРЕМЕНИ ---
+                // Берем текущее время в UTC
+                const utcHours = now.getUTCHours();
+                const utcMinutes = now.getUTCMinutes();
+                
+                // Прибавляем смещение часового пояса события (например, +3 для МСК)
+                let localHours = utcHours + event.timezoneOffset;
+                let localMinutes = utcMinutes;
+                
+                // Если часов больше 23, переносим на следующий день (упрощенно)
+                if (localHours >= 24) localHours -= 24;
+                if (localHours < 0) localHours += 24;
+
+                // Форматируем в строку "HH:MM"
+                const currentHHMM = String(localHours).padStart(2, '0') + ':' + String(localMinutes).padStart(2, '0');
+                
+                // День недели в UTC (0 - Вс, 1 - Пн...)
+                const currentDay = now.getUTCDay();
 
                 if (event.isRecurring) {
-                    // === ДЛЯ ЦИКЛИЧЕСКИХ СОБЫТИЙ ===
-                    // Если уже отправляли сегодня — пропускаем
-                    if (event.lastRemindedDate === currentDateStr) continue;
+                    // === ДЛЯ ЦИКЛИЧЕСКИХ ===
+                    if (event.lastRemindedDate === currentDateStr) continue; // Уже отправляли сегодня
                     
-                    // Переводим текущее время в часовой пояс события
-                    const utcNow = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
-                    const localNow = new Date(utcNow.getTime() + event.timezoneOffset * 3600000);
-                    const currentHHMM = localNow.toISOString().slice(11, 16); // "HH:MM"
-                    const currentDay = localNow.getDay(); // 0-6
-
                     if (event.timeOfDay === currentHHMM) {
                         if (event.recurrenceType === 'daily') shouldNotify = true;
                         if (event.recurrenceType === 'weekly' && event.recurrenceDays.includes(currentDay)) shouldNotify = true;
                     }
                 } else {
-                    // === ДЛЯ РАЗОВЫХ СОБЫТИЙ ===
+                    // === ДЛЯ РАЗОВЫХ ===
                     if (!event.date) continue;
-                    // Проверяем, что до начала события осталось от 0 до 2 минут
-                    // (таймер проверяет раз в минуту, поэтому ловим окно в 2 минуты, чтобы не пропустить)
+                    // Смотрим, сколько миллисекунд осталось до события
                     const diff = event.date - now.getTime();
-                    if (diff >= 0 && diff < 120000) {
-                        // Проверяем, не отправляли ли уже уведомление по этому событию
-                        // (можно использовать поле lastRemindedDate, если оно есть, или проверять по времени)
-                        // Для простоты считаем, что разовое событие отправляется один раз
+                    
+                    // Если до события осталось от 0 до 1 минуты 30 секунд (90 000 мс), отправляем
+                    if (diff >= 0 && diff < 90000) {
                         shouldNotify = true;
                     }
                 }
 
                 if (!shouldNotify) continue;
 
-                // Отправляем сообщение
+                // === ОТПРАВКА ===
                 const channel = await client.channels.fetch(settings.eventChannelId).catch(() => null);
                 if (!channel) continue;
 
@@ -475,19 +485,16 @@ function startEventNotifier(client) {
 
                 await channel.send({ content, embeds: [embed] });
                 
-                // Если событие циклическое, запоминаем, что сегодня уже отправили
+                // Защита от спама для циклических событий
                 if (event.isRecurring) {
                     event.lastRemindedDate = currentDateStr;
                     await event.save();
-                } else {
-                    // Для разового можно удалить его после отправки или пометить, 
-                    // но пока оставим как есть, чтобы ты видел его в списке.
                 }
             }
         } catch (e) {
             console.error('EVENT NOTIFIER ERROR:', e);
         }
-    }, 60000); // Проверка раз в 60 секунд
+    }, 60000); // Проверка каждые 60 секунд
 }
 
 // ─── ПРОФИЛИ ──────────────────────────────────────────────
