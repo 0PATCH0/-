@@ -18,248 +18,239 @@ module.exports = {
     async execute(interaction) {
         const text = interaction.options.getString('текст');
         
-        // Храним состояние в памяти, пока пользователь кликает по кнопкам
         const state = {
             text: text,
-            timezoneOffset: 3, // По умолчанию МСК
+            timezoneOffset: 3,
             repeat: 'once',
-            targetId: null,
-            targetType: null,
-            nextTime: null
+            dayOfWeek: null,
+            hour: 20,
+            minute: 0
         };
 
-        // Главное меню
-        const embed = new EmbedBuilder()
-            .setTitle('⏰ Настройка напоминания')
-            .setColor('#d4af37')
-            .setDescription(`**Текст:** ${text}\n\nВыберите параметры ниже, а затем нажмите «Далее».`)
-            .addFields(
-                { name: 'Часовой пояс', value: 'МСК (UTC+3)', inline: true },
-                { name: 'Повтор', value: 'Один раз', inline: true },
-                { name: 'Тег', value: 'Автор (вы)', inline: true }
-            );
-
-        const row1 = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('select_tz')
-                .setPlaceholder('Выберите часовой пояс')
-                .addOptions([
-                    { label: 'МСК (UTC+3)', value: '3', default: true },
-                    { label: 'UTC (UTC+0)', value: '0' },
-                    { label: 'UTC+2', value: '2' },
-                    { label: 'UTC+4', value: '4' },
-                    { label: 'UTC+5', value: '5' },
-                    { label: 'UTC+7', value: '7' }
-                ])
-        );
-
-        const row2 = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('select_repeat')
-                .setPlaceholder('Выберите повтор')
-                .addOptions([
-                    { label: 'Один раз', value: 'once', default: true },
-                    { label: 'Каждый день', value: 'daily' },
-                    { label: 'Каждую неделю', value: 'weekly' },
-                    { label: 'Каждый месяц', value: 'monthly' }
-                ])
-        );
-
-        const row3 = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('next_step')
-                .setLabel('Далее ➡️')
-                .setStyle(ButtonStyle.Primary),
-            new ButtonBuilder()
-                .setCustomId('cancel')
-                .setLabel('Отмена')
-                .setStyle(ButtonStyle.Danger)
-        );
-
-        const response = await interaction.reply({
-            embeds: [embed],
-            components: [row1, row2, row3],
-            ephemeral: true,
-            fetchReply: true
-        });
-
-        const collector = response.createMessageComponentCollector({ time: 300000 });
-
-        collector.on('collect', async i => {
-            if (i.user.id !== interaction.user.id) {
-                return i.reply({ content: 'Это меню не для вас.', ephemeral: true });
-            }
-
-            if (i.customId === 'cancel') {
-                collector.stop();
-                return i.update({ content: '❌ Создание напоминания отменено.', embeds: [], components: [] });
-            }
-
-            if (i.customId === 'select_tz') {
-                state.timezoneOffset = Number(i.values[0]);
-                embed.spliceFields(0, 1, { name: 'Часовой пояс', value: i.component.options.find(o => o.value === i.values[0]).label, inline: true });
-                await i.update({ embeds: [embed] });
-            }
-
-            if (i.customId === 'select_repeat') {
-                state.repeat = i.values[0];
-                embed.spliceFields(1, 1, { name: 'Повтор', value: i.component.options.find(o => o.value === i.values[0]).label, inline: true });
-                await i.update({ embeds: [embed] });
-            }
-
-            if (i.customId === 'next_step') {
-                collector.stop();
-                await i.update({ content: '⏳ Загрузка следующего шага...', embeds: [], components: [] });
-                await showTimeSelection(i, state);
-            }
-        });
+        await showMainMenu(interaction, state);
     }
 };
 
-// Второй шаг: выбор времени
-async function showTimeSelection(interaction, state) {
-    const isRecurring = state.repeat !== 'once';
-    
+// === ГЛАВНОЕ МЕНЮ ===
+async function showMainMenu(interaction, state) {
+    const embed = new EmbedBuilder()
+        .setTitle('⏰ Настройка напоминания')
+        .setColor('#d4af37')
+        .setDescription(`**Текст:** ${state.text}\n\nВыберите параметры ниже, а затем нажмите «Далее».`)
+        .addFields(
+            { name: 'Часовой пояс', value: `UTC+${state.timezoneOffset}`, inline: true },
+            { name: 'Повтор', value: getRepeatName(state.repeat), inline: true }
+        );
+
+    const row1 = new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+            .setCustomId('select_tz')
+            .setPlaceholder('Выберите часовой пояс')
+            .addOptions([
+                { label: 'МСК (UTC+3)', value: '3', default: state.timezoneOffset === 3 },
+                { label: 'UTC (UTC+0)', value: '0', default: state.timezoneOffset === 0 },
+                { label: 'UTC+2', value: '2', default: state.timezoneOffset === 2 },
+                { label: 'UTC+4', value: '4', default: state.timezoneOffset === 4 },
+                { label: 'UTC+5', value: '5', default: state.timezoneOffset === 5 }
+            ])
+    );
+
+    const row2 = new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+            .setCustomId('select_repeat')
+            .setPlaceholder('Выберите повтор')
+            .addOptions([
+                { label: 'Один раз', value: 'once', default: state.repeat === 'once' },
+                { label: 'Каждый день', value: 'daily', default: state.repeat === 'daily' },
+                { label: 'Каждую неделю', value: 'weekly', default: state.repeat === 'weekly' },
+                { label: 'Каждый месяц', value: 'monthly', default: state.repeat === 'monthly' }
+            ])
+    );
+
+    const row3 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('next_step').setLabel('Далее ➡️').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('cancel').setLabel('Отмена').setStyle(ButtonStyle.Danger)
+    );
+
+    const response = await interaction.editReply({
+        embeds: [embed],
+        components: [row1, row2, row3]
+    });
+
+    const collector = response.createMessageComponentCollector({ time: 300000 });
+
+    collector.on('collect', async i => {
+        if (i.user.id !== interaction.user.id) return i.reply({ content: 'Не для вас.', ephemeral: true });
+
+        if (i.customId === 'cancel') {
+            collector.stop();
+            return i.update({ content: '❌ Отменено.', embeds: [], components: [] });
+        }
+
+        if (i.customId === 'select_tz') {
+            state.timezoneOffset = Number(i.values[0]);
+            return showMainMenu(i, state); // Перерисовываем меню
+        }
+
+        if (i.customId === 'select_repeat') {
+            state.repeat = i.values[0];
+            return showMainMenu(i, state);
+        }
+
+        if (i.customId === 'next_step') {
+            collector.stop();
+            await showTimeMenu(i, state);
+        }
+    });
+}
+
+// === МЕНЮ ВЫБОРА ВРЕМЕНИ (ЧАСЫ И МИНУТЫ) ===
+async function showTimeMenu(interaction, state) {
+    const isWeekly = state.repeat === 'weekly';
+
     const embed = new EmbedBuilder()
         .setTitle('🕒 Выбор времени')
         .setColor('#d4af37')
-        .setDescription(`**Повтор:** ${state.repeat === 'once' ? 'Один раз' : state.repeat}`);
+        .setDescription(`**Повтор:** ${getRepeatName(state.repeat)}\nВыберите час и минуту, затем нажмите «Сохранить».`);
 
     const rows = [];
 
-    // Если это разовое или ежедневное — можно выбрать «через N минут»
-    if (!isRecurring) {
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('time_5m').setLabel('Через 5 мин').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('time_30m').setLabel('Через 30 мин').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('time_1h').setLabel('Через 1 час').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('time_custom').setLabel('Указать время').setStyle(ButtonStyle.Primary)
+    // Если еженедельно, добавляем выбор дня
+    if (isWeekly) {
+        const dayRow = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('select_day')
+                .setPlaceholder('Выберите день недели')
+                .addOptions([
+                    { label: 'Понедельник', value: '1' },
+                    { label: 'Вторник', value: '2' },
+                    { label: 'Среда', value: '3' },
+                    { label: 'Четверг', value: '4' },
+                    { label: 'Пятница', value: '5' },
+                    { label: 'Суббота', value: '6' },
+                    { label: 'Воскресенье', value: '0' }
+                ])
         );
-        rows.push(row);
-    } else {
-        // Для повторяющихся — только выбор конкретного времени
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('time_custom').setLabel('Указать время').setStyle(ButtonStyle.Primary)
-        );
-        rows.push(row);
+        rows.push(dayRow);
     }
 
-    const msg = await interaction.editReply({ embeds: [embed], components: rows, content: null });
+    // Выбор часа (0-23)
+    const hourOptions = [];
+    for (let h = 0; h < 24; h++) {
+        hourOptions.push({ label: `${h}:00`, value: h.toString() });
+    }
+    // Разбиваем часы на два ряда, так как Discord разрешает только 25 опций
+    const hourRow1 = new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+            .setCustomId('select_hour')
+            .setPlaceholder('Выберите час')
+            .addOptions(hourOptions.slice(0, 12))
+    );
+    const hourRow2 = new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+            .setCustomId('select_hour_2')
+            .setPlaceholder('Выберите час (продолжение)')
+            .addOptions(hourOptions.slice(12, 24))
+    );
+    rows.push(hourRow1, hourRow2);
+
+    // Выбор минут (кратно 5, чтобы не перегружать)
+    const minuteRow = new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+            .setCustomId('select_minute')
+            .setPlaceholder('Выберите минуту')
+            .addOptions([
+                { label: ':00', value: '0' },
+                { label: ':05', value: '5' },
+                { label: ':10', value: '10' },
+                { label: ':15', value: '15' },
+                { label: ':20', value: '20' },
+                { label: ':25', value: '25' },
+                { label: ':30', value: '30' },
+                { label: ':35', value: '35' },
+                { label: ':40', value: '40' },
+                { label: ':45', value: '45' },
+                { label: ':50', value: '50' },
+                { label: ':55', value: '55' }
+            ])
+    );
+    rows.push(minuteRow);
+
+    // Кнопки подтверждения
+    const btnRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('save_reminder').setLabel('✅ Сохранить').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('back_to_main').setLabel('⬅️ Назад').setStyle(ButtonStyle.Secondary)
+    );
+    rows.push(btnRow);
+
+    // Обрезаем до 5 рядов (максимум Discord)
+    const finalRows = rows.slice(0, 5);
+
+    const msg = await interaction.editReply({ embeds: [embed], components: finalRows });
 
     const collector = msg.createMessageComponentCollector({ time: 300000 });
 
     collector.on('collect', async i => {
         if (i.user.id !== interaction.user.id) return i.reply({ content: 'Не для вас.', ephemeral: true });
 
-        let targetTime = null;
-        let targetDate = new Date();
-
-        if (i.customId === 'time_5m') targetTime = Date.now() + 5 * 60000;
-        if (i.customId === 'time_30m') targetTime = Date.now() + 30 * 60000;
-        if (i.customId === 'time_1h') targetTime = Date.now() + 60 * 60000;
-
-        if (i.customId === 'time_custom') {
+        if (i.customId === 'back_to_main') {
             collector.stop();
-            return await showCustomTimePicker(i, state);
+            return showMainMenu(i, state);
         }
 
-        if (targetTime) {
+        if (i.customId === 'select_day') {
+            state.dayOfWeek = Number(i.values[0]);
+            return i.reply({ content: `День недели выбран: ${getDayName(state.dayOfWeek)}`, ephemeral: true });
+        }
+
+        if (i.customId === 'select_hour' || i.customId === 'select_hour_2') {
+            state.hour = Number(i.values[0]);
+            return i.reply({ content: `Час выбран: ${state.hour}:00`, ephemeral: true });
+        }
+
+        if (i.customId === 'select_minute') {
+            state.minute = Number(i.values[0]);
+            return i.reply({ content: `Минута выбрана: :${state.minute.toString().padStart(2, '0')}`, ephemeral: true });
+        }
+
+        if (i.customId === 'save_reminder') {
+            if (isWeekly && state.dayOfWeek === null) {
+                return i.reply({ content: '⚠️ Вы не выбрали день недели!', ephemeral: true });
+            }
             collector.stop();
-            state.nextTime = targetTime;
-            await saveAndFinish(i, state);
+            await saveReminder(i, state);
         }
     });
 }
 
-// Третий шаг: ввод точного времени (для повторяющихся или кастомных)
-async function showCustomTimePicker(interaction, state) {
-    const embed = new EmbedBuilder()
-        .setTitle('⌨️ Введите время')
-        .setColor('#d4af37')
-        .setDescription('Отправьте сообщение в формате **ЧЧ:ММ** (например, `20:30`).\n\nЕсли вы выбрали еженедельный повтор, укажите и день: `Пн 20:30`, `Сб 15:00` и т.д.');
-
-    await interaction.editReply({ embeds: [embed], components: [] });
-
-    const filter = m => m.author.id === interaction.user.id;
-    const collected = await interaction.channel.awaitMessages({ filter, max: 1, time: 60000 }).catch(() => null);
-
-    if (!collected || collected.size === 0) {
-        return interaction.editReply({ content: '⏳ Время вышло. Напоминание не создано.', embeds: [] });
-    }
-
-    const msg = collected.first();
-    const input = msg.content.trim();
-    await msg.delete().catch(() => {});
-
-    // Парсим время
-    let hour, minute, dayOfWeek = null;
+// === СОХРАНЕНИЕ В БАЗУ ===
+async function saveReminder(interaction, state) {
+    const now = new Date();
     
-    // Поддержка ввода "Пн 20:30" для еженедельных
-    const daysMap = { 'вс': 0, 'пн': 1, 'вт': 2, 'ср': 3, 'чт': 4, 'пт': 5, 'сб': 6 };
-    let timeStr = input;
-    
-    if (state.repeat === 'weekly') {
-        const parts = input.split(' ');
-        if (parts.length === 2) {
-            const dayName = parts[0].toLowerCase().slice(0, 2);
-            if (daysMap[dayName] !== undefined) {
-                dayOfWeek = daysMap[dayName];
-                timeStr = parts[1];
+    // Вычисляем следующую дату в UTC
+    let targetDate = new Date(Date.UTC(
+        now.getUTCFullYear(), 
+        now.getUTCMonth(), 
+        now.getUTCDate(), 
+        state.hour - state.timezoneOffset, 
+        state.minute, 0, 0
+    ));
+
+    if (state.repeat === 'once' || state.repeat === 'daily' || state.repeat === 'monthly') {
+        if (targetDate.getTime() <= Date.now()) {
+            if (state.repeat === 'once' || state.repeat === 'daily') {
+                targetDate.setUTCDate(targetDate.getUTCDate() + 1);
+            } else if (state.repeat === 'monthly') {
+                targetDate.setUTCMonth(targetDate.getUTCMonth() + 1);
             }
         }
-        if (dayOfWeek === null) {
-            return interaction.editReply({ content: '❌ Неверный формат дня. Напишите, например: `Пн 20:30`', embeds: [] });
-        }
-    }
-
-    const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
-    if (!match) {
-        return interaction.editReply({ content: '❌ Неверный формат времени. Напишите, например: `20:30`', embeds: [] });
-    }
-
-    hour = Number(match[1]);
-    minute = Number(match[2]);
-
-    // Вычисляем дату
-    const now = new Date();
-    // Переводим в UTC с учетом часового пояса
-    let targetDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hour - state.timezoneOffset, minute, 0, 0));
-
-    if (state.repeat === 'once') {
-        // Если время уже прошло — переносим на завтра
-        if (targetDate.getTime() <= Date.now()) {
-            targetDate.setUTCDate(targetDate.getUTCDate() + 1);
-        }
-    } else if (state.repeat === 'daily') {
-        // Каждый день: если время прошло, переносим на завтра
-        if (targetDate.getTime() <= Date.now()) {
-            targetDate.setUTCDate(targetDate.getUTCDate() + 1);
-        }
     } else if (state.repeat === 'weekly') {
-        // Каждую неделю: двигаем на нужный день
         const currentDay = targetDate.getUTCDay();
-        let diff = dayOfWeek - currentDay;
+        let diff = state.dayOfWeek - currentDay;
         if (diff < 0) diff += 7;
         if (diff === 0 && targetDate.getTime() <= Date.now()) diff = 7;
         targetDate.setUTCDate(targetDate.getUTCDate() + diff);
-    } else if (state.repeat === 'monthly') {
-        if (targetDate.getTime() <= Date.now()) {
-            targetDate.setUTCMonth(targetDate.getUTCMonth() + 1);
-        }
     }
-
-    state.nextTime = targetDate.getTime();
-    state.hour = hour;
-    state.minute = minute;
-    state.dayOfWeek = dayOfWeek;
-
-    await saveAndFinish(interaction, state);
-}
-
-// Финальный шаг: сохранение в БД
-async function saveAndFinish(interaction, state) {
-    const targetId = interaction.user.id;
-    const targetType = 'user';
 
     try {
         const newReminder = await Reminder.create({
@@ -267,10 +258,10 @@ async function saveAndFinish(interaction, state) {
             userId: interaction.user.id,
             channelId: interaction.channelId,
             text: state.text,
-            targetId: targetId,
-            targetType: targetType,
+            targetId: interaction.user.id,
+            targetType: 'user',
             repeat: state.repeat,
-            nextTime: state.nextTime,
+            nextTime: targetDate.getTime(),
             hour: state.hour,
             minute: state.minute,
             timezone: state.timezoneOffset,
@@ -279,7 +270,7 @@ async function saveAndFinish(interaction, state) {
 
         setReminderTimeout(newReminder, interaction.client);
 
-        const dateStr = new Date(state.nextTime).toLocaleString('ru-RU', { 
+        const dateStr = targetDate.toLocaleString('ru-RU', { 
             timeZone: `Etc/GMT${state.timezoneOffset >= 0 ? '-' : '+'}${Math.abs(state.timezoneOffset)}`,
             day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
         });
@@ -290,24 +281,32 @@ async function saveAndFinish(interaction, state) {
             .addFields(
                 { name: '📝 Текст', value: state.text },
                 { name: '🕒 Когда', value: dateStr },
-                { name: '🔁 Повтор', value: state.repeat === 'once' ? 'Один раз' : 
-                    state.repeat === 'daily' ? 'Каждый день' : 
-                    state.repeat === 'weekly' ? 'Каждую неделю' : 'Каждый месяц' }
+                { name: '🔁 Повтор', value: getRepeatName(state.repeat) }
             )
             .setFooter({ text: `ID: ${newReminder.id}` });
 
-        if (interaction.replied || interaction.deferred) {
-            await interaction.editReply({ content: null, embeds: [embed], components: [] });
-        } else {
-            await interaction.reply({ embeds: [embed], ephemeral: true });
-        }
+        await interaction.update({ content: null, embeds: [embed], components: [] });
     } catch (e) {
         console.error('SAVE REMINDER:', e);
-        await interaction.editReply({ content: '❌ Ошибка сохранения.', embeds: [] });
+        await interaction.update({ content: '❌ Ошибка сохранения.', embeds: [], components: [] });
     }
 }
 
-// Функция таймера
+// === УТИЛИТЫ ===
+function getRepeatName(repeat) {
+    if (repeat === 'once') return 'Один раз';
+    if (repeat === 'daily') return 'Каждый день';
+    if (repeat === 'weekly') return 'Каждую неделю';
+    if (repeat === 'monthly') return 'Каждый месяц';
+    return repeat;
+}
+
+function getDayName(day) {
+    const names = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+    return names[day];
+}
+
+// === ТАЙМЕР (без изменений) ===
 function setReminderTimeout(reminder, client) {
     const timeLeft = reminder.nextTime - Date.now();
     const timeout = timeLeft > 0 ? timeLeft : 5000;
@@ -325,15 +324,11 @@ function setReminderTimeout(reminder, client) {
                 if (dbReminder.repeat === 'once') {
                     await Reminder.deleteOne({ id: dbReminder.id });
                 } else {
-                    // Пересчитываем следующее время
                     let next = new Date(dbReminder.nextTime);
-                    if (dbReminder.repeat === 'daily') {
-                        next.setUTCDate(next.getUTCDate() + 1);
-                    } else if (dbReminder.repeat === 'weekly') {
-                        next.setUTCDate(next.getUTCDate() + 7);
-                    } else if (dbReminder.repeat === 'monthly') {
-                        next.setUTCMonth(next.getUTCMonth() + 1);
-                    }
+                    if (dbReminder.repeat === 'daily') next.setUTCDate(next.getUTCDate() + 1);
+                    else if (dbReminder.repeat === 'weekly') next.setUTCDate(next.getUTCDate() + 7);
+                    else if (dbReminder.repeat === 'monthly') next.setUTCMonth(next.getUTCMonth() + 1);
+                    
                     dbReminder.nextTime = next.getTime();
                     dbReminder.warned = false;
                     await dbReminder.save();
