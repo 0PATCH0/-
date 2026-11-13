@@ -5,7 +5,7 @@ const {
     ButtonBuilder, 
     ButtonStyle, 
     StringSelectMenuBuilder,
-    ComponentType 
+    MessageFlags
 } = require('discord.js');
 const { Reminder } = require('../models');
 
@@ -16,6 +16,9 @@ module.exports = {
         .addStringOption(option => option.setName('текст').setDescription('О чём напомнить?').setRequired(true)),
 
     async execute(interaction) {
+        // 1. Сразу отвечаем Discord, чтобы не было таймаута
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
         const text = interaction.options.getString('текст');
         
         const state = {
@@ -27,7 +30,12 @@ module.exports = {
             minute: 0
         };
 
-        await showMainMenu(interaction, state);
+        try {
+            await showMainMenu(interaction, state);
+        } catch (e) {
+            console.error('ОШИБКА ВЫПОЛНЕНИЯ КОМАНДЫ:', e);
+            await interaction.editReply({ content: '⚠️ Произошла ошибка при создании меню.' });
+        }
     }
 };
 
@@ -72,6 +80,7 @@ async function showMainMenu(interaction, state) {
         new ButtonBuilder().setCustomId('cancel').setLabel('Отмена').setStyle(ButtonStyle.Danger)
     );
 
+    // Используем editReply, так как мы уже сделали deferReply в execute
     const response = await interaction.editReply({
         embeds: [embed],
         components: [row1, row2, row3]
@@ -80,7 +89,7 @@ async function showMainMenu(interaction, state) {
     const collector = response.createMessageComponentCollector({ time: 300000 });
 
     collector.on('collect', async i => {
-        if (i.user.id !== interaction.user.id) return i.reply({ content: 'Не для вас.', ephemeral: true });
+        if (i.user.id !== interaction.user.id) return i.reply({ content: 'Не для вас.', flags: MessageFlags.Ephemeral });
 
         if (i.customId === 'cancel') {
             collector.stop();
@@ -115,7 +124,6 @@ async function showTimeMenu(interaction, state) {
 
     const rows = [];
 
-    // Если еженедельно, добавляем выбор дня
     if (isWeekly) {
         const dayRow = new ActionRowBuilder().addComponents(
             new StringSelectMenuBuilder()
@@ -134,27 +142,25 @@ async function showTimeMenu(interaction, state) {
         rows.push(dayRow);
     }
 
-    // Выбор часа (0-23)
     const hourOptions = [];
     for (let h = 0; h < 24; h++) {
-        hourOptions.push({ label: `${h}:00`, value: h.toString() });
+        hourOptions.push({ label: `${h.toString().padStart(2, '0')}:00`, value: h.toString() });
     }
-    // Разбиваем часы на два ряда, так как Discord разрешает только 25 опций
+    
     const hourRow1 = new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
             .setCustomId('select_hour')
-            .setPlaceholder('Выберите час')
+            .setPlaceholder('Выберите час (0-11)')
             .addOptions(hourOptions.slice(0, 12))
     );
     const hourRow2 = new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
             .setCustomId('select_hour_2')
-            .setPlaceholder('Выберите час (продолжение)')
+            .setPlaceholder('Выберите час (12-23)')
             .addOptions(hourOptions.slice(12, 24))
     );
     rows.push(hourRow1, hourRow2);
 
-    // Выбор минут (кратно 5, чтобы не перегружать)
     const minuteRow = new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
             .setCustomId('select_minute')
@@ -176,22 +182,21 @@ async function showTimeMenu(interaction, state) {
     );
     rows.push(minuteRow);
 
-    // Кнопки подтверждения
     const btnRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId('save_reminder').setLabel('✅ Сохранить').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId('back_to_main').setLabel('⬅️ Назад').setStyle(ButtonStyle.Secondary)
     );
     rows.push(btnRow);
 
-    // Обрезаем до 5 рядов (максимум Discord)
     const finalRows = rows.slice(0, 5);
 
-    const msg = await interaction.editReply({ embeds: [embed], components: finalRows });
+    // ВАЖНО: используем update, так как это происходит внутри коллектора
+    const msg = await interaction.update({ embeds: [embed], components: finalRows });
 
     const collector = msg.createMessageComponentCollector({ time: 300000 });
 
     collector.on('collect', async i => {
-        if (i.user.id !== interaction.user.id) return i.reply({ content: 'Не для вас.', ephemeral: true });
+        if (i.user.id !== interaction.user.id) return i.reply({ content: 'Не для вас.', flags: MessageFlags.Ephemeral });
 
         if (i.customId === 'back_to_main') {
             collector.stop();
@@ -200,22 +205,22 @@ async function showTimeMenu(interaction, state) {
 
         if (i.customId === 'select_day') {
             state.dayOfWeek = Number(i.values[0]);
-            return i.reply({ content: `День недели выбран: ${getDayName(state.dayOfWeek)}`, ephemeral: true });
+            return i.reply({ content: `День недели выбран: ${getDayName(state.dayOfWeek)}`, flags: MessageFlags.Ephemeral });
         }
 
         if (i.customId === 'select_hour' || i.customId === 'select_hour_2') {
             state.hour = Number(i.values[0]);
-            return i.reply({ content: `Час выбран: ${state.hour}:00`, ephemeral: true });
+            return i.reply({ content: `Час выбран: ${state.hour}:00`, flags: MessageFlags.Ephemeral });
         }
 
         if (i.customId === 'select_minute') {
             state.minute = Number(i.values[0]);
-            return i.reply({ content: `Минута выбрана: :${state.minute.toString().padStart(2, '0')}`, ephemeral: true });
+            return i.reply({ content: `Минута выбрана: :${state.minute.toString().padStart(2, '0')}`, flags: MessageFlags.Ephemeral });
         }
 
         if (i.customId === 'save_reminder') {
             if (isWeekly && state.dayOfWeek === null) {
-                return i.reply({ content: '⚠️ Вы не выбрали день недели!', ephemeral: true });
+                return i.reply({ content: '⚠️ Вы не выбрали день недели!', flags: MessageFlags.Ephemeral });
             }
             collector.stop();
             await saveReminder(i, state);
@@ -227,7 +232,6 @@ async function showTimeMenu(interaction, state) {
 async function saveReminder(interaction, state) {
     const now = new Date();
     
-    // Вычисляем следующую дату в UTC
     let targetDate = new Date(Date.UTC(
         now.getUTCFullYear(), 
         now.getUTCMonth(), 
@@ -306,7 +310,7 @@ function getDayName(day) {
     return names[day];
 }
 
-// === ТАЙМЕР (без изменений) ===
+// === ТАЙМЕР ===
 function setReminderTimeout(reminder, client) {
     const timeLeft = reminder.nextTime - Date.now();
     const timeout = timeLeft > 0 ? timeLeft : 5000;
