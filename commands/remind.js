@@ -16,13 +16,10 @@ module.exports = {
         .addStringOption(option => option.setName('текст').setDescription('О чём напомнить?').setRequired(true)),
 
     async execute(interaction) {
-        // 1. Сразу отвечаем Discord, чтобы не было таймаута
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        const text = interaction.options.getString('текст');
-        
         const state = {
-            text: text,
+            text: interaction.options.getString('текст'),
             timezoneOffset: 3,
             repeat: 'once',
             dayOfWeek: null,
@@ -30,12 +27,7 @@ module.exports = {
             minute: 0
         };
 
-        try {
-            await showMainMenu(interaction, state);
-        } catch (e) {
-            console.error('ОШИБКА ВЫПОЛНЕНИЯ КОМАНДЫ:', e);
-            await interaction.editReply({ content: '⚠️ Произошла ошибка при создании меню.' });
-        }
+        await showMainMenu(interaction, state);
     }
 };
 
@@ -80,13 +72,15 @@ async function showMainMenu(interaction, state) {
         new ButtonBuilder().setCustomId('cancel').setLabel('Отмена').setStyle(ButtonStyle.Danger)
     );
 
-    // Используем editReply, так как мы уже сделали deferReply в execute
-    const response = await interaction.editReply({
-        embeds: [embed],
-        components: [row1, row2, row3]
-    });
+    let msg;
+    // Проверяем: если это первичный вызов (из execute) или обновление
+    if (interaction.isButton() || interaction.isStringSelectMenu()) {
+        msg = await interaction.update({ embeds: [embed], components: [row1, row2, row3], fetchReply: true });
+    } else {
+        msg = await interaction.editReply({ embeds: [embed], components: [row1, row2, row3] });
+    }
 
-    const collector = response.createMessageComponentCollector({ time: 300000 });
+    const collector = msg.createMessageComponentCollector({ time: 300000 });
 
     collector.on('collect', async i => {
         if (i.user.id !== interaction.user.id) return i.reply({ content: 'Не для вас.', flags: MessageFlags.Ephemeral });
@@ -98,17 +92,25 @@ async function showMainMenu(interaction, state) {
 
         if (i.customId === 'select_tz') {
             state.timezoneOffset = Number(i.values[0]);
-            return showMainMenu(i, state); // Перерисовываем меню
+            collector.stop(); // Останавливаем старый, чтобы не было конфликтов
+            return showMainMenu(i, state); // Рекурсивно перерисовываем с новым state
         }
 
         if (i.customId === 'select_repeat') {
             state.repeat = i.values[0];
+            collector.stop();
             return showMainMenu(i, state);
         }
 
         if (i.customId === 'next_step') {
             collector.stop();
-            await showTimeMenu(i, state);
+            await i.deferUpdate();
+            try {
+                await showTimeMenu(i, state);
+            } catch (err) {
+                console.error('ОШИБКА В showTimeMenu:', err);
+                await i.editReply({ content: '⚠️ Ошибка при открытии меню времени.', embeds: [], components: [] });
+            }
         }
     });
 }
@@ -190,8 +192,7 @@ async function showTimeMenu(interaction, state) {
 
     const finalRows = rows.slice(0, 5);
 
-    // ВАЖНО: используем update, так как это происходит внутри коллектора
-    const msg = await interaction.update({ embeds: [embed], components: finalRows });
+    const msg = await interaction.editReply({ embeds: [embed], components: finalRows });
 
     const collector = msg.createMessageComponentCollector({ time: 300000 });
 
@@ -223,6 +224,7 @@ async function showTimeMenu(interaction, state) {
                 return i.reply({ content: '⚠️ Вы не выбрали день недели!', flags: MessageFlags.Ephemeral });
             }
             collector.stop();
+            await i.deferUpdate();
             await saveReminder(i, state);
         }
     });
@@ -289,10 +291,10 @@ async function saveReminder(interaction, state) {
             )
             .setFooter({ text: `ID: ${newReminder.id}` });
 
-        await interaction.update({ content: null, embeds: [embed], components: [] });
+        await interaction.editReply({ content: null, embeds: [embed], components: [] });
     } catch (e) {
         console.error('SAVE REMINDER:', e);
-        await interaction.update({ content: '❌ Ошибка сохранения.', embeds: [], components: [] });
+        await interaction.editReply({ content: '❌ Ошибка сохранения.', embeds: [], components: [] });
     }
 }
 
