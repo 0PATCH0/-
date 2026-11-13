@@ -6,7 +6,7 @@ const SettingsSchema = new mongoose.Schema({
     rosterRoleIds: { type: [String], default: [] },
     challengeChannelId: { type: String, default: null } // ← НОВОЕ
 });
-const ReminderSchema = new mongoose.Schema({ id: { type: String, required: true, unique: true }, userId: String, channelId: String, text: String, targetId: String, targetType: String, repeat: String, nextTime: Number, hour: Number, minute: Number, timezone: Number, warned: { type: Boolean, default: false } });
+const ReminderSchema = new mongoose.Schema({ id: { type: String, required: true, unique: true }, userId: String, channelId: String, text: String, targetId: String, targetType: String, repeat: String, nextTime: Number, hour: Number, minute: Number, timezone: Number, dayOfWeek: { type: Number, default: null }, warned: { type: Boolean, default: false } });
 const ReactionRoleSchema = new mongoose.Schema({ guildId: String, channelId: String, messageId: String, title: String, desc: String, color: String, mode: String, roles: [{ roleId: String, label: String, emoji: String }] });
 const SentMessageSchema = new mongoose.Schema({ guildId: String, channelId: String, messageId: String, title: String, description: String, color: String, image: String, footer: String, author: String });
 const RosterSchema = new mongoose.Schema({ guildId: String, lastUpdated: { type: Date, default: Date.now }, data: { type: Object, default: {} } });
