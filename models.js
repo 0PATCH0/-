@@ -129,6 +129,21 @@ const WordleLobbySchema = new mongoose.Schema({
     }]
 }, { timestamps: true });
 
+const GatherSchema = new mongoose.Schema({
+    messageId: { type: String, required: true, unique: true },
+    channelId: { type: String, required: true },
+    guildId: { type: String, required: true },
+    creatorId: { type: String, required: true },
+    title: String,
+    eventTimestamp: Number,
+    pingMinutes: Number,
+    pingTarget: String,
+    roles: { type: Object, default: {} },      // { tank: [], dps: [], healer: [] }
+    statuses: { type: Object, default: {} },   // { bench: [], late: [], absent: [] },
+    locked: { type: Boolean, default: false },
+    isEnded: { type: Boolean, default: false },
+    hasPinged: { type: Boolean, default: false } // Флаг, чтобы не спамить пингом
+});
 
 
 
