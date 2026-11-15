@@ -161,5 +161,6 @@ module.exports = {
     Challenge: mongoose.model('Challenge', ChallengeSchema),
     WordleLobby: mongoose.model('WordleLobby', WordleLobbySchema),
     PlayerProfile: mongoose.model('PlayerProfile', PlayerProfileSchema),
-    EventSettings: mongoose.model('EventSettings', EventSettingsSchema)
+    EventSettings: mongoose.model('EventSettings', EventSettingsSchema),
+    Gather: mongoose.model('Gather', GatherSchema)
 };
