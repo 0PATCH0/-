@@ -6,7 +6,7 @@ const { refreshRosterMessage } = require('./roster-refresh');
 require('dotenv').config();
 
 const { startWebServer } = require('./web'); 
-const { Reminder, ReactionRole, Roster, RosterConfig, RosterMessage } = require('./models');
+const { Reminder, ReactionRole, Roster, RosterConfig, RosterMessage, Gather } = require('./models');
 
 const client = new Client({ 
     intents: [
@@ -59,8 +59,6 @@ async function registerCommands() {
     }
 }
 
-
-
 async function updateRosterForGuild(guild) {
     try {
         await guild.members.fetch({ time: 120000, force: true });
@@ -101,7 +99,11 @@ client.on('interactionCreate', async interaction => {
             await command.execute(interaction);
         } catch (error) {
             console.error(error);
-            await interaction.reply({ content: 'Ошибка при выполнении!', ephemeral: true });
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp({ content: 'Ошибка при выполнении!', ephemeral: true }).catch(() => {});
+            } else {
+                await interaction.reply({ content: 'Ошибка при выполнении!', ephemeral: true }).catch(() => {});
+            }
         }
     }
 
@@ -166,13 +168,53 @@ client.once('ready', async () => {
 
     client.guilds.cache.forEach(guild => updateRosterForGuild(guild));
 
+    // === ВОССТАНОВЛЕНИЕ НАПОМИНАНИЙ ===
     try {
         const reminders = await Reminder.find();
         if (reminders.length > 0) {
-            const remindCommand = require('./commands/remind.js');
-            reminders.forEach(rem => remindCommand.setReminderTimeout(rem, client));
+            console.log(`[REMINDERS] Восстановление ${reminders.length} напоминаний...`);
+            const remindCommand = require('./commands/reminders.js') || require('./commands/remind.js');
+            if (remindCommand && remindCommand.setReminderTimeout) {
+                reminders.forEach(rem => remindCommand.setReminderTimeout(rem, client));
+            }
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error('REMINDERS RESTORE:', e); }
+
+    // === ВОССТАНОВЛЕНИЕ СБОРОВ ===
+    try {
+        const activeGathers = await Gather.find({ isEnded: false });
+        if (activeGathers.length > 0) {
+            console.log(`[GATHERS] Восстановление ${activeGathers.length} активных сборов...`);
+            const gatherCommand = require('./commands/gather.js');
+            
+            for (const g of activeGathers) {
+                const channel = client.channels.cache.get(g.channelId);
+                if (!channel) continue;
+                
+                const msg = await channel.messages.fetch(g.messageId).catch(() => null);
+                if (!msg) continue;
+
+                // Если время сбора уже прошло, пока бот был оффлайн — завершаем его
+                if ((g.eventTimestamp * 1000) < Date.now()) {
+                    const { endGather } = gatherCommand;
+                    if (endGather) {
+                        await endGather(client, g, channel);
+                    } else {
+                        g.isEnded = true;
+                        await g.save();
+                        await msg.edit({ components: [] }).catch(() => {});
+                    }
+                    continue;
+                }
+
+                // Иначе запускаем таймеры заново
+                if (gatherCommand.startGatherTimers) {
+                    gatherCommand.startGatherTimers(client, g, msg);
+                    console.log(`[GATHERS] Таймеры для "${g.title}" восстановлены.`);
+                }
+            }
+        }
+    } catch (e) { console.error('GATHERS RESTORE:', e); }
 });
 
 client.on('guildMemberUpdate', (oldMember, newMember) => {
