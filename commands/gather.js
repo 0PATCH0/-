@@ -302,3 +302,6 @@ async function endGather(client, dbGather, channel) {
     
     await channel.send({ content: '🏁 **Время сбора наступило!**', embeds: [summaryEmbed] }).catch(() => {});
 }
+
+module.exports.startGatherTimers = startGatherTimers;
+module.exports.endGather = endGather;
