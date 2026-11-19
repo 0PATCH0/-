@@ -1,52 +1,47 @@
 const { PromoCode } = require('../models');
-const cron = require('node-cron'); // Потребуется установить: npm install node-cron
+const cron = require('node-cron');
+const { JSDOM } = require('jsdom');
 
-// Список источников для парсинга
-const SOURCES = [
-    { name: 'modwwm', url: 'https://modwwm.com/database/codes/index.html' },
-    // Можно добавить сюда codes.yar.gg, если у него есть API
-];
-
-async function fetchAndParseModwwm() {
+async function fetchCodesFromModWWM() {
     try {
-        const response = await fetch(SOURCES[0].url);
+        const response = await fetch('https://modwwm.com/database/codes/index.html', {
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
         const html = await response.text();
-        
-        // Простой парсинг: ищем коды в таблице. 
-        // В реальности здесь нужен более надежный парсер (cheerio или jsdom)
-        // Это лишь пример логики.
-        const codeRegex = /<td><code>([A-Z0-9]{8,})<\/code><\/td>/g;
-        const codes = [];
-        let match;
-        while ((match = codeRegex.exec(html)) !== null) {
-            codes.push(match[1]);
+        const dom = new JSDOM(html);
+        const document = dom.window.document;
+
+        const activeSection = document.querySelector('.copy-codes-will-copy') || document.body;
+        const codeRegex = /\b[A-Z0-9]{8,16}\b/g;
+        const text = activeSection.textContent || '';
+        const foundCodes = [...new Set(text.match(codeRegex) || [])];
+
+        if (foundCodes.length === 0) {
+            console.warn('[PROMO] Коды не найдены, пропускаем обновление.');
+            return;
         }
-        
-        // Обновляем базу: помечаем все старые коды как expired, добавляем новые
-        await PromoCode.updateMany({ source: 'modwwm' }, { status: 'expired' });
-        
-        for (const code of codes) {
+
+        await PromoCode.updateMany({}, { status: 'expired' });
+
+        for (const code of foundCodes) {
             await PromoCode.findOneAndUpdate(
-                { code },
-                { status: 'active', source: 'modwwm', updatedAt: new Date() },
+                { code: code },
+                { status: 'active', updatedAt: new Date(), source: 'modwwm' },
                 { upsert: true }
             );
         }
-        console.log(`[PROMO] Синхронизировано ${codes.length} кодов с modwwm.`);
-    } catch (e) {
-        console.error('[PROMO] Ошибка парсинга modwwm:', e);
+        console.log(`[PROMO] Синхронизировано ${foundCodes.length} активных кодов.`);
+    } catch (error) {
+        console.error('[PROMO] Ошибка при парсинге modwwm:', error.message);
     }
 }
 
-// Запускаем синхронизацию каждый час
 function startPromoSync() {
     cron.schedule('0 * * * *', () => {
         console.log('[PROMO] Запуск плановой синхронизации...');
-        fetchAndParseModwwm();
-        // Здесь можно добавить вызовы других источников
+        fetchCodesFromModWWM();
     });
-    // Первый запуск при старте
-    fetchAndParseModwwm();
+    fetchCodesFromModWWM();
 }
 
 module.exports = { startPromoSync };
