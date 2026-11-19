@@ -7,6 +7,7 @@ require('dotenv').config();
 
 const { startWebServer } = require('./web'); 
 const { Reminder, ReactionRole, Roster, RosterConfig, RosterMessage, Gather } = require('./models');
+const { startPromoSync } = require('./services/promo-sync'); // <-- Импорт сервиса синхронизации
 
 const client = new Client({ 
     intents: [
@@ -194,7 +195,6 @@ client.once('ready', async () => {
                 const msg = await channel.messages.fetch(g.messageId).catch(() => null);
                 if (!msg) continue;
 
-                // Если время сбора уже прошло, пока бот был оффлайн — завершаем его
                 if ((g.eventTimestamp * 1000) < Date.now()) {
                     const { endGather } = gatherCommand;
                     if (endGather) {
@@ -207,7 +207,6 @@ client.once('ready', async () => {
                     continue;
                 }
 
-                // Иначе запускаем таймеры заново
                 if (gatherCommand.startGatherTimers) {
                     gatherCommand.startGatherTimers(client, g, msg);
                     console.log(`[GATHERS] Таймеры для "${g.title}" восстановлены.`);
@@ -215,6 +214,10 @@ client.once('ready', async () => {
             }
         }
     } catch (e) { console.error('GATHERS RESTORE:', e); }
+
+    // === ЗАПУСК СИНХРОНИЗАЦИИ ПРОМОКОДОВ ===
+    startPromoSync();
+    console.log('[PROMO] Сервис синхронизации промокодов запущен.');
 });
 
 client.on('guildMemberUpdate', (oldMember, newMember) => {
