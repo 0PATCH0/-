@@ -145,6 +145,21 @@ const GatherSchema = new mongoose.Schema({
     hasPinged: { type: Boolean, default: false } // Флаг, чтобы не спамить пингом
 });
 
+// Схема для хранения промокодов
+const PromoCodeSchema = new mongoose.Schema({
+    code: { type: String, required: true, unique: true },
+    status: { type: String, enum: ['active', 'expired'], default: 'active' },
+    reward: { type: String, default: 'Награда не указана' },
+    source: { type: String }, // Откуда пришел код (modwwm, yar.gg и т.д.)
+    updatedAt: { type: Date, default: Date.now }
+});
+
+// Схема для прогресса пользователей
+const UserPromoProgressSchema = new mongoose.Schema({
+    discordId: { type: String, required: true, unique: true },
+    enteredCodes: { type: [String], default: [] } // Массив кодов, которые пользователь уже ввел
+});
+
 
 
 module.exports = {
@@ -162,5 +177,8 @@ module.exports = {
     WordleLobby: mongoose.model('WordleLobby', WordleLobbySchema),
     PlayerProfile: mongoose.model('PlayerProfile', PlayerProfileSchema),
     EventSettings: mongoose.model('EventSettings', EventSettingsSchema),
-    Gather: mongoose.model('Gather', GatherSchema)
+    Gather: mongoose.model('Gather', GatherSchema),
+    PromoCode: mongoose.model('PromoCode', PromoCodeSchema),
+    UserPromoProgress: mongoose.model('UserPromoProgress', UserPromoProgressSchema)
 };
+
